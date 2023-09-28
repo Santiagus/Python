@@ -27,11 +27,12 @@ This is a list of SW I am currently using or those tools I have in mind to check
 * [Codefactor](https://www.codefactor.io/)
 * [Pylint](https://github.com/pylint-dev/pylint)
 * [flake8](https://flake8.pycqa.org/en/latest/)
+* [pylint-django](https://github.com/pylint-dev/pylint-django)
 
 ## Code Formatting / Naming
-* [Customizable Naming Convention Checker](https://github.com/mapbox/cncc)
-* [ClangFormat](http://clang.llvm.org/docs/ClangFormat.html)
-* []()
+Mentioned Static Analyzers can be configured for to enforce custom naming conventions and code style.
+* Pylint
+* Mypy
 
 ## Testing
 ### Unit tests
@@ -42,40 +43,33 @@ This is a list of SW I am currently using or those tools I have in mind to check
 ### Code Coverage Analysis
 * [Coverage.py](https://coverage.readthedocs.io/en/7.3.1/)
 * [pytest-cov](https://pytest-cov.readthedocs.io/en/latest/#)
-* [Cobertura]()
-* [LCOV](http://ltp.sourceforge.net/coverage/lcov.php)
 
 ### Fuzzing
-* [american fuzzy lop ++](https://github.com/AFLplusplus/AFLplusplus)
-* [american fuzzy lop](http://lcamtuf.coredump.cx/afl/)
-* [Fuzztest](https://github.com/google/fuzztest)
-* [LibFuzzer](http://llvm.org/docs/LibFuzzer.html)
-* [KLEE](http://klee.github.io/)
-* [Fuzzit](https://fuzzit.dev/)
+- [Atheris](https://github.com/google/atheris)
+- [HypoFuzz](https://hypofuzz.com/)
+- [Boofuzz](https://github.com/jtpereyda/boofuzz)
+- [FuzzManager](https://github.com/MozillaSecurity/FuzzManager)
+- [Radamsa](https://github.com/aoh/radamsa)
+- [Atheris-native](https://github.com/google/atheris-native)
 
 ### Mutation Testers
- * [Dextool Mutate](https://github.com/joakim-brannstrom/dextool/tree/master/plugin/mutate)
- * [MuCPP](https://neptuno.uca.es/redmine/projects/mucpp-mutation-tool/wiki)
- * [mull](https://github.com/mull-project/mull)
- * [CCMutator](https://github.com/markus-kusano/CCMutator)
- * [Universal Mutator](https://github.com/agroce/universalmutator)
-
+- [mutmut](https://github.com/boxed/mutmut)
+- [cosmic-ray](https://github.com/sixty-north/cosmic-ray)
+- [MutPy](https://github.com/mutpy/mutpy)
 
 ## PROFILING
 ### Heap profiling
-* [Dr Memory](http://www.drmemory.org)
-* [Valgrind](http://www.valgrind.org/) 
- 
+- [Heapy](https://github.com/zhuyifei1999/guppy3)
+- [Pyflame](https://github.com/uber/pyflame)
+- [memory-profiler (mprof)](https://github.com/pythonprofilers/memory_profiler)
+- [Tracemalloc](https://docs.python.org/3/library/tracemalloc.html)
+- [Objgraph (now Objbrowser)](https://github.com/titusjan/objbrowser)
+- [Pympler](https://github.com/pympler/pympler)
+
 ### CPU profiling
-* [Hotspot](https://github.com/KDAB/hotspot)
-* [uftrace](https://github.com/namhyung/uftrace)
+- [cProfile](https://docs.python.org/3/library/profile.html)
+- [Pyflame](https://github.com/uber/pyflame)
+- [line_profiler](https://github.com/rkern/line_profiler)
+- [Py-Spy](https://github.com/benfred/py-spy)
+- [SnakeViz](https://jiffyclub.github.io/snakeviz/)
 
-### Binary Size profiling
-* [Bloaty McBloatface](https://github.com/google/bloaty)
-
-### Reverse engineering tools
-* [IDA Pro](https://hex-rays.com/ida-pro/)  
-* [Ghidra](https://ghidra-sre.org/)
-
-### Data structure profiling
-* [pahole](https://linux.die.net/man/1/pahole)
