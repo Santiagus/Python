@@ -8,7 +8,7 @@ This is a list of SW I am currently using or those tools I have in mind to check
 * [GitHub](https://github.com/)
 * [Visual Studio Online](https://vscode.dev/)
 
-## Build/Package Tool ()
+## Build/Package Tool
 * [Build](https://github.com/pypa/build)
 * [setuptools](https://pypi.org/project/setuptools/)
 * [PyBuilder](https://pybuilder.io/)
