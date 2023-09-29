@@ -47,9 +47,15 @@ $ . .venv/bin/activate
 │ ├── tests.py
 │ └── views.py
 ```
-• admin.py  : configuration file for the built-in Django Admin app
-• apps.py   : configuration file for the app itself
-• migrations/ : keeps track of models.py file changes
-• models.py : database models which Django translates into database tables
-• tests.py  : app-specific tests
-• views.py  : request/response logic for our web app
+**admin.py  :** configuration file for the built-in Django Admin app.
+
+**apps.py   :** configuration file for the app itself.
+
+**migrations/ :** keeps track of models.py file changes.
+
+**models.py :** database models which Django translates into database tables.
+
+**tests.py  :** app-specific tests.
+
+**views.py  :** request/response logic for our web app.
+
