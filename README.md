@@ -33,7 +33,7 @@ This is a list of SW I am currently using or those tools I have in mind to check
 * [pylint-django](https://github.com/pylint-dev/pylint-django)
 
 ## Code Formatting / Naming
-*[Black](https://pypi.org/project/black/)
+* [Black](https://pypi.org/project/black/)
 Mentioned Static Analyzers can be configured for to enforce custom naming conventions and code style.
 * Pylint
 * Mypy
