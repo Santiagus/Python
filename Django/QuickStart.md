@@ -8,35 +8,35 @@ $ mkdir my_project
 ```
 $ python3 -m venv <MYVENV>
 ```
-- Activate venv
+- Activate virtual environment ()
 ```
 $ . .venv/bin/activate
 ```
 - Install desired Django version
 ```
-(.venv) > python -m pip install django~=4.0.0
+(.venv)$ python -m pip install django~=4.0.0
 ```
 - Create a new Django Project
 ```
-(.venv) > django-admin startproject django_project .
+(.venv)$ django-admin startproject django_project .
 ```
 - Run Django internal web server
 ```
-(.venv) > python3 manage.py runserver
+(.venv)$ python3 manage.py runserver
 ```
 - Verify is running at http://127.0.0.1:8000/
 - Stops it with CONTROL-C
 - Deactivate virtual environment
 ```
-(.venv) > deactivate
+(.venv)$ deactivate
 ```
 - Create App
 ```
-(.venv) > python manage.py startapp <APPNAME>
+(.venv)$ python manage.py startapp <APPNAME>
 ```
 - Check created directory
 ```
-(.venv) > tree
+(.venv)$ tree
 ├── APPNAME
 │ ├── __init__.py
 │ ├── admin.py
@@ -59,3 +59,11 @@ $ . .venv/bin/activate
 
 **views.py  :** request/response logic for our web app.
 
+- Save installed packages in venv
+```
+(.venv)$ pip freeze > requirements.txt
+```
+- To install the packages listed in the requirements.txt file use
+```
+$python -m pip install -r requirements.txt
+```
