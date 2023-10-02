@@ -19,7 +19,9 @@ TEMPLATES = [{"DIRS": [BASE_DIR / "templates"],},]
 ```
 - Create *templates/home.html*
 - Add class view *pages/views.py*
-```from django.views.generic import TemplateView
+```
+from django.views.generic import TemplateView
+
 class HomePageView(TemplateView):
     template_name = "home.html" 
 ```
