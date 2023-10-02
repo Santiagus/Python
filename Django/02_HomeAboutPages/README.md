@@ -36,3 +36,19 @@ from django.urls import path
 from .views import HomePageView
 urlpatterns = [path("", HomePageView.as_view(), name="home"),]
 ```
+
+- Same procedure for about page.
+
+*pages/view.py*
+```
+class AboutPageView(TemplateView): # new
+    template_name = "about.html"
+```
+*pages/urls.py*
+```
+urlpatterns = [path("about/", AboutPageView.as_view(), name="about",]
+```
+*templages/about.html*
+```
+<h1>About page</h1>
+```
