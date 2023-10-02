@@ -1,13 +1,14 @@
 Sample Project with Home and about pages implementation
 
-- Create venv and install Django in it
+- Create venv, activate and install Django in it
 ```
 $python -m venv .venv
+$. .venv/bin/activate
 (.venv)$ python -m pip install django~=4.0.0
 ```
 - Create Django project and app
 ```
-(.venv)$ python django-admin startproject homeabout
+(.venv)$ django-admin startproject homeabout .
 (.venv)$ python manage.py startapp pages
 ```
 - Add app to project's settings and set templates path
