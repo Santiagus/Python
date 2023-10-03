@@ -43,9 +43,46 @@
 - Login at http://127.0.0.1:8000/admin
 
 - Register model to make it appear in admin panel
-    ```django
+    ```python
     from django.contrib import admin
     from .models import Post
 
     admin.site.register(Post)
+    ```
+
+- Update model to show other than 'Post object(id)` in admin panel.
+    ```python
+    from django.db import models
+
+    class Post(models.Model):
+        text = models.TextField()
+
+        def __str__(self):
+            return self.text[:50]
+    ```
+
+- Create view in *posts/views.py* to list post in database.
+
+    ListView automatically returns a context variable called \<model>_list.
+
+    ```python
+    from django.views.generic import ListView
+    from .models import Post
+
+    class HomePageView(ListView):
+        model = Post
+        template_name = "home.html"
+    ```
+- Create templates folder and include the path in *message_board/settings.py*
+    ```python
+    TEMPLATES = [{"DIRS": [BASE_DIR / "templates"],}]
+    ```
+- Create *template/home.html*
+    ```django
+    <h1>Message board homepage</h1>
+    <ul>
+        {% for post in post_list %}
+            <li>{{ post.text }}</li>
+        {% endfor %}
+    </ul>
     ```
