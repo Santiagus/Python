@@ -52,7 +52,7 @@ class AboutPageView(TemplateView): # new
 ```python
 urlpatterns = [path("about/", AboutPageView.as_view(), name="about",]
 ```
-*templages/about.html*
+*templates/about.html*
 ```html
 <h1>About page</h1>
 ```
