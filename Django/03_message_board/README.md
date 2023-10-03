@@ -10,8 +10,28 @@ $ . .venv/bin/activate
 (.venv) $ python3 manage.py startapp posts
 ```
 
-## Update settings
-django_project/settings.py
-```
+- Update *django_project/settings.py*
+```django
 INSTALLED_APPS = ["posts.apps.PostsConfig", # new]
+```
+
+- Create initial database with default settings
+```bash
+$ python manage.py migrate
+```
+
+- Create database model
+```python
+from django.db import models
+
+class Post(models.Model):
+    text = models.TextField()
+```
+- Create migrations file
+```bash
+(.venv) > python manage.py makemigrations posts
+```
+- Build database (which execute instructions in migrations file)
+```bash
+(.venv) > python manage.py migrate
 ```
