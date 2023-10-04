@@ -52,3 +52,67 @@
 
     admin.site.register(Post)
     ```
+
+- Create view
+    ```python
+    from django.views.generic import ListView
+    from .models import Post
+
+    class BlogListView(ListView):
+        model = Post
+        template_name = "home.html"
+    ```
+
+- Create *blog_app/urls.py* adding the created view
+    ```python
+    from django.urls import path
+    from .views import BlogListView
+
+    urlpatterns = [path("", BlogListView.as_view()),]
+    ```
+- Add app in *blog/urls.py*
+    ```python
+    from django.contrib import admin
+    from django.urls import path, include
+
+    urlpatterns = [
+        path("admin/", admin.site.urls),
+        path("", include("blog_app.urls")),
+    ]
+    ```
+
+- Create *templates* folder and add :
+<details>
+<summary>base.html</summary>
+
+```html
+<html> 
+    <head><title>Django blog</title></head>
+    <body>
+    <header>
+        <h1><a href="{% url 'home' %}">Django blog</a></h1>
+    </header>
+    <div>
+        {% block content %}
+        {% endblock content %}
+    </div>
+    </body>
+</html>
+```
+</details>
+
+<details>
+<summary>home.html</summary>
+
+```html
+{% extends "base.html" %}
+{% block content %}
+{% for post in post_list %}
+<div class="post-entry">
+<h2><a href="">{{ post.title }}</a></h2>
+<p>{{ post.body }}</p>
+</div>
+{% endfor %}
+{% endblock content %}
+```
+</details>
