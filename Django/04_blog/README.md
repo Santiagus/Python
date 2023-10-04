@@ -82,37 +82,111 @@
     ```
 
 - Create *templates* folder and add :
-<details>
-<summary>base.html</summary>
+    <details>
+    <summary>base.html</summary>
 
-```html
-<html> 
-    <head><title>Django blog</title></head>
-    <body>
-    <header>
-        <h1><a href="{% url 'home' %}">Django blog</a></h1>
-    </header>
-    <div>
-        {% block content %}
-        {% endblock content %}
+    ```html
+    <html> 
+        <head><title>Django blog</title></head>
+        <body>
+        <header>
+            <h1><a href="{% url 'home' %}">Django blog</a></h1>
+        </header>
+        <div>
+            {% block content %}
+            {% endblock content %}
+        </div>
+        </body>
+    </html>
+    ```
+    </details>
+
+    <details>
+    <summary>home.html</summary>
+
+    ```html
+    {% extends "base.html" %}
+    {% block content %}
+    {% for post in post_list %}
+    <div class="post-entry">
+    <h2><a href="">{{ post.title }}</a></h2>
+    <p>{{ post.body }}</p>
     </div>
-    </body>
-</html>
-```
-</details>
+    {% endfor %}
+    {% endblock content %}
+    ```
+    </details>
 
-<details>
-<summary>home.html</summary>
+- Create *static/css* folder and add *base.css*:
+    <details>
+    <summary>base.css</summary>
 
-```html
-{% extends "base.html" %}
-{% block content %}
-{% for post in post_list %}
-<div class="post-entry">
-<h2><a href="">{{ post.title }}</a></h2>
-<p>{{ post.body }}</p>
-</div>
-{% endfor %}
-{% endblock content %}
-```
-</details>
+    ```css
+    body {
+        font-family: 'Source Sans Pro', sans-serif;
+        font-size: 18px;
+    }
+
+    header {
+        border-bottom: 1px solid #999;
+        margin-bottom: 2rem;
+        display: flex;
+    }
+
+    header h1 a {
+        color: red;
+        text-decoration: none;
+    }
+
+    .nav-left {
+        margin-right: auto;
+    }
+
+    .nav-right {
+        display: flex;
+        padding-top: 2rem;
+    }
+
+    .post-entry {
+        margin-bottom: 2rem;
+    }
+
+    .post-entry h2 {
+        margin: 0.5rem 0;
+    }
+
+    .post-entry h2 a,
+    .post-entry h2 a:visited {
+        color: blue;
+        text-decoration: none;
+    }
+
+    .post-entry p {
+        margin: 0;
+        font-weight: 400;
+    }
+
+    .post-entry h2 a:hover {
+        color: red;
+    }
+    ```
+    </details>
+
+- Add detail view in *blog/views.py*:
+    ```python
+    from django.views.generic import ListView, DetailView
+
+    class BlogDetailView(DetailView):
+        model = Post
+        template_name = "post_detail.html"
+    ```
+- Add *template/post_detail.html*
+    ```django
+    {% extends "base.html" %}
+    {% block content %}
+    <div class="post-entry">
+        <h2>{{ post.title }}</h2>
+        <p>{{ post.body }}</p>
+    </div>
+    {% endblock content %}
+    ```
