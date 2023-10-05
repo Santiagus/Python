@@ -362,3 +362,36 @@
 
     {% endblock content %}
     ```
+*NOTE:* Edit post form should be autofilled with the post info, if not stop the server and run again.
+
+## Add delete post page
+- Create view in *blog/views.py*
+    ```python
+    from django.urls import reverse_lazy
+
+    class BlogDeleteView(DeleteView):
+        model = Post
+        template_name = "post_delete.html"
+        success_url = reverse_lazy("home")
+    ```
+
+- Update *post_detail.html* adding a link to the delete post page:
+    ```html
+    <p><a href="{% url 'post_delete' post.pk %}">+ Delete Blog Post</a></p>
+    ```
+- Add url in *blog/urls.py*:
+    ```python
+    path("post/<int:pk>/delete/", BlogDeleteView.as_view(), name="post_delete"),
+    ```
+
+- Create *post_delete.html* in *templates*:
+    ```django
+    {% extends "base.html" %}
+    {% block content %}
+    <h1>Delete post</h1>
+    <form action="" method="post">{% csrf_token %}
+        <p>Are you sure you want to delete "{{ post.title }}"?</p>
+        <input type="submit" value="Confirm">
+    </form>
+    {% endblock content %}
+    ```
