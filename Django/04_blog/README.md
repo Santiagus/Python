@@ -295,3 +295,70 @@
             )
 
     ```
+
+## Add Form for adding new posts
+- Create view in *blog/views.py*
+    ```python
+    from django.views.generic.edit import CreateView # new
+    class BlogCreateView(CreateView): # new
+        model = Post
+        template_name = "post_new.html"
+        fields = ["title", "author", "body"]
+    ```
+
+- Update *base.html* adding a link to the form page:
+    ```html
+    <div class="nav-right">
+        <a href="{% url 'post_new' %}">+ New Blog Post</a>
+    </div>
+    ```
+- Add url in *blog/urls.py*:
+    ```python
+    from django.urls import path
+    from .views import BlogListView, BlogDetailView, BlogCreateView # new
+    urlpatterns = [path("post/new/", BlogCreateView.as_view(), name="post_new"),]
+    ```
+- Create *post_new.html* in *templates*:
+
+    *NOTE:* **csrf_token** (Cross Site Request Forgery protection)
+    ```django
+    {% extends "base.html" %}
+    {% block content %}
+    <h1>New post</h1>
+    <form action="" method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Save">
+    </form>
+    {% endblock content %}
+    ```
+
+## Add Edit post page
+- Create view in *blog/views.py*
+    ```python
+    class BlogUpdateView(CreateView):
+        model = Post
+        template_name = "post_edit.html"
+        fields = ["title", "body"]
+    ```
+
+- Update *post_detail.html* adding a link to the edit form page:
+    ```html
+    <a href="{% url 'post_edit' post.pk %}"> + Edit Blog Post </a>
+    ```
+- Add url in *blog/urls.py*:
+    ```python
+    path("post/<int:pk>/edit/", BlogUpdateView.as_view(), name="post_edit"),
+    ```
+
+- Create *post_edit.html* in *templates*:
+    ```django
+    {% extends "base.html" %}
+    {% block content %}
+    <h1>Edit post</h1>
+    <form action="" method="post"> {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Update">
+    </form>
+
+    {% endblock content %}
+    ```
