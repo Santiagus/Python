@@ -31,3 +31,11 @@ class BlogTest(TestCase):
             self.assertEqual(str(self.post), "A good title")
         with self.subTest(msg="post url check"):
             self.assertEqual(self.post.get_absolute_url(), "/post/1/")
+
+    def test_url_exists_at_correct_location_listview(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_url_exists_at_correct_location_detailview(self):
+        response = self.client.get("/post/1/")
+        self.assertEqual(response.status_code, 200)
