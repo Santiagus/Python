@@ -8,7 +8,8 @@ Playground to test Python related stuff.
 
 Folders named by frameworks contain examples of those. 
 Number prefix increase with project complexity/size.
-A README.md file can be (usually) find in each folder with breaf indications to reproduce the example from scratch.
+
+A *README.md* file can be (usually) find in each folder with breaf indications to reproduce the example from scratch.
 
 Example:
 ```bash
