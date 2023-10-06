@@ -432,9 +432,29 @@
 ```
 </details>
 
-## Add Log In
+## Add [LoginView](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.views.LoginView)
 
-- Update Settings
+- Create registration folder in *templates*
+    ```bash
+    (.venv) > mkdir templates/registration
+    ```
+- Add *templates/registration/login.html*
+    ```django
+    {% extends "base.html" %}
+    {% block content %}
+    <h2>Log In</h2>
+    <form method="post">{% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Log In</button>
+    </form>
+    {% endblock content %}
+    ```
 - Add url in *blog/urls.html* (project level, not app)
-- Add template at *blog_app/login.html*
+    ```python
+    urlpatterns = [path("accounts/", include("django.contrib.auth.urls")),]
+    ```
+- Update Settings
+    ```python
+    LOGIN_REDIRECT_URL = "home"
+    ```
 
