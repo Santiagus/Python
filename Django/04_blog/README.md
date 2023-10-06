@@ -530,3 +530,23 @@
     </form>
     {% endblock content %}
     ```
+- Add SignUp link in *templates/base.html*
+    ```html
+    <a href="{% url 'signup' %}">Sign Up</a>
+    ```
+
+## Static Files configuration
+- Install *whitenoise*
+    ```bash
+    (.venv) > python -m pip install whitenoise==5.3.0
+    ```
+- Update *blog/settings.py* (project settings)
+    ```python
+    INSTALLED_APPS = ["whitenoise.runserver_nostatic",]
+    MIDDLEWARE = ["whitenoise.middleware.WhiteNoiseMiddleware",
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    ```
+- Run *collectstatic*
+    ```bash
+    (.venv) > python manage.py collectstatic
+    ```
