@@ -483,3 +483,50 @@
     ```python
     LOGOUT_REDIRECT_URL = "home"
     ```
+
+## Sign Up app
+
+- Create accounts app
+    ```bash
+    python manage.py startapp accounts
+    ```
+- Update *blog/settings.py* to add the new app
+    ```python
+    INSTALLED_APPS = ["accounts.apps.AccountsConfig",]
+    ```
+
+- Update *blog/urls.py* to add *accounts/accounts.urls* path
+    ```python
+    urlpatterns = [path("accounts/", include("accounts.urls")),]
+    ```
+
+- Add *SignUpView* in *accounts/views.py*
+    ```python
+    from django.contrib.auth.forms import UserCreationForm
+    from django.urls import reverse_lazy
+    from django.views.generic import CreateView
+
+    class SignUpView(CreateView):
+        form_class = UserCreationForm
+        success_url = reverse_lazy("login")
+        template_name = "registration/signup.html"
+    ```
+- Create *accounts/urls.py* and add path
+    ```python
+    from django.urls import path
+    from .views import SignUpView
+
+    urlpatterns = [path("signup/", SignUpView.as_view(), name="signup"),]
+    ```
+
+- Create *registration/signup.html* file:
+    ```html
+    {% extends "base.html" %}
+    {% block content %}
+    <h2>Sign Up</h2>
+    <form method="post">{% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Sign Up</button>
+    </form>
+    {% endblock content %}
+    ```
