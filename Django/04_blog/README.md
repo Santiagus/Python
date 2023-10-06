@@ -432,6 +432,8 @@
 ```
 </details>
 
+- Add user 
+
 ## Add [LoginView](https://docs.djangoproject.com/en/4.0/topics/auth/default/#django.contrib.auth.views.LoginView)
 
 - Create registration folder in *templates*
@@ -457,4 +459,27 @@
     ```python
     LOGIN_REDIRECT_URL = "home"
     ```
+- Add logged username in *templates/base.html*
+    ```django
+    {% if user.is_authenticated %}
+        <p>Hi {{ user.username }}!</p>        
+    {% else %}
+        <p>You are not logged in.</p>
+        <a href="{% url 'login' %}">Log In</a>
+    {% endif %}
+    ```
 
+## Add Logout
+
+- Add log out link in *templates/base.html*
+    ```django
+    {% if user.is_authenticated %}
+        <p>Hi {{ user.username }}!</p>
+        <p><a href="{% url 'logout' %}">Log out</a></p>
+    {% else %}
+    ```
+
+- Update Settings
+    ```python
+    LOGOUT_REDIRECT_URL = "home"
+    ```
