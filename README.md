@@ -5,6 +5,20 @@
 
 Playground to test Python related stuff.
 
+
+Folders named by frameworks contain examples of those. 
+Number prefix increase with project complexity/size.
+A README.md file can be (usually) find in each folder with breaf indications to reproduce the example from scratch.
+
+Example:
+```bash
+Django
+│   ├── 00_FirstProject
+│   ├── 01_HelloWorld
+│   ├── 02_HomeAboutPages
+│   │   ├── README.md
+```
+
 This is a list of SW I am currently using or those tools I have in mind to check/use soon.
 
 ## Source Control
