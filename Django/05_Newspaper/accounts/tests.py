@@ -39,8 +39,9 @@ class SingUpTetst(TestCase):
                 get_user_model().objects.all()[0].get_username(), "testuser"
             )
         with self.subTest(msg="signup form email check"):
-            # self.assertEqual(get_user_model().objects.all()[0].email, "testuser@email.com")
             self.assertEqual(
-                get_user_model().objects.all()[0].get_email_field_name(),
-                "testuser@email.com",
+                get_user_model().objects.all()[0].email, "testuser@email.com"
             )
+
+        with self.subTest(msg="signup form age check"):
+            self.assertEqual(get_user_model().objects.all()[0].age, 34)
