@@ -34,5 +34,13 @@ class SingUpTetst(TestCase):
         with self.subTest(msg="signup form object count 1"):
             self.assertEqual(get_user_model().objects.all().count(), 1)
         with self.subTest(msg="signup form username check"):
-            self.assertEqual(get_user_model().objects.all()[0].username, "testuser")
-            # get_user_model().objects.all()[0].get_username(), "testuser"
+            # self.assertEqual(get_user_model().objects.all()[0].username, "testuser")
+            self.assertEqual(
+                get_user_model().objects.all()[0].get_username(), "testuser"
+            )
+        with self.subTest(msg="signup form email check"):
+            # self.assertEqual(get_user_model().objects.all()[0].email, "testuser@email.com")
+            self.assertEqual(
+                get_user_model().objects.all()[0].get_email_field_name(),
+                "testuser@email.com",
+            )
