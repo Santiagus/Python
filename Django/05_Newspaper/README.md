@@ -280,3 +280,62 @@ Django will look for templates related to log in and sign up.
             self.assertEqual(get_user_model().objects.all()[0].age, 34)
     ```
     </details>
+
+
+## Add pages app
+- Create *pages* app:
+    ```bash
+    (.venv) > python manage.py startapp pages
+    ```
+
+- Add app config to *django_project/settings/py*:
+    ```python
+    INSTALLED_APPS = ["pages.apps.PagesConfig",]
+    ```
+- Update *django_project/urls.py*:
+    ```python
+    from django.contrib import admin
+    from django.urls import path, include
+
+    urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("accounts/", include("accounts.urls")),
+    path("accounts/", include("django.contrib.auth.urls")),
+    path("", include("pages.urls")), # new
+    ```
+
+- Add *pages/urls.py*:
+    ```python
+    from django.urls import path
+    from .views import HomePageView
+
+    urlpatterns = [path("", HomePageView.as_view(), name="home"),]
+    ```
+
+- Add *pages/views.py*:
+    ```python
+    from django.views.generic import TemplateView
+
+    class HomePageView(TemplateView):
+        template_name = "home.html"
+    ```
+- Add *pages/test.py*:
+    ```python
+    from django.test import SimpleTestCase
+    from django.urls import reverse
+    from http import HTTPStatus
+
+    class HomePageTest(SimpleTestCase):
+        def test_url_exists_at_correct_location_homepageview(self):
+            response = self.client.get("/")
+            self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        def test_homepage_view(self):
+            response = self.client.get(reverse("home"))
+            with self.subTest(msg="homepage name resolution check"):
+                self.assertEqual(response.status_code, HTTPStatus.OK)
+            with self.subTest(msg="homepage template used check"):
+                self.assertTemplateUsed(response, "home.html")
+            with self.subTest(msg="homepage contain check"):
+                self.assertContains(response, "Home")
+    ```
