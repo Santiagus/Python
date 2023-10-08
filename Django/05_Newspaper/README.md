@@ -85,3 +85,116 @@ $ . .venv/bin/activate
     ```
 
 ## User Authentication
+- Create *templates/registration* directory as that’s where
+Django will look for templates related to log in and sign up.
+    ```bash
+    (.venv) $ mk dir templates
+    (.venv) $ mk dir templates/resgistration
+    ```
+
+- Updates *django_project/settings/py* adding templates dir and redir page when login/logout
+    ```python
+    TEMPLATES = [{"DIRS": [BASE_DIR / "templates"], }]
+    LOGIN_REDIRECT_URL = "home"
+    LOGOUT_REDIRECT_URL = "home"
+    ```
+
+- Create templates:
+
+    <details>
+    <summary> template/base.html </summary>
+
+    ```django
+    <!DOCTYPE html>
+    <html>
+        <head>
+        <meta charset="utf-8">
+        <title>{% block title %}Newspaper App{% endblock title %}</title>
+    </head>
+    <body>
+        <main>
+        {% block content %}
+        {% endblock content %}
+        </main>
+    </body>
+    </html>
+    ```
+    </details>
+
+    <details> <summary> template/home.html </summary>
+
+    ```django
+    {% extends "base.html" %}
+
+    {% block title %}Home{% endblock title %}
+
+    {% block content %}
+    {% if user.is_authenticated %}
+        Hi {{ user.username }}!
+        <p><a href="{% url 'logout' %}">Log Out</a></p>
+    {% else %}
+        <p>You are not logged in</p>
+        <a href="{% url 'login' %}">Log In</a> |
+        <a href="{% url 'signup' %}">Sign Up</a>
+    {% endif %}
+    {% endblock content %}
+    ```
+    </details>
+
+    <details> <summary> template/registration/login.html </summary>
+
+    ```django
+    {% extends "base.html" %}
+
+    {% block title %}Log In{% endblock title %}
+
+    {% block content %}
+        <h2>Log In</h2>
+        <form method="post">{% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Log In</button>
+        </form>
+    {% endblock content %}
+    ```
+    </details>
+
+
+    <details> <summary> template/registration/signup.html </summary>
+
+    ```django
+    {% extends "base.html" %}
+
+    {% block title %}Sign Up{% endblock title %}
+
+    {% block content %}
+    <h2>Sign Up</h2>
+    <form method="post">{% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Sign Up</button>
+    </form>
+    {% endblock content %}
+    ```
+    </details>
+
+
+- Create *accounts/views.py*
+    ```python
+    from django.urls import reverse_lazy
+    from django.views.generic import CreateView
+    from .forms import CustomUserCreationForm
+
+
+    class SignUpView(CreateView):
+        form_class = CustomUserCreationForm
+        success_url = reverse_lazy("login")
+        template_name = "registration/signup.html"
+    ```
+
+- Create *accounts/urls.py*
+    ```python
+    from django.urls import path
+    from .views import SignUpView
+
+    urlpatterns = [path("signup/", SignUpView.as_view(), name="signup"),]
+    ```
+
