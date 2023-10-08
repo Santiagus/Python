@@ -31,5 +31,8 @@ class SingUpTetst(TestCase):
         )
         with self.subTest(msg="signup form status_code"):
             self.assertEqual(response.status_code, HTTPStatus.FOUND)
-        with self.subTest(msg="object count 1"):
+        with self.subTest(msg="signup form object count 1"):
             self.assertEqual(get_user_model().objects.all().count(), 1)
+        with self.subTest(msg="signup form username check"):
+            self.assertEqual(get_user_model().objects.all()[0].username, "testuser")
+            # get_user_model().objects.all()[0].get_username(), "testuser"
