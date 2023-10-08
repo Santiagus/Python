@@ -89,7 +89,7 @@ $ . .venv/bin/activate
 Django will look for templates related to log in and sign up.
     ```bash
     (.venv) $ mk dir templates
-    (.venv) $ mk dir templates/resgistration
+    (.venv) $ mk dir templates/registration
     ```
 
 - Updates *django_project/settings/py* adding templates dir and redir page when login/logout
@@ -197,4 +197,34 @@ Django will look for templates related to log in and sign up.
 
     urlpatterns = [path("signup/", SignUpView.as_view(), name="signup"),]
     ```
+- Update *django_project/urls.py*
+    ```python
+    from django.contrib import admin
+    from django.urls import path, include
+    from django.views.generic.base import TemplateView
 
+    urlpatterns = [
+        path("admin/", admin.site.urls),
+        path("accounts/", include("accounts.urls")),
+        path("accounts/", include("django.contrib.auth.urls")),
+        path("", TemplateView.as_view(template_name="home.html"),
+        name="home"),]
+    ```
+
+- Update *accounts/forms.py* to allow set *age* value
+    <details> <summary>accounts/forms.py</summary>
+    ```python
+    from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+    from .models import CustomUser
+
+    class CustomUserCreationForm(UserCreationForm):
+        class Meta(UserCreationForm):
+            model = CustomUser
+            fields = ("username", "email", "age")
+
+    class CustomUserChangeForm(UserChangeForm):
+        class Meta:
+            model = CustomUser
+            fields = ("username", "email", "age")
+    ```
+    </details>
