@@ -551,3 +551,8 @@ Django will look for templates related to log in and sign up.
         </form>    
     {% endblock content %}
     ```
+
+- Create *registration/password_reset_complete.html
+    ```django
+    
+    ```
