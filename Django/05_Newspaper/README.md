@@ -523,3 +523,14 @@ Django will look for templates related to log in and sign up.
     </form>    
     {% endblock content %}    
     ```
+- Create *registration/password_reset_done.html
+   ```django
+   {% extends 'base.html' %}
+   {% block title %}Email Sent{% endblock title %}
+
+   {% block content %}
+    <h1>Check your inbox.</h1>
+    <p>We've emailed you instruccions for settings your passworld.
+    You should receive the email shortly! </p>
+   {% endblock content %}
+   ```
