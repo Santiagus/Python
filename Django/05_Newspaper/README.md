@@ -506,3 +506,20 @@ Django will look for templates related to log in and sign up.
     ```bash
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     ```
+
+- Create *registration/password_reset_form.html*:
+    ```django
+    {% extends 'base.html' %}
+    {% load crispy_forms_tags %}
+    {% block title %}Forgot your Password?{% endblock title %}
+
+    {% block content %}
+    <h1>Forgot your password? </h1>
+    <p>Enter your email address below, and we'll email instructions for settings a new one.</p>
+
+    <form method="post"> {% csrf_token %}
+        {{form|crispy}}
+        <input type="submit" class="btn btn-success" value="Send me instructions!">
+    </form>    
+    {% endblock content %}    
+    ```
