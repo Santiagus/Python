@@ -554,5 +554,13 @@ Django will look for templates related to log in and sign up.
 
 - Create *registration/password_reset_complete.html
     ```django
-    
+    {% extends 'base.html' %}
+    {% block title %}Password reset complete{% endblock title %}
+    {% block content %}
+        <h1>Password reset complete</h1>
+        <p>Your password has been set.</p>
+        <p>Your can log in now on the 
+            <a href="{% url "login" %}"> Log In page. </a>
+        </p>
+    {% endblock content %}
     ```
