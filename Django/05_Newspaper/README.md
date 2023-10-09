@@ -500,3 +500,9 @@ Django will look for templates related to log in and sign up.
     <p>Your password was changed.</p>
     {% endblock content %}
     ```
+
+## Password Reset
+- Update *django_project/settings.py* to send info to terminal:
+    ```bash
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    ```
