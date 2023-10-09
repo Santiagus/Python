@@ -534,3 +534,20 @@ Django will look for templates related to log in and sign up.
     You should receive the email shortly! </p>
    {% endblock content %}
    ```
+
+- Create *registration/password_reset_confirm.html
+    ```django
+    {% extends 'base.html' %}
+
+    {% load crispy_forms_tags %}
+
+    {% block title %}Enter new password{% endblock title %}
+
+    {% block content %}
+        <h1>Set a new password</h1>
+        <form method="post"> {% csrf_token %}
+            {{ form|crispy }}
+            <input type="submit" value="Change my password">
+        </form>    
+    {% endblock content %}
+    ```
