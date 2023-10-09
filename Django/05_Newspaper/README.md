@@ -564,3 +564,50 @@ Django will look for templates related to log in and sign up.
         </p>
     {% endblock content %}
     ```
+
+## Add Articles App
+- Create Articles App
+    ```bash
+    (venv) $ python manage.py startapp articles
+    ```
+
+- Add app in *django_project/settings.py*:
+    ```python
+    INSTALLED_APPS = ["articles.apps.ArticlesConfig",]
+    ```
+
+- Add *articles/model.py*:
+    ```python
+    from django.conf import settings
+    from django.db import models
+    from django.urls import reverse
+
+    class Article(models.Model):
+        title = models.CharField(max_length=255)
+        body = models.TextField()
+        date = models.DateTimeField(auto_now_add=True)
+        author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        )
+
+        def __str__(self):
+            return self.title
+
+        def get_absolute_url(self):
+            return reverse("article_detail", kwargs={"pk": self.pk})
+    ```
+
+- Articles app models migration
+    ```bash
+    (.venv) > python manage.py makemigrations articles
+    (.venv) > python manage.py migrate
+    ``` 
+- Register article models to make it visible in admin panel
+    ```python
+    # articles/admin.py
+    from django.contrib import admin
+    from .models import Article
+
+    admin.site.register(Article)
+    ```
