@@ -611,3 +611,54 @@ Django will look for templates related to log in and sign up.
 
     admin.site.register(Article)
     ```
+
+- Add tree articles with superuser
+
+- Add *articles.urls* to *django_project/urls.py*:
+    ```python
+    urlpatterns = [path("articles/", include("articles.urls")),]
+    ```
+- Update *articles/views.py*:
+    ```python
+    from django.views.generic import ListView
+    from .models import Article
+    class ArticleListView(ListView):
+        model = Article
+        template_name = "article_list.html"
+    ```
+- Update *articles/urls.py*:
+    ```python
+    from django.urls import path
+    from .views import ArticleListView
+    urlpatterns = [path("", ArticleListView.as_view(),name="artible_list"),]
+    ```
+
+- Create *templates/article_list.html*:
+    <details> <summary>article_list.html</summary>
+    ```django
+    {% extends "base.html" %}
+
+    {% block title %}Articles{% endblock title %}
+
+    {% block content %}
+    {% for article in article_list %}
+    <div class="card">
+        <div class="card-header">
+            <span class="font-weight-bold">{{ article.title }}</span> &middot;
+            <span class="text-muted">by {{ article.author }} |
+            {{ article.date }}</span>
+        </div>
+        <div class="card-body">
+            {{ article.body }}
+        </div>
+        <div class="card-footer text-center text-muted">
+            <a href="#">Edit</a> | <a href="#">Delete</a>
+        </div>
+        </div>
+        <br />
+    {% endfor %}
+    {% endblock content %}
+    ```
+    </details>
+
+- Check *http://127.0.0.1:8000/articles/*
