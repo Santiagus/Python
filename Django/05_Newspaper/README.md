@@ -422,3 +422,55 @@ Django will look for templates related to log in and sign up.
     ```html
     <button class="btn btn-success ml-2" type="submit">Log In</button>
     ```
+
+## Restyle the help_text in forms
+- Install crispy
+    ```bash
+    (.venv) > python -m pip install django-crispy-forms==1.13.0
+    (.venv) > python -m pip install crispy-bootstrap5==0.6
+    ```
+- Add app in *django_project/settings.py*:
+    ```python
+    INSTALLED_APPS = [
+    "django.contrib....
+    # 3rd Party
+    "crispy_forms", # new
+    "crispy_bootstrap5", # new
+    # Local
+    "accounts.apps.AccountsConfig",
+    "pages.apps.PagesConfig",
+    ]
+    CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+    CRISPY_TEMPLATE_PACK = "bootstrap5"
+    ```
+- Update *registration/signup.html* to *crispy* style:
+    ```django
+    {% extends "base.html" %}
+    {% load crispy_forms_tags %}
+    {% block title %}Sign Up{% endblock title %}
+
+    {% block content %}
+    <h2>Sign Up</h2>
+    <form method="post">{% csrf_token %}
+        {{ form|crispy }}
+        <button class="btn btn-success" type="submit">Sign Up</button>
+    </form>
+    {% endblock content %}
+    ```
+
+- Update *registration/login.html* to *crispy* style:
+    ```django
+    {% extends "base.html" %}
+    {% load crispy_forms_tags %}
+    {% block title %}Log In{% endblock title %}
+
+    {% block content %}
+        <h2>Log In</h2>
+        <form method="post">{% csrf_token %}
+            {{ form|crispy }}
+            <button class="btn btn-success ml-2" type="submit">Log In</button>
+        </form>
+    {% endblock content %}
+    ```
+
+
