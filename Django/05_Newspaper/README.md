@@ -827,3 +827,153 @@ Django will look for templates related to log in and sign up.
     
     class ArticleCreateView(LoginRequiredMixin, CreateView):
     ```
+
+- Update rest of views in *articles/views.py* to only allow logged users
+
+- Update *articles/views.py* to only allow edit/delete to article's owner:
+    ```python
+    from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+
+    class ArticleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+        model = Article
+        fields = ("title", "body")
+        template_name = "article_edit.html"
+
+        def test_func(self):
+            obj = self.get_object()
+            return obj.author == self.request.user
+
+    class ArticleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+        model = Article
+        template_name = "article_delete.html"
+        success_url = reverse_lazy("article_list")
+
+        def test_func(self):
+            obj = self.get_object()
+            return obj.author == self.request.user
+    ```
+
+## Create comments per article
+
+- Add Comment model to *articles/models.py*:
+    ```python
+    class Comments(models.Model):
+        article = models.ForeignKey(Article, on_delete=models.CASCADE)
+        comment = models.CharField(max_length=140)
+        author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+        def __str__(self) -> str:
+            return self.comment
+
+        def get_absolute_url(self):
+            return reverse("article_list")
+    ```
+
+- Add model to the database
+    ```bash
+    (.venv) > python manage.py makemigrations articles
+    (.venv) > python manage.py migrate
+    ```
+
+- Register model in *articles/admin.py*:
+    ```python
+    from django.contrib import admin
+    from .models import Article, Comment
+
+    admin.site.register(Article)
+    admin.site.register(Comment)
+    ```
+
+- Check model in admin panel http://127.0.0.1:8000/admin/
+
+- Add inline view to see all article's related comments in admin panel
+    <details><summary>articles/admin.py</summary>
+
+    ```python
+    from django.contrib import admin
+    from .models import Article, Comment
+
+    class CommentInLine(admin.StackedInline):
+        model = Comment
+        extra = 1 # default = 3
+    class ArticleAdmin(admin.ModelAdmin):
+        inlines = [CommentInLine,]
+
+    admin.site.register(Article, ArticleAdmin)
+    admin.site.register(Comment)
+    ```
+    </details>
+
+- Add Tabular view in *articles/admin.py* and pick prefered view
+    ```python
+    class CommentInline(admin.TabularInline):
+        model = Comment
+    ```
+
+- Update *templates/article_list.html* to show commets per article:
+    <details><summary>templates/article_list.html</summary>
+
+    ```django
+    {% extends "base.html" %}
+
+    {% block title %}Articles{% endblock title %}
+
+    {% block content %}
+    {% for article in article_list %}
+    <div class="card">
+        <div class="card-header">
+            <a href="{% url 'article_detail' article.pk %}">
+                <span class="font-weight-bold">{{ article.title }}</span>
+            </a> &middot;
+            <span class="text-muted">by {{ article.author }} |
+            {{ article.date }}</span>
+        </div>
+        <div class="card-body">
+            <p>{{ article.body }}</p>
+            <a href="{% url 'article_edit' article.pk %}">Edit</a> |
+            <a href="{% url 'article_delete' article.pk %}">Delete</a>
+            </div>
+            <div class="card-footer">
+            {% for comment in article.comment_set.all %}
+                <p>
+                <span class="font-weight-bold">
+                {{ comment.author }} &middot;
+                </span>
+                {{ comment }}
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+    <br />
+    {% endfor %}
+    {% endblock content %}
+    ```
+    </details>
+
+- Update *templates/article_detail.html* to show commets per article:
+    <details><summary>templates/article_detail.html</summary>
+
+    ```django
+    {% extends "base.html" %}
+
+    {% block content %}
+    <div class="article-entry">
+        <h2>{{ object.title }}</h2>
+        <p> {{ object.author }} | {{ object.date }} </p>
+        <p> {{ object.body }}</p>
+    </div>
+
+    <hr>
+    <h4>Comments</h4>
+    {% for comment in article.comment_set.all %}
+        <p>{{ comment.author }} &middot; {{ comment }}</p>
+    {% endfor %}
+    <hr>
+
+    <p><a href="{% url 'article_edit' article.pk %}">Edit</a> |
+    <a href="{% url 'article_delete' article.pk %}">Delete</a>
+    </p>
+    <p> Back to <a href="{% url 'article_list'%}">All Articles</a> </p>
+    {% endblock content %}
+    ```
+    </details>
