@@ -746,7 +746,7 @@ Django will look for templates related to log in and sign up.
     </details>
 
     <details><summary>templates/article_delete.html</summary>
-    
+
     ```django
     {% extends "base.html" %}
     {% block content %}
@@ -758,4 +758,50 @@ Django will look for templates related to log in and sign up.
     {% endblock content %}
     ```
     </details>
+
+## Add articles creation
+- Add Create View:
+    <details><summary>article/views.py</summary>
+
+    ```python
+    from django.views.generic import (CreateView,)
+    from .models import Article
+
+    class ArticleCreateView(CreateView):
+        model = Article
+        template_name = "article_new.html"
+        fields = ("title", "author", "body")
+    ```
+    </details>
+
+- Update *articles/urls.py*:
+    <details><summary>articles/urls.py</summary>
     
+    ```python
+    from django.urls import path
+    from .views import (ArticleCreateView,)
+
+    urlpatterns = [path("new/", ArticleCreateView.as_view(), name="article_new"),]  
+    ```
+    </details>
+
+- Create *templates/article_new.html*:
+    <details><summary>templates/article_new.html</summary>
+
+    ```django
+    {% extends "base.html" %}
+    {% load crispy_forms_tags %}
+    {% block content %}
+    <h1>New article</h1>
+    <form action="" method="post">{% csrf_token %}
+        {{ form|crispy}}
+        <button type="submit" class="btn btn-success ml-2">Save</button>
+    </form>
+    {% endblock content %}
+    ```
+    </details>
+
+- Update *+ New* link in *templates/base.html* to ref *article_new.html*:
+    ```html
+    <li><a href="{% url 'article_new' %}" class="nav-link px-2 link-dark">+ New</a></li>
+    ```
