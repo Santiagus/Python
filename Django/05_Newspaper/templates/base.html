@@ -14,6 +14,7 @@ initial-scale=1, shrink-to-fit=no">
     <div class="container">
     <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
     <a class="navbar-brand" href="{% url 'home' %}">Newspaper</a>
+    <a class="nav-link px-2 link-dark" href="{% url 'article_list' %}">All Articles</a>
     <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
     {% if user.is_authenticated %}
         <li><a href="{% url 'article_new' %}" class="nav-link px-2 link-dark">+ New</a></li>
