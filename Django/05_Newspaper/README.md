@@ -977,3 +977,106 @@ Django will look for templates related to log in and sign up.
     {% endblock content %}
     ```
     </details>
+
+## Add form in website to allow users to add comments
+
+- Create *articles/forms.py*:
+    ```python
+    from django import forms
+    from .models import Comment
+
+    class CommentForm(forms.ModelForm):
+        class Meta:
+            model = Comment
+            fields = ("comment", "author")
+    ```
+
+- Update *articles/views.py*:
+    ```python
+    from .forms import CommentForm # new
+    class ArticleDetailView(LoginRequiredMixin, DetailView):
+        model = Article
+        template_name = "article_detail.html"
+
+        def get_context_data(self, **kwargs): # new
+            context = super().get_context_data(**kwargs)
+            context['form'] = CommentForm()
+            return context
+    ```
+- Update *templates/article_detail.html*:
+    <details>
+
+    ```django
+    {% extends "base.html" %}
+    {% load crispy_forms_tags %} <!-- new! -->
+    {% block content %}
+    <div class="article-entry">
+        <h2>{{ object.title }}</h2>
+        <p>by {{ object.author }} | {{ object.date }}</p>
+        <p>{{ object.body }}</p>
+    </div>
+    <hr>   
+    <h4>Comments</h4>
+    {% for comment in article.comment_set.all %}
+        <p>{{ comment.author }} &middot; {{ comment }}</p>
+    {% endfor %}
+    <hr>
+    <h4>Add a comment</h4>
+    <form action="" method="post">{% csrf_token %}
+        {{ form|crispy }}
+        <button class="btn btn-success ml-2" type="submit">Save</button>
+    </form>
+    
+    <p><a href="{% url 'article_edit' article.pk %}">Edit</a> |
+    <a href="{% url 'article_delete' article.pk %}">Delete</a></p>
+    <p>Back to <a href="{% url 'article_list' %}">All Articles</a>.</p>
+    {% endblock content %}
+    ```
+    </details>
+
+- Update *articles/views.py*:
+    <details>
+
+    ```python    
+    from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+    from django.views import View
+    from django.views.generic import ListView, DetailView, FormView
+    from django.views.generic.detail import SingleObjectMixin
+    from django.views.generic.edit import UpdateView, DeleteView, CreateView
+    from django.urls import reverse_lazy, reverse
+    from .forms import CommentForm
+
+    class CommentGet(DetailView):
+        model = Article
+        template_name = "article_detail.html"
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            context["form"] = CommentForm()
+            return context
+
+     class CommentPost(SingleObjectMixin, FormView): # new
+        model = Article
+        form_class = CommentForm
+        template_name = "article_detail.html"
+
+        def post(self, request, *args, **kwargs):
+            self.object = self.get_object()
+            return super().post(request, *args, **kwargs)
+        def form_valid(self, form):
+            comment = form.save(commit=False)
+            comment.article = self.object
+            comment.save()
+            return super().form_valid(form)
+        def get_success_url(self):
+            article = self.get_object()
+            return reverse("article_detail", kwargs={"pk": article.pk})
+            
+    class ArticleDetailView(LoginRequiredMixin, View):
+        def get(self, request, *args, **kwargs):
+            view = CommentGet.as_view()
+            return view(request, *args, **kwargs)
+        def post(self, request, *args, **kwargs):
+            view = CommentPost.as_view()
+            return view(request, *args, **kwargs)
+    ```
+    </details>
