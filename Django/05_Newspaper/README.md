@@ -805,3 +805,25 @@ Django will look for templates related to log in and sign up.
     ```html
     <li><a href="{% url 'article_new' %}" class="nav-link px-2 link-dark">+ New</a></li>
     ```
+## Permission and Authorization
+
+- Update *articles/views.py* to set logged userd as author when creating an article:
+
+    ```python
+    class ArticleCreateView(CreateView):
+        model = Article
+        template_name = "article_new.html"
+        fields = ("title", "body")
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+    return super().form_valid(form)
+    ```
+
+- Update *articles/views.py* to redirect not logged users when accesing to ArticleCreateView:
+
+    ```python
+    from django.contrib.auth.mixins import LoginRequiredMixin
+    
+    class ArticleCreateView(LoginRequiredMixin, CreateView):
+    ```
