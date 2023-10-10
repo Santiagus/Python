@@ -667,7 +667,7 @@ Django will look for templates related to log in and sign up.
 ## Add detail, edit, and delete options for the articles.
 
 - Create *article/views.py*:
-    <detail><summary>article/views.py</summary>
+    <details><summary>article/views.py</summary>
 
     ```python
     from django.views.generic import ListView, DetailView, UpdateView, DeleteView
@@ -692,7 +692,7 @@ Django will look for templates related to log in and sign up.
         template_name = "article_delete.html"
         success_url = reverse_lazy("article_list")
     ```
-    </detail>
+    </details>
 
 - Create *articles/urls.py*:
     ```python
@@ -711,3 +711,51 @@ Django will look for templates related to log in and sign up.
         path("", ArticleListView.as_view(), name="article_list"),
     ]
     ```
+
+- Add article templates:
+    <details> <summary>templates/article_detail.html</summary>
+    
+    ```django    
+    {% extends "base.html" %}
+    {% block content %}
+    <div class="article-entry">
+        <h2>{{ object.title }}</h2>
+        <p>by {{ object.author }} | {{ object.date }}</p>
+        <p>{{ object.body }}</p>
+    </div>
+    <p><a href="{% url 'article_edit' article.pk %}">Edit</a> |
+    <a href="{% url 'article_delete' article.pk %}">Delete</a></p>
+    <p>Back to <a href="{% url 'article_list' %}">All Articles</a>.</p>
+    {% endblock content %}    
+    ```
+    </details>
+
+    <details><summary>templates/article_edit.html</summary>
+
+    ```django
+    {% extends 'base.html' %}
+    {% load crispy_forms_tags %}
+    {% block content %}
+        <h1>Edit</h1>
+        <form action="" method="post"> {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-info ml-2">Update</button>
+        </form>
+    {% endblock content %}
+    ```
+    </details>
+
+    <details><summary>templates/article_delete.html</summary>
+    
+    ```django
+    {% extends "base.html" %}
+    {% block content %}
+    <h1>Delete</h1>
+    <form action="" method="post"> {% csrf_token %}
+        <p>Are you sure you want to delete "{{ article.title }}"?</p>
+        <button type="submit" class="btn btn-danger ml-2">Confirm</button>
+    </form>
+    {% endblock content %}
+    ```
+    </details>
+    
