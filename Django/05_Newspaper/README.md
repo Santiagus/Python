@@ -635,6 +635,7 @@ Django will look for templates related to log in and sign up.
 
 - Create *templates/article_list.html*:
     <details> <summary>article_list.html</summary>
+
     ```django
     {% extends "base.html" %}
 
@@ -662,3 +663,51 @@ Django will look for templates related to log in and sign up.
     </details>
 
 - Check *http://127.0.0.1:8000/articles/*
+
+## Add detail, edit, and delete options for the articles.
+
+- Create *article/views.py*:
+    <detail><summary>article/views.py</summary>
+
+    ```python
+    from django.views.generic import ListView, DetailView, UpdateView, DeleteView
+    from django.urls import reverse_lazy
+    from .models import Article
+
+    class ArticleListView(ListView):
+        model = Article
+        template_name = "article_list.html"
+
+    class ArticleDetailView(DetailView):
+        model = Article
+        template_name = "article_detail.html"
+
+    class ArticleUpdateView(UpdateView):
+        model = Article
+        fields = ("title", "body")
+        template_name = "article_edit.html"
+
+    class ArticleDeleteView(DeleteView):
+        model = Article
+        template_name = "article_delete.html"
+        success_url = reverse_lazy("article_list")
+    ```
+    </detail>
+
+- Create *articles/urls.py*:
+    ```python
+    from django.urls import path
+    from .views import (
+        ArticleListView,
+        ArticleDetailView,
+        ArticleUpdateView,
+        ArticleDeleteView,
+    )
+
+    urlpatterns = [
+        path("<int:pk>/", ArticleDetailView.as_view(), name="article_detail"),
+        path("<int:pk>/edit/", ArticleUpdateView.as_view(), name="article_update"),
+        path("<int:pk>/delete/", ArticleDeleteView.as_view(), name="article_delete"),
+        path("", ArticleListView.as_view(), name="article_list"),
+    ]
+    ```
