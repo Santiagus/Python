@@ -23,3 +23,8 @@ components:
       type: object
       required:
         - order
+      properties:
+        order:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemSchema'
