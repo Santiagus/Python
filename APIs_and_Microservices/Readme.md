@@ -51,12 +51,13 @@ Example:
 ## Setup: 
 
 1. Create a virtual environment per project \
-```python -m venv .venv```
+```$ python -m venv .venv```
 
-2. Install required packages: \
-``` pip install -r requirements```
+2. Activate virtual environment\
+```$ . .venv/bin/activate```
 
-3. Follow steps in `Readme.md` file
+3. Install required packages: \
+```$ pip install -r requirements```
 
-
+4. Follow steps in `Readme.md` file
 
