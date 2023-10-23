@@ -4,7 +4,11 @@ from uuid import UUID
 from starlette.responses import Response
 from starlette import status
 from orders.app import app
-from orders.api.schemas import CreateOrderSchema
+from orders.api.schemas import (
+    GetOrderSchema,
+    CreateOrderSchema,
+    GetOrdersSchema,
+)
 from http import HTTPStatus
 
 # Static order for testing purpose
@@ -16,12 +20,12 @@ order = {
 }
 
 
-@app.get("/orders")
+@app.get("/orders", response_model=GetOrdersSchema)
 def get_orders():
     return {"orders": [order]}
 
 
-@app.post("/orders", status_code=status.HTTP_201_CREATED)
+@app.post("/orders", status_code=status.HTTP_201_CREATED, response_model=GetOrderSchema)
 def create_order(order_details: CreateOrderSchema):
     return order
 
