@@ -24,7 +24,7 @@ class OrderItemSchema(BaseModel):
     product: str
     size: Size
     # quantity: Optional[conint(ge=1, strict=True)] = 1
-    quantity: Annotated[int, Field(strict=True, ge=1)]
+    quantity: Annotated[int, Field(strict=True, ge=1)] = 1
 
 
 class CreateOrderSchema(BaseModel):
