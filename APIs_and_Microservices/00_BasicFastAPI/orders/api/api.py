@@ -4,7 +4,7 @@ from uuid import UUID
 from starlette.responses import Response
 from starlette import status
 from orders.app import app
-
+from http import HTTPStatus
 
 # Static order for testing purpose
 order = {
