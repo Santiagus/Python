@@ -1,7 +1,7 @@
 # file: orders/api/schemas.py
 from enum import Enum
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List, Annotated
 from uuid import UUID
 
@@ -24,7 +24,12 @@ class OrderItemSchema(BaseModel):
     product: str
     size: Size
     # quantity: Optional[conint(ge=1, strict=True)] = 1
-    quantity: Annotated[int, Field(strict=True, ge=1)] = 1
+    quantity: Annotated[int, Field(strict=True, ge=1, le=10)] = 1
+
+    @validator("quantity")
+    def quantity_non_nullable(cls, value):
+        assert value is not None, "quantity may not be None"
+        return value
 
 
 class CreateOrderSchema(BaseModel):
