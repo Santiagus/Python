@@ -89,7 +89,7 @@ REST APIs.
 
     @app.get('/orders')
     def get_orders():
-    return {'orders': [orders]}
+    return {'orders': [order]}
 
     @app.post('/orders', status_code=status.HTTP_201_CREATED)
     def create_order():
@@ -121,6 +121,43 @@ REST APIs.
 5. Run app
 ```$ uvicorn orders.app:app --reload```
 
-6. Check API  
+6. Check REST API
 + [Swagger UI](http://127.0.0.1:8000/docs)
 + [Redoc](http://127.0.0.1:8000/redoc)
+
+*order_id* is static at this point : ***ff0f1355-e821-4178-9567-550dec27a373***
+
+Method | Description               | Endpoint
+-------| ------------------------- | ----------
+GET    | /orders                   | http://127.0.0.1:8000/orders
+POST   | /orders                   | http://127.0.0.1:8000/orders
+GET    | /orders/{order_id}        | http://127.0.0.1:8000/ff0f1355-e821-4178-9567-550dec27a373
+PUT    | /orders/{order_id}        | http://127.0.0.1:8000/ff0f1355-e821-4178-9567-550dec27a373
+DELETE | /orders/{order_id}        | http://127.0.0.1:8000/ff0f1355-e821-4178-9567-550dec27a373
+POST   | /orders/{order_id}/cancel | http://127.0.0.1:8000/ff0f1355-e821-4178-9567-550dec27a373/cancel
+POST   | /orders/{order_id}/pay    | http://127.0.0.1:8000/ff0f1355-e821-4178-9567-550dec27a373/pay
+
+
+All but DELETE should return the following response body:
+
+<details><summary>Server Response</summary>
+
+```json
+{
+  "orders": [
+    {
+      "id": "ff0f1355-e821-4178-9567-550dec27a373",
+      "status": "delivered",
+      "created": "2023-10-23T09:34:18.722191",
+      "order": [
+        {
+          "product": "cappuccino",
+          "size": "medium",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}
+```
+</details>
