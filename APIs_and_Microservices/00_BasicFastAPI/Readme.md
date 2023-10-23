@@ -64,6 +64,8 @@ order = {
     ]
 }
 ```
+</details>
+</br>
 
 **4. Orders API Minimal Implementation** 
 <details>
@@ -120,9 +122,9 @@ def pay_order(order_id: UUID):
     return order
 ```
 </details>
+</br>
 
-
-**5. Run app**
+**5. Run app** \
 ```$ uvicorn orders.app:app --reload```
 
 **6. Check REST API**
@@ -179,6 +181,27 @@ def create_order(order_details: CreateOrderSchema):
 
 @app.put('/orders/{order_id}')
 def update_order(order_id: UUID, order_details: CreateOrderSchema):
+    return order
+```
+</details>
+</br>
+
+**8. Response payloads validation**
+<details><summary>orders/api/api.py</summary>
+
+```python
+from orders.api.schemas import (
+GetOrderSchema,
+CreateOrderSchema,
+GetOrdersSchema,
+)
+
+@app.get('/orders', response_model=GetOrdersSchema)
+def get_orders():
+    return [order]
+
+@app.post('/orders', status_code=status.HTTP_201_CREATED, response_model=GetOrderSchema,)
+def create_order(order_details: CreateOrderSchema):
     return order
 ```
 </details>
