@@ -28,3 +28,30 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrderItemSchema'
+
+    GetOrderSchema:
+      type: object
+      required:
+        - order
+        - id
+        - created
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        created:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - created
+            - progress
+            - cancelled
+            - dispatched
+            - delivered
+        order:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemSchema'
