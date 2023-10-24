@@ -171,6 +171,54 @@ def update_order(order_id: UUID, order_details: CreateOrderSchema):
 </details>
 </br>
 
+<details><summary>orders/api/schemas.py</summary>
+
+```python
+from enum import Enum
+from datetime import datetime
+from pydantic import BaseModel, Field, validator, root_validator
+from typing import List, Annotated
+from uuid import UUID
+
+class Size(Enum):
+    small = "small"
+    medium = "medium"
+    big = "big"
+
+class Status(Enum):
+    created = "created"
+    progress = "progress"
+    cancelled = "cancelled"
+    dispatched = "dispatched"
+    delivered = "delivered"
+
+class OrderItemSchema(BaseModel):
+    product: str
+    size: Size    
+    quantity: Annotated[int, Field(strict=True, ge=1, le=10)] = 1
+
+    @validator("quantity")
+    def quantity_non_nullable(cls, value):
+        assert value is not None, "quantity may not be None"
+        return value
+
+class CreateOrderSchema(BaseModel):
+    order: Annotated[List[OrderItemSchema], Field(min_length=1)]
+
+class GetOrderSchema(CreateOrderSchema):
+    id: UUID
+    created: datetime
+    updated: datetime
+    status: Status
+
+
+class GetOrdersSchema(BaseModel):
+    orders: List[GetOrderSchema]
+```
+</details>
+</br>
+
+
 **8. Response payloads validation**
 <details><summary>orders/api/api.py</summary>
 
@@ -183,7 +231,8 @@ GetOrdersSchema,
 
 @app.get('/orders', response_model=GetOrdersSchema)
 def get_orders():
-    return [order]
+    return GetOrdersSchema(orders=ORDERS)
+
 
 @app.post('/orders', status_code=status.HTTP_201_CREATED, response_model=GetOrderSchema,)
 def create_order(order_details: CreateOrderSchema):
