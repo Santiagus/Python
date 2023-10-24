@@ -40,6 +40,7 @@ class CreateOrderSchema(BaseModel):
 class GetOrderSchema(CreateOrderSchema):
     id: UUID
     created: datetime
+    updated: datetime
     status: Status
 
 
