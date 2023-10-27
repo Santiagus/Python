@@ -1,7 +1,7 @@
 # file: orders/api/schemas.py
 from enum import Enum
 from datetime import datetime
-from pydantic import BaseModel, Field, validator, root_validator, conlist
+from pydantic import BaseModel, Field, validator, root_validator, conlist, Extra
 from typing import List, Annotated, Union
 from uuid import UUID
 
@@ -31,11 +31,15 @@ class OrderItemSchema(BaseModel):
         assert value is not None, "quantity may not be None"
         return value
 
+    class Config:
+        extra = "forbid"
+
 
 class CreateOrderSchema(BaseModel):
-    # order: conlist(OrderItemSchema, min_items=1)
     orders: Annotated[List[OrderItemSchema], Field(min_length=1)]
-    # order: List[OrderItemSchema]
+
+    class Config:
+        extra = "forbid"
 
 
 class GetOrderSchema(CreateOrderSchema):
@@ -49,6 +53,10 @@ class GetOrdersSchema(BaseModel):
     # orders: List[GetOrderSchema]
     orders: Annotated[List[GetOrderSchema], Field(min_length=0)]
 
+    class Config:
+        extra = "forbid"
+
+    # order: List[OrderItemSchema]
     # @root_validator(pre=True)
     # def validate_data(cls, orders):
     #     if orders == []:
