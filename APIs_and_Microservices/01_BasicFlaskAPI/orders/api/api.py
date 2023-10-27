@@ -1,5 +1,5 @@
 # file: orders/api/api.py
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 import uuid
 
 from datetime import datetime
@@ -28,9 +28,26 @@ ORDERS = []
 
 
 @app.get("/orders", response_model=GetOrdersSchema)
-def get_orders():
+def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
     # return ORDERS
-    return GetOrdersSchema(orders=ORDERS)
+    if cancel_order is None and limit is None:
+        return GetOrdersSchema(orders=ORDERS)
+        # return {"orders": ORDERS}
+
+    query_set = [order for order in ORDERS]
+
+    if cancelled is not None:
+        if cancelled:
+            query_set = [order for order in query_set if order["status"] == "cancelled"]
+            # query_set = filter(lambda ord: ord[status] == "cancelled", query_set)
+        else:
+            query_set = [order for order in query_set if order["status"] != "cancelled"]
+            # query_set = filter(lambda ord: ord[status] != "cancelled", query_set)
+
+    if limit is not None and len(query_set) > limit:
+        return {"orders": query_set[:limit]}
+
+    return {"orders": query_set}
 
 
 @app.post(
