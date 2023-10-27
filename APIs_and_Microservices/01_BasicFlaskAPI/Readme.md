@@ -65,3 +65,40 @@ def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
 ####  Check orders endpoint filtering
 Run : ```uvicorn orders.app:app --reload``` \
 Check: http://127.0.0.1:8000/docs
+
+#### Disallowing additional properties in models
+<details> <summary> Update oas.yaml </summary>
+
+```yaml
+    OrderItemSchema:
+      additionalProperties: false
+
+    CreateOrderSchema:
+        additionalProperties: false
+
+    GetOrderSchema:
+        additionalProperties: false
+```
+</details>
+
+<details> <summary> Update schemas.py </summary>
+
+```python
+    from pydantic import Extra
+
+    class OrderItemSchema(BaseModel):
+        ...
+        class Config:
+            extra = "forbid"
+
+    class CreateOrderSchema(BaseModel):
+        ...
+        class Config:
+            extra = "forbid"
+
+    class GetOrdersSchema(BaseModel):
+        ...
+        class Config:
+            extra = "forbid"
+```
+</details>
