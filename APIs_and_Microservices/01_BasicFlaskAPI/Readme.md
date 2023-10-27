@@ -31,3 +31,37 @@ Flask-smorest is a REST API framework built on top of Flask and marshmallow
 **7. Check app is working** \
 Run : ```uvicorn orders.app:app --reload``` \
 Check: http://127.0.0.1:8000/docs
+
+## Implementations
+
+#### Add query parameters to orders:
+
+<details>
+
+```python
+from typing import Annotated, List, Optional
+
+@app.get("/orders", response_model=GetOrdersSchema)
+def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
+    if cancel_order is None and limit is None:
+        return GetOrdersSchema(orders=ORDERS)
+
+    query_set = [order for order in ORDERS]
+
+    if cancelled is not None:
+        if cancelled:
+            query_set = [order for order in query_set if order["status"] == "cancelled"]
+        else:
+            query_set = [order for order in query_set if order["status"] != "cancelled"]
+
+    if limit is not None and len(query_set) > limit:
+        return {"orders": query_set[:limit]}
+
+    return {"orders": query_set}
+```
+</details>
+</br>
+
+####  Check orders endpoint filtering
+Run : ```uvicorn orders.app:app --reload``` \
+Check: http://127.0.0.1:8000/docs
