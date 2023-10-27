@@ -102,3 +102,39 @@ Check: http://127.0.0.1:8000/docs
             extra = "forbid"
 ```
 </details>
+
+### Override FastAPI generated specification
+
+```pip install pyyaml```
+
+<details><summary>orders/orders/app.py</summary>
+
+```python
+    from pathlib import Path
+    import yaml
+
+    from fastapi import FastAPI
+    app = FastAPI(debug=True)
+
+    oas_doc = yaml.safe_load((Path(__file__).parent / '../oas.yaml').read_text())
+
+    app.openapi = lambda: oas_doc
+
+    from orders.api import api
+```
+</details>
+
+<details><summary>orders/oas.yaml</summary>
+
+```yaml
+openapi: 3.0.3
+
+servers:
+    - url: http:/ /localhost:8000
+    description: URL for local development and testing
+    - url: https:/ /coffeemesh.com
+    description: main production server
+    - url: https:/ /coffeemesh-staging.com
+    description: staging server for testing purposes only
+```
+</details>
