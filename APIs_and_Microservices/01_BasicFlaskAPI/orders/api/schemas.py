@@ -47,7 +47,7 @@ class GetOrderSchema(CreateOrderSchema):
 
 class GetOrdersSchema(BaseModel):
     # orders: List[GetOrderSchema]
-    orders: Annotated[List[GetOrderSchema], Field(min_length=1)]
+    orders: Annotated[List[GetOrderSchema], Field(min_length=0)]
 
     # @root_validator(pre=True)
     # def validate_data(cls, orders):
