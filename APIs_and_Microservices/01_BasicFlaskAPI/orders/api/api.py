@@ -53,7 +53,8 @@ def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
 @app.post(
     "/orders",
     status_code=status.HTTP_201_CREATED,
-    response_model=Annotated[GetOrderSchema, list],
+    # response_model=Annotated[GetOrderSchema, list],
+    response_model=GetOrderSchema,
 )
 def create_order(order_details: CreateOrderSchema):
     # return order
@@ -80,7 +81,7 @@ def update_order(order_id: UUID, order_details: CreateOrderSchema):
     # return order
     for order in ORDERS:
         if order["id"] == order_id:
-            order.update(order_details.dict())
+            order.update(order_details.model_dump())
             return order
     raise HTTPException(status_code=404, detail=f"Order with ID {order_id} not found")
 
