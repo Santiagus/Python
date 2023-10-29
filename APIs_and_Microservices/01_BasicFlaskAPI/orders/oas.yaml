@@ -8,8 +8,108 @@ servers:
   - url: https://coffeemesh-staging.com
     description: staging server for testing purposes only
 
+
+paths:
+  /orders:
+    get:
+      parameters:
+      - name : cancelled
+        in: query
+        required: false
+        schema:
+          type : boolean
+      - name : limit
+        in: query
+        required: false
+        schema:
+          type: integer
+      summary: Regurns a list of orders
+      operationId: getOrders
+      description: >
+        A list of orders sorted by date.
+      responses:
+        '200':
+          description: A JSON array of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetOrderSchema'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    post:
+      summary: Creates an order
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderSchema'
+      responses:
+        '201':
+          description: A JSON representation of the created order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderSchema'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /order/{order_id}:
+    parameters:
+      - in: path
+        name: order_id
+        required : true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Returns the details of a specified order
+      operationId: getOrder
+      responses:
+        '201':
+          description: A JSON representation of the created order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderSchema'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
 components:
+  responses:
+    NotFound:
+      description: The specified resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: The payload contains invalid values.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
   schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: array
+      required:
+        - detail
+      additionalProperties: false
+  
     OrderItemSchema:
       additionalProperties: false
       type: object
@@ -68,4 +168,3 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrderItemSchema'
-
