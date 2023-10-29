@@ -30,7 +30,7 @@ Flask-smorest is a REST API framework built on top of Flask and marshmallow
 
 **7. Check app is working** \
 Run : ```uvicorn orders.app:app --reload``` \
-Check: http://127.0.0.1:8000/docs
+Check: http://localhost:8000/docs
 
 ## Implementations
 
@@ -64,7 +64,7 @@ def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
 
 ####  Check orders endpoint filtering
 Run : ```uvicorn orders.app:app --reload``` \
-Check: http://127.0.0.1:8000/docs
+Check: http://localhost:8000/docs
 
 #### Disallowing additional properties in models
 <details> <summary> Update oas.yaml </summary>
@@ -130,11 +130,11 @@ Check: http://127.0.0.1:8000/docs
 openapi: 3.0.3
 
 servers:
-    - url: http:/ /localhost:8000
+    - url: http://localhost:8000
     description: URL for local development and testing
-    - url: https:/ /coffeemesh.com
+    - url: https://coffeemesh.com
     description: main production server
-    - url: https:/ /coffeemesh-staging.com
+    - url: https://coffeemesh-staging.com
     description: staging server for testing purposes only
 ```
 </details>
