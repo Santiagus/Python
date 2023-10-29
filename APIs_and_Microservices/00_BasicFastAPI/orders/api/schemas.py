@@ -34,8 +34,7 @@ class OrderItemSchema(BaseModel):
 
 class CreateOrderSchema(BaseModel):
     # order: conlist(OrderItemSchema, min_items=1)
-    orders: Annotated[List[OrderItemSchema], Field(min_length=1)]
-    # order: List[OrderItemSchema]
+    order: Annotated[List[OrderItemSchema], Field(min_length=1)]
 
 
 class GetOrderSchema(CreateOrderSchema):
