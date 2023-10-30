@@ -465,3 +465,69 @@ CORS
 Network Failure
 URL scheme must be "http" or "https" for CORS request.
 ```
+
+## Flask app Initialization
+
+From this points proceed with the equivalent to ***orders*** implementation with FastAPI but using ***Flask***
+
+#### Create kitchen folder
+```mkdir kitchen```
+
+#### Create First Flask app file
+<details><summary>kitchen/app.py</summary>
+
+```python
+from flask import Flask
+from flask_smorest import Api
+
+app = Flask(__name__)
+
+@app.route("/")
+def index():
+    return "Index Page"
+
+@app.route("/hello")
+def hello():
+    return "Hello, World"
+```
+</details>
+
+#### Run App:
+Terminal Command: \
+```flask --app kitchen.app --debug run --port 9000```
+
+VSCode config:
+
+<details><summary>launch.json</summary>
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flask",
+            "type": "python",
+            "pythonArgs": [
+                "-Xfrozen_modules=off"
+            ],
+            "request": "launch",
+            "module": "flask",
+            "args": [
+                "--app",
+                "kitchen.app",
+                "--debug",
+                "run",
+                "--port",
+                "9000",
+            ],
+            "jinja": true,
+            "justMyCode": true,
+        }
+    ]
+}
+```
+</details>
+</br>
+
+App should be running on http://127.0.0.1:9000 \
+and showing "Hello, World" at http://127.0.0.1:9000/hello
