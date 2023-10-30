@@ -630,3 +630,41 @@ class KitchenSchedules(MethodView):
 
 Check kitchen api at http://127.0.0.1:9000/docs/kitchen \
 (specified at ***config.py*** file)
+
+#### Implement resting endpoints
+
+<details><summary>kitchen/api/api.py</summary>
+
+```python
+@blueprint.route("/kitchen/schedules")
+class KitchenSchedules(MethodView):
+    def get(self):
+        return {"schedules": schedules}, 200
+
+    def post(self, payload):
+        return schedules[0], 201
+
+
+@blueprint.route("/kitchen/schedules/<schedule_id>")
+class KitchenSchedule(MethodView):
+    def get(self, schedule_id):
+        return schedules[0], 200
+
+    def put(self, payload, schedule_id):
+        return schedules[0], 200
+
+    def delete(self, schedule_id):
+        return "", 204
+
+@blueprint.route("/kitchen/schedules/<schedule_id>/cancel", methods=["POST"])
+def cancel_schedule(schedule_id):
+    return schedules[0], 200
+
+
+@blueprint.route("/kitchen/schedules/<schedule_id>/status", methods=["GET"])
+def get_schedule_status(schedule_id):
+    return schedules[0], 200
+
+```
+</details>
+</br>
