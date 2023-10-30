@@ -588,3 +588,45 @@ class Kitchen(MethodView):
     pass
 ```
 
+## Kitchen API Implementation
+
+Register blueprint with API object ***kitcken/app.py***
+```python
+from kitchen.api.api import blueprint
+kitchen_api.register_blueprint(blueprint)
+```
+
+Implement Get schedules ***/kitchen/schedules*** endpoint
+<details><summary>kitchen/api/api.py</summary>
+
+```python
+from urllib.parse import scheme_chars
+import uuid
+from datetime import datetime
+
+from flask.views import MethodView
+from flask_smorest import Blueprint
+
+blueprint = Blueprint("kitchen", __name__, description="Kitchen API")
+
+# hardcoded schedules list
+schedules = [
+    {
+        "id": str(uuid.uuid4()),
+        "scheduled": datetime.now(),
+        "status": "pending",
+        "order": [{"product": "capuccino", "quantity": 1, "size": "big"}],
+    }
+]
+
+@blueprint.route("/kitchen/schedules")
+class KitchenSchedules(MethodView):
+    def get(self):
+        return {"schedules": schedules}, 200
+
+```
+</details>
+</br>
+
+Check kitchen api at http://127.0.0.1:9000/docs/kitchen \
+(specified at ***config.py*** file)
