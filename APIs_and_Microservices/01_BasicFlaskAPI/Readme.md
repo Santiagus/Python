@@ -668,3 +668,148 @@ def get_schedule_status(schedule_id):
 ```
 </details>
 </br>
+
+### Adding validation to the API endpoints
+Schema definitions for the orders API
+<details><summary>kitchen/api/schemas.py</summary>
+
+```python
+from dataclasses import field
+from itertools import product
+from operator import truediv
+from typing import Required
+from marshmallow import Schema, fields, validate, EXCLUDE
+
+
+class OrderItemSchema(Schema):
+    # Meta class to ban unknown properties
+    class Meta:
+        unknown = EXCLUDE
+
+        product = fields.String(required=True)
+        size = fields.String(
+            required=True, validate=validate.OneOf(["small", "medium", "big"])
+        )
+        quantity = fields.Integer(
+            validate=validate.Range(1, min_inclusive=True), Required=True
+        )
+
+
+class ScheduleOrderSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    order = fields.List(fields.Nested(OrderItemSchema), Required=True)
+
+
+class GetScheduledOrderSchema(ScheduleOrderSchema):
+    id = fields.UUID(required=True)
+    scheduled = fields.DateTime(Required=True)
+    status = fields.String(
+        required=True,
+        validate=validate.OneOf(["pending", "progress", "cancelled", "finished"]),
+    )
+
+
+class GetScheduledOrdersSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    schedules = fields.List(fields.Nested(GetScheduledOrderSchema), required=True)
+
+
+class ScheduleStatusSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    status = fields.String(
+        required=True,
+        validate=validate.OneOf(["pending", "progress", "cancelled", "finished"]),
+    )
+```
+</details>
+</br>
+
+Adding validation to the API endpoints
+<details><summary>kitchen/api/api.py</summary>
+
+```python
+from urllib.parse import scheme_chars
+import uuid
+from datetime import datetime
+
+from flask.views import MethodView
+from flask_smorest import Blueprint
+
+# Marshmallow models
+from kitchen.api.schemas import (
+    GetScheduledOrderSchema,
+    ScheduleOrderSchema,
+    GetScheduledOrdersSchema,
+    ScheduleStatusSchema,
+)
+
+blueprint = Blueprint("kitchen", __name__, description="Kitchen API")
+
+# hardcoded schedules list
+schedules = [
+    {
+        "id": str(uuid.uuid4()),
+        "scheduled": datetime.now(),
+        "status": "pending",
+        "order": [{"product": "capuccino", "quantity": 1, "size": "big"}],
+    }
+]
+
+
+@blueprint.route("/kitchen/schedules")
+class KitchenSchedules(MethodView):
+    @blueprint.response(status_code=200, schema=GetScheduledOrdersSchema)
+    def get(self):
+        # return {"schedules": schedules}, 200
+        return {"schedules": schedules}
+
+    @blueprint.arguments(ScheduleOrderSchema)
+    @blueprint.response(status_code=201, schema=GetScheduledOrderSchema)
+    def post(self, payload):
+        # return schedules[0], 201
+        return schedules[0]
+
+
+@blueprint.route("/kitchen/schedules/<schedule_id>")
+class KitchenSchedule(MethodView):
+    @blueprint.response(status_code=200, schema=GetScheduledOrderSchema)
+    def get(self, schedule_id):
+        # return schedules[0], 200
+        return schedules[0]
+
+    @blueprint.arguments(ScheduleOrderSchema)
+    @blueprint.response(status_code=200, schema=GetScheduledOrderSchema)
+    def put(self, payload, schedule_id):
+        # return schedules[0], 200
+        return schedules[0]
+
+    @blueprint.response(status_code=204)
+    def delete(self, schedule_id):
+        # return "", 204
+        return
+
+
+@blueprint.response(status_code=200, schema=GetScheduledOrderSchema)
+@blueprint.route("/kitchen/schedules/<schedule_id>/cancel", methods=["POST"])
+def cancel_schedule(schedule_id):
+    # return schedules[0], 200
+    return schedules[0]
+
+
+@blueprint.response(status_code=200, schema=ScheduleStatusSchema)
+@blueprint.route("/kitchen/schedules/<schedule_id>/status", methods=["GET"])
+def get_schedule_status(schedule_id):
+    # return schedules[0], 200
+    return schedules[0]
+```
+</details>
+
+
+Check Swagger UI now shows schema for the request and sample payloads based on schema: \
+ ***http://127.0.0.1:9000/docs/kitchen***
