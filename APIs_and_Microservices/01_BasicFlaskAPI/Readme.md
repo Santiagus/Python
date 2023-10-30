@@ -116,7 +116,7 @@ Check: http://localhost:8000/docs
     from fastapi import FastAPI
     app = FastAPI(debug=True)
 
-    oas_doc = yaml.safe_load((Path(__file__).parent / '../oas.yaml').read_text())
+    oas_doc = yaml.safe_load((Path(__file__).parent / './oas.yaml').read_text())
 
     app.openapi = lambda: oas_doc
 
@@ -138,3 +138,330 @@ servers:
     description: staging server for testing purposes only
 ```
 </details>
+
+
+#### Update paths where FastAPI server the APIs
+
+- orders/orders/app.py
+
+```python
+    app = FastAPI(debug=True, openapi_url='/openapi/orders.json', docs_url='/docs/orders')
+```
+
+#### Complete Open Api Specification
+<details><summary>orders/oas.yaml</summary>
+
+```yaml
+openapi: 3.0.3
+
+info:
+  title: Orders API
+  description: API that allows you to manage orders for CoffeeMesh
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: local development server
+  - url: https://coffeemesh.com
+    description: main production server
+  - url: https://coffeemesh-staging.com
+    description: staging server for testing purposes only
+
+paths:
+  /orders:
+    get:
+      parameters:
+      - name: cancelled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+      summary: Returns a list of orders
+      operationId: getOrders
+      description: >
+        A list of orders made by the customer
+        sorted by date. Allows to filter orders
+        by range of dates.
+      responses:
+        '200':
+          description: A JSON array of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetOrderSchema'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    post:
+      summary: Creates an order
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderSchema'
+      responses:
+        '201':
+          description: A JSON representation of the created order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderSchema'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /orders/{order_id}:
+    parameters:
+      - in: path
+        name: order_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Returns the details of a specific order
+      operationId: getOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderSchema'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    put:
+      summary: Replaces an existing order
+      operationId: updateOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderSchema'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref:  '#/components/schemas/GetOrderSchema'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    delete:
+      summary: Deletes an existing order
+      operationId: deleteOrder
+      responses:
+        '204':
+          description: The resource was deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /orders/{order_id}/pay:
+    parameters:
+      - in: path
+        name: order_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Processes payment for an order
+      operationId: payOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderSchema'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+
+  /orders/{order_id}/cancel:
+    parameters:
+      - in: path
+        name: order_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Cancels an order
+      operationId: cancelOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderSchema'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+components:
+  responses:
+    NotFound:
+      description: The specified resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: The payload contains invalid values.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    openId:
+      type: openIdConnect
+      openIdConnectUrl: https://coffeemesh-dev.eu.auth0.com/.well-known/openid-configuration
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://coffeemesh-dev.eu.auth0.com/oauth/token
+          scopes: {}
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: array
+      required:
+        - detail
+      additionalProperties: false
+
+    OrderItemSchema:
+      additionalProperties: false
+      type: object
+      required:
+        - product
+        - size
+      properties:
+        product:
+          type: string
+        size:
+          type: string
+          enum:
+            - small
+            - medium
+            - big
+        quantity:
+          type: integer
+          format: int64
+          default: 1
+          minimum: 1
+          maximum: 1000000
+
+    CreateOrderSchema:
+      additionalProperties: false
+      type: object
+      required:
+        - order
+      properties:
+        order:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItemSchema'
+
+    GetOrderSchema:
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - created
+        - updated
+        - status
+        - order
+      properties:
+        id:
+          type: string
+          format: uuid
+        created:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - created
+            - updated
+            - paid
+            - progress
+            - cancelled
+            - dispatched
+            - delivered
+        order:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItemSchema'
+
+security:
+  - oauth2:
+      - getOrders
+      - createOrder
+      - getOrder
+      - updateOrder
+      - deleteOrder
+      - payOrder
+      - cancelOrder
+  - bearerAuth:
+      - getOrders
+      - createOrder
+      - getOrder
+      - updateOrder
+      - deleteOrder
+      - payOrder
+      - cancelOrder
+```
+</details>
+</br>
+
+## Notes:
+Check Request URL (Eg.: http://localhost:8000/orders) in Swagger UI match the URL used to access the API (http://localhost:8000/docs/orders). Both must be *localhost* or *127.0.0.1* to avoid the following error:
+
+```
+Undocumented
+Failed to fetch.
+Possible Reasons:
+
+CORS
+Network Failure
+URL scheme must be "http" or "https" for CORS request.
+```
