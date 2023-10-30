@@ -531,3 +531,60 @@ VSCode config:
 
 App should be running on http://127.0.0.1:9000 \
 and showing "Hello, World" at http://127.0.0.1:9000/hello
+
+#### Set configuration for the Kitchen API
+
+<details><summary>kitchen/config.py</summary>
+
+```python
+class BaseConfig:
+    API_TITLE = 'Kitchen API'
+    API_VERSION = 'v1'
+    OPENAPI_VERSION = '3.0.3'
+    OPENAPI_JSON_PATH = 'openapi/kitchen.json'
+    OPENAPI_URL_PREFIX = '/'
+    OPENAPI_REDOC_PATH = '/redoc'
+    OPENAPI_REDOC_URL = 'https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js'
+    OPENAPI_SWAGGER_UI_PATH = '/docs/kitchen'
+    OPENAPI_SWAGGER_UI_URL = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
+```
+</details>
+
+#### Load configuration *kitcken/app.py*
+```python
+from flask import Flask
+from flask_smorest import Api
+from kitchen.config import BaseConfig
+
+app = Flask(__name__)
+app.config.from_object(BaseConfig)
+kitchen_api = Api(app)
+```
+
+## Implement endpoints
+
+#### Simple cases : Route decorator
+```python
+@app.route('/orders')
+def process
+  pass
+```
+#### Complex cases: Flask Blueprints
+It allows to provide specific configuratin for a group of URLs
+```python
+@blueprint.route('/info')
+def get_info():
+  pass
+```
+
+#### Multiple method cases : Route decorator
+When a URL exposes multiple HTTP methods (GET, POST, PUT, DELETE) use class-based routes using MethodView. Each method is a class function:
+
+```python
+class Kitchen(MethodView):
+  def get(self):
+    pass
+  def post(self):
+    pass
+```
+
