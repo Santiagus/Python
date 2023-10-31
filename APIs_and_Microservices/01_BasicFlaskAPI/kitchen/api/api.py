@@ -11,6 +11,7 @@ from kitchen.api.schemas import (
     ScheduleOrderSchema,
     GetScheduledOrdersSchema,
     ScheduleStatusSchema,
+    GetKitchenScheduleParameters,
 )
 
 blueprint = Blueprint("kitchen", __name__, description="Kitchen API")
@@ -28,8 +29,9 @@ schedules = [
 
 @blueprint.route("/kitchen/schedules")
 class KitchenSchedules(MethodView):
+    @blueprint.arguments(GetKitchenScheduleParameters, location="query")
     @blueprint.response(status_code=200, schema=GetScheduledOrdersSchema)
-    def get(self):
+    def get(self, parameters):
         # return {"schedules": schedules}, 200
         return {"schedules": schedules}
 
