@@ -50,3 +50,12 @@ class ScheduleStatusSchema(Schema):
         required=True,
         validate=validate.OneOf(["pending", "progress", "cancelled", "finished"]),
     )
+
+
+class GetKitchenScheduleParameters(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    progress = fields.Boolean()
+    limit = fields.Integer()
+    since = fields.DateTime()
