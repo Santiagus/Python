@@ -813,3 +813,69 @@ def get_schedule_status(schedule_id):
 
 Check Swagger UI now shows schema for the request and sample payloads based on schema: \
  ***http://127.0.0.1:9000/docs/kitchen***
+
+
+### Validating URL query parameters
+
+Register schema
+
+```python
+class GetKitchenScheduleParameters(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    progress = fields.Boolean()
+    limit = fields.Integer()
+    since = fields.DateTime()
+```
+
+Adding URL query parameters to GET /kitchen/schedules
+<details><summary>kitchen/api/api.py</summary>
+
+```python
+@blueprint.route("/kitchen/schedules")
+class KitchenSchedules(MethodView):
+    @blueprint.arguments(GetKitchenScheduleParameters, location="query")
+    @blueprint.response(status_code=200, schema=GetScheduledOrdersSchema)
+    def get(self, parameters):
+        if not parameters:
+            return {"schedules": schedules}
+
+        query_set = [schedule for schedule in schedules]
+
+        # Filter by progress
+        in_progress = parameters.get("progress")
+        if in_progress is not None:
+            if in_progress:
+                query_set = [
+                    schedule
+                    for schedule in query_set
+                    if schedule["status"] == "progress"
+                ]
+            else:
+                query_set = [
+                    schedule
+                    for schedule in query_set
+                    if schedule["status"] != "progress"
+                ]
+
+        # Filter by date
+        since = parameters.get("since")
+        if since is not None:
+            query_set = [
+                schedule for schedule in query_set if schedule["scheduled"] >= since
+            ]
+
+        # Filter by limit
+        limit = parameters.get("limit")
+        if limit is not None and len(query_set) > limit:
+            query_set = query_set[:limit]
+
+        return {"schedules": query_set}
+```
+</details>
+</br>
+
+***NOTE:*** schedules is a harcoded value by now, add some values and play around with filters in Swagger UI
+
+
