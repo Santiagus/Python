@@ -1,6 +1,6 @@
 from urllib.parse import scheme_chars
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask.views import MethodView
 from flask_smorest import Blueprint
@@ -16,14 +16,27 @@ from kitchen.api.schemas import (
 
 blueprint = Blueprint("kitchen", __name__, description="Kitchen API")
 
+
 # hardcoded schedules list
 schedules = [
     {
         "id": str(uuid.uuid4()),
-        "scheduled": datetime.now(),
+        "scheduled": datetime.now() + timedelta(minutes=15),
         "status": "pending",
-        "order": [{"product": "capuccino", "quantity": 1, "size": "big"}],
-    }
+        "order": [{"product": "Expresso", "quantity": 1, "size": "big"}],
+    },
+    {
+        "id": str(uuid.uuid4()),
+        "scheduled": datetime.now() + timedelta(minutes=2),
+        "status": "progress",
+        "order": [{"product": "caffe latte", "quantity": 2, "size": "medium"}],
+    },
+    {
+        "id": str(uuid.uuid4()),
+        "scheduled": datetime.now(),
+        "status": "finished",
+        "order": [{"product": "capuccino", "quantity": 3, "size": "small"}],
+    },
 ]
 
 
@@ -33,7 +46,42 @@ class KitchenSchedules(MethodView):
     @blueprint.response(status_code=200, schema=GetScheduledOrdersSchema)
     def get(self, parameters):
         # return {"schedules": schedules}, 200
-        return {"schedules": schedules}
+        if not parameters:
+            return {"schedules": schedules}
+
+        query_set = [schedule for schedule in schedules]
+
+        # in_progress = parameters.get(GetKitchenScheduleParameters.progress)
+
+        # Filter by progress
+        in_progress = parameters.get("progress")
+        if in_progress is not None:
+            if in_progress:
+                query_set = [
+                    schedule
+                    for schedule in query_set
+                    if schedule["status"] == "progress"
+                ]
+            else:
+                query_set = [
+                    schedule
+                    for schedule in query_set
+                    if schedule["status"] != "progress"
+                ]
+
+        # Filter by date
+        since = parameters.get("since")
+        if since is not None:
+            query_set = [
+                schedule for schedule in query_set if schedule["scheduled"] >= since
+            ]
+
+        # Filter by limit
+        limit = parameters.get("limit")
+        if limit is not None and len(query_set) > limit:
+            query_set = query_set[:limit]
+
+        return {"schedules": query_set}
 
     @blueprint.arguments(ScheduleOrderSchema)
     @blueprint.response(status_code=201, schema=GetScheduledOrderSchema)
