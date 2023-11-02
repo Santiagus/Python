@@ -1,9 +1,11 @@
 from urllib.parse import scheme_chars
+import copy
 import uuid
 from datetime import datetime, timedelta
 
 from flask.views import MethodView
 from flask_smorest import Blueprint
+from marshmallow import ValidationError
 
 # Marshmallow models
 from kitchen.api.schemas import (
@@ -46,8 +48,14 @@ class KitchenSchedules(MethodView):
     @blueprint.response(status_code=200, schema=GetScheduledOrdersSchema)
     def get(self, parameters):
         # return {"schedules": schedules}, 200
-        if not parameters:
-            return {"schedules": schedules}
+        # In Marshmallow, there isn't a built-in way to validate an entire list of objects in one step using a schema.
+        for schedule in schedules:
+            schedule = copy.deepcopy(schedule)
+            schedule["scheduled"] = schedule["scheduled"].isoformat()
+            errors = GetScheduledOrderSchema().validate(schedule)
+            if errors:
+                raise ValidationError(errors)
+        return {"schedules": schedules}
 
         query_set = [schedule for schedule in schedules]
 

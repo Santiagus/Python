@@ -809,7 +809,7 @@ def get_schedule_status(schedule_id):
     return schedules[0]
 ```
 </details>
-
+</br>
 
 Check Swagger UI now shows schema for the request and sample payloads based on schema: \
  ***http://127.0.0.1:9000/docs/kitchen***
@@ -879,3 +879,29 @@ class KitchenSchedules(MethodView):
 ***NOTE:*** schedules is a harcoded value by now, add some values and play around with filters in Swagger UI
 
 
+#### Validating data before serialization
+<details><summary>kitchen/api/api.py</summary>
+
+```python
+# file: kitchen/api/api.py
+import copy
+from marshmallow import ValidationError
+...
+@blueprint.route('/kitchen/schedules')
+class KitchenSchedules(MethodView):
+  @blueprint.arguments(GetKitchenScheduleParameters, location='query')
+  @blueprint.response(status_code=200, schema=GetScheduledOrdersSchema)
+  def get(self, parameters):
+    for schedule in schedules:
+      schedule = copy.deepcopy(schedule)
+      schedule['scheduled'] = schedule['scheduled'].isoformat()
+      errors = GetScheduledOrderSchema().validate(schedule)
+      if errors:
+        raise ValidationError(errors)
+  ...
+  return {'schedules': query_set}
+```
+</details>
+</br>
+
+***NOTE:*** In Marshmallow, there isn't a built-in way to validate an entire list of objects in one step using a schema.
