@@ -3,6 +3,7 @@ import copy
 import uuid
 from datetime import datetime, timedelta
 
+from flask import abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from marshmallow import ValidationError
@@ -17,7 +18,6 @@ from kitchen.api.schemas import (
 )
 
 blueprint = Blueprint("kitchen", __name__, description="Kitchen API")
-
 
 # hardcoded schedules list
 schedules = [
@@ -41,6 +41,17 @@ schedules = [
     },
 ]
 
+# schedules = []
+
+
+# Data validation code refactored to function
+def validate_schedule(schedule):
+    schedule = copy.deepcopy(schedule)
+    schedule["scheduled"] = schedule["scheduled"].isoformat()
+    errors = GetScheduledOrderSchema().validate(schedule)
+    if errors:
+        raise ValidationError(errors)
+
 
 @blueprint.route("/kitchen/schedules")
 class KitchenSchedules(MethodView):
@@ -48,15 +59,6 @@ class KitchenSchedules(MethodView):
     @blueprint.response(status_code=200, schema=GetScheduledOrdersSchema)
     def get(self, parameters):
         # return {"schedules": schedules}, 200
-        # In Marshmallow, there isn't a built-in way to validate an entire list of objects in one step using a schema.
-        for schedule in schedules:
-            schedule = copy.deepcopy(schedule)
-            schedule["scheduled"] = schedule["scheduled"].isoformat()
-            errors = GetScheduledOrderSchema().validate(schedule)
-            if errors:
-                raise ValidationError(errors)
-        return {"schedules": schedules}
-
         query_set = [schedule for schedule in schedules]
 
         # in_progress = parameters.get(GetKitchenScheduleParameters.progress)
@@ -89,6 +91,9 @@ class KitchenSchedules(MethodView):
         if limit is not None and len(query_set) > limit:
             query_set = query_set[:limit]
 
+        # In Marshmallow, there isn't a built-in way to validate an entire list of objects in one step using a schema.
+        for schedule in query_set:
+            validate_schedule(schedule)
         return {"schedules": query_set}
 
     @blueprint.arguments(ScheduleOrderSchema)
