@@ -686,25 +686,25 @@ class OrderItemSchema(Schema):
     class Meta:
         unknown = EXCLUDE
 
-        product = fields.String(required=True)
-        size = fields.String(
-            required=True, validate=validate.OneOf(["small", "medium", "big"])
-        )
-        quantity = fields.Integer(
-            validate=validate.Range(1, min_inclusive=True), Required=True
-        )
+    product = fields.String(required=True)
+    size = fields.String(
+        required=True, validate=validate.OneOf(["small", "medium", "big"])
+    )
+    quantity = fields.Integer(
+        validate=validate.Range(1, min_inclusive=True), required=True
+    )
 
 
 class ScheduleOrderSchema(Schema):
     class Meta:
         unknown = EXCLUDE
 
-    order = fields.List(fields.Nested(OrderItemSchema), Required=True)
+    order = fields.List(fields.Nested(OrderItemSchema), required=True)
 
 
 class GetScheduledOrderSchema(ScheduleOrderSchema):
     id = fields.UUID(required=True)
-    scheduled = fields.DateTime(Required=True)
+    scheduled = fields.DateTime(required=True)
     status = fields.String(
         required=True,
         validate=validate.OneOf(["pending", "progress", "cancelled", "finished"]),
@@ -905,3 +905,85 @@ class KitchenSchedules(MethodView):
 </br>
 
 ***NOTE:*** In Marshmallow, there isn't a built-in way to validate an entire list of objects in one step using a schema.
+
+
+## In memory implementation
+
+Refactor schedule validation
+```python
+# Data validation code refactored to function
+def validate_schedule(schedule):
+    schedule = copy.deepcopy(schedule)
+    schedule["scheduled"] = schedule["scheduled"].isoformat()
+    errors = GetScheduledOrderSchema().validate(schedule)
+    if errors:
+        raise ValidationError(errors)
+```
+
+Modify schedules in-memory list when using endpoints
+</br>
+
+<details><summary>kitchen/api/api.py</summary>
+
+```python
+@blueprint.route("/kitchen/schedules")
+class KitchenSchedules(MethodView):
+...
+    @blueprint.arguments(ScheduleOrderSchema)
+    @blueprint.response(status_code=201, schema=GetScheduledOrderSchema)
+    def post(self, payload):
+        payload["id"] = str(uuid.uuid4())
+        payload["scheduled"] = datetime.now()
+        payload["status"] = "pending"
+        schedules.append(payload)
+        validate_schedule(payload)
+        return payload
+
+@blueprint.route("/kitchen/schedules/<schedule_id>")
+class KitchenSchedule(MethodView):
+    @blueprint.response(status_code=200, schema=GetScheduledOrderSchema)
+    def get(self, schedule_id):
+        for schedule in schedules:
+            if schedule["id"] == schedule_id:
+                validate_schedule(schedule)
+                return schedule
+        abort(404, description=f"Resource with ID {schedule_id} not found")
+
+    @blueprint.arguments(ScheduleOrderSchema)
+    @blueprint.response(status_code=200, schema=GetScheduledOrderSchema)
+    def put(self, payload, schedule_id):
+        for schedule in schedules:
+            if schedule["id"] == schedule_id:
+                schedule.update(payload)
+                validate_schedule(schedule)
+                return schedule
+        abort(404, description=f"Resource with ID {schedule_id} not found")
+
+    @blueprint.response(status_code=204)
+    def delete(self, schedule_id):
+        for index, schedule in enumerate(schedules):
+            if schedule["id"] == schedule_id:
+                schedules.pop(index)
+                return
+        abort(404, description=f"Resource with ID {schedule_id} not found")
+
+@blueprint.response(status_code=200, schema=GetScheduledOrderSchema)
+@blueprint.route("/kitchen/schedules/<schedule_id>/cancel", methods=["POST"])
+def cancel_schedule(schedule_id):
+    for schedule in schedules:
+        if schedule["id"] == schedule_id:
+            schedule["status"] = "cancelled"
+            validate_schedule(schedule)
+            return schedule
+    abort(404, description=f"Resource with ID {schedule_id} not found")
+
+@blueprint.response(status_code=200, schema=ScheduleStatusSchema)
+@blueprint.route("/kitchen/schedules/<schedule_id>/status", methods=["GET"])
+def get_schedule_status(schedule_id):
+    for schedule in schedules:
+        if schedule["id"] == schedule_id:
+            validate_schedule(schedule)
+            return {"status": schedule["status"]}
+    abort(404, description=f"Resource with ID {schedule_id} not found")
+```
+</details>
