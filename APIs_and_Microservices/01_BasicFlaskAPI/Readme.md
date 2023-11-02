@@ -987,3 +987,29 @@ def get_schedule_status(schedule_id):
     abort(404, description=f"Resource with ID {schedule_id} not found")
 ```
 </details>
+
+### Overriding flask-smorest’s dynamically generated API specification
+
+Install pyyaml
+
+```pipenv install pyyaml```
+
+Override the API object’s spec property with a custom APISpec object.
+
+<details><summary>kitchen/app.py</summary>
+
+```python
+from pathlib import Path
+import yaml
+from apispec import APISpec
+...
+api_spec = yaml.safe_load((Path(__file__).parent / "oas.yaml").read_text())
+spec = APISpec(
+    title=api_spec["info"]["title"],
+    version=api_spec["info"]["version"],
+    openapi_version=api_spec["openapi"],
+)
+spec.to_dict = lambda: api_spec
+kitchen_api.spec = spec
+```
+</details>
