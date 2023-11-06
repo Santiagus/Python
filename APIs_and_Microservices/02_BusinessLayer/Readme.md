@@ -287,15 +287,175 @@ Codename:       trixie
 #### Install Prism CLI
 ```yarnpkg add @stoplight/prism-cli```
 
-#### Run Prism iwith kitchen API
+#### Run Prism with kitchen API
 ```./node_modules/.bin/prism mock kitchen.yaml --port 3000```
 
 #### Install jq - commandline JSON processor
 ```sudo apt install jq```
 
-Check response parsing it with jq to get a beautiful display
-
+#### Check response parsing it with jq to get a beautiful display
 ```curl http://localhost:3000/kitchen/schedules | jq```
+<details>
 
-pipenv install requests
+```JSON
+{
+  "schedules": [
+    {
+      "id": "497f6eca-6276-4993-bfeb-53cbbbba6f08",
+      "scheduled": "2019-08-24T14:15:22Z",
+      "status": "pending",
+      "order": [
+        {
+          "product": "string",
+          "size": "small",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}
+```
+</details>
+
+#### Run Prism with kitchen/Payments API
+```./node_modules/.bin/prism mock kitchen.yaml --port 3000```
+
+***NOTE:*** Payments only have a POST endpoint to inform about the payment
+
+</br>
+
+## Implement API integration
+#### Install request python library
+```(.venv) $ pipenv install requests```
+
+#### Encapsulating per-order capabilities within the Order class
+<details><summary>orders/orders_service/orders.py</summary>
+
+```python
+import requests
+from orders.orders_service.exceptions import APIIntegrationError, InvalidActionError
+
+class OrderItem:
+    def __init__(self, id, product, quantity, size):
+        self.id = id
+        self.product = product
+        self.quantity = quantity
+        self.size = size
+
+class Order:
+    def __init__(self, id, created, items, status, schedule_id=None, delivery_id=None, order_=None,):
+        self._id = id
+        self._created = created
+        self.items = [OrderItem(**item) for item in items]
+        self._status = status
+        self.schedule_id = schedule_id
+        self.delivery_id = delivery_id
+
+    @property
+    def id(self):
+        return self._id or self._order.id
+
+    @property
+    def created(self):
+        return self._created or self._order.created
+
+    @property
+    def status(self):
+        return self._status or self._order.status
+
+    def cancel(self):
+        if self.status == "progress":
+            kitchen_base_url = "http:/ /localhost:3000/kitchen"
+            response = requests.post(
+                f"{kitchen_base_url}/schedules/{self.schedule_id}/cancel",
+                json={"order": [item.dict() for item in self.items]},
+            )
+            if response.status_code == 200:
+                return
+            raise APIIntegrationError(f"Could not cancel order with id {self.id}")
+        if self.status == "delivery":
+            raise InvalidActionError(f"Cannot cancel order with id {self.id}")
+
+    def pay(self):
+        response = requests.post(
+            "http:/ /localhost:3001/payments", json={"order_id": self.id}
+        )
+        if response.status_code == 201:
+            return
+        raise APIIntegrationError(
+            f"Could not process payment for order with id {self.id}"
+        )
+
+    def schedule(self):
+        response = requests.post(
+            "http:/ /localhost:3000/kitchen/schedules",
+            json={"order": [item.dict() for item in self.items]},
+        )
+        if response.status_code == 201:
+            return response.json()["id"]
+        raise APIIntegrationError((f"Could not schedule order with id {self.id}"))
+```
+</details>
+
+#### Define orders_service custom exceptions
+<details><summary>orders/orders_service/exceptions.py</summary>
+
+```python
+class OrderNotFoundError(Exception):
+    pass
+class APIIntegrationError(Exception):
+    pass
+class InvalidActionError(Exception):
+    pass
+```
+</details>
+
+#### Implementation of the OrdersService
+<details><summary>orders/orders_service/orders_service.py</summary>
+
+```python
+from orders.orders_service.exceptions import OrderNotFoundError
+
+
+class OrdersService:
+    def __init__(self, orders_repository):
+        self.orders_repository = orders_repository
+
+    def place_order(self, items):
+        return self.orders_repository.add(items)
+
+    def get_order(self, order_id):
+        order = self.orders_repository.get(order_id)
+        if order is not None:
+            return order
+        raise OrderNotFoundError(f"Order with id {order_id} not found")
+
+    def update_order(self, order_id, items):
+        order = self.orders_repository.get(order_id)
+        if order is None:
+            raise OrderNotFoundError(f"Order with id {order_id} not found")
+        return self.orders_repository.update(order_id, {"items": items})
+
+    def list_orders(self, **filters):
+        limit = filters.pop("limit", None)
+        return self.orders_repository.list(limit, **filters)
+
+    def pay_order(self, order_id):
+        order = self.orders_repository.get(order_id)
+        if order is None:
+            raise OrderNotFoundError(f"Order with id {order_id} not found")
+        order.pay()
+        schedule_id = order.schedule()
+        return self.orders_repository.update(
+            order_id, {"status": "scheduled", "schedule_id": schedule_id}
+        )
+
+    def cancel_order(self, order_id):
+        order = self.orders_repository.get(order_id)
+        if order is None:
+            raise OrderNotFoundError(f"Order with id {order_id} not found")
+        order.cancel()
+        return self.orders_repository.update(order_id, status="cancelled")
+```
+</details>
 
