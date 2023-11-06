@@ -39,4 +39,10 @@ class OrdersService:
         if order is None:
             raise OrderNotFoundError(f"Order with id {order_id} not found")
         order.cancel()
-        return self.orders_repository.update(order_id, status="cancelled")
+        return self.orders_repository.update(order_id, {"status": "cancelled"})
+
+    def delete_order(self, order_id):
+        order = self.orders_repository.get(order_id)
+        if order is None:
+            raise OrderNotFoundError(f"Order with id {order_id} not found")
+        return self.orders_repository.delete(order_id)

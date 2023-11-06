@@ -317,8 +317,8 @@ Codename:       trixie
 ```
 </details>
 
-#### Run Prism with kitchen/Payments API
-```./node_modules/.bin/prism mock kitchen.yaml --port 3000```
+#### Run Prism with Payments API
+```./node_modules/.bin/prism mock payments.yaml --port 3001```
 
 ***NOTE:*** Payments only have a POST endpoint to inform about the payment
 
@@ -459,3 +459,57 @@ class OrdersService:
 ```
 </details>
 
+
+### Implementing the unit of work pattern
+<details><summary>orders/repository/unit_of_work.py</summary>
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+class UnitOfWork:
+    def __init__(self):
+        self.session_maker = sessionmaker(
+            bind=create_engine('sqlite:///orders.db')
+        )
+    def __enter__(self):
+        self.session = self.session_maker()
+        return self
+    def __exit__(self, exc_type, exc_val, traceback):
+        if exc_type is not None:
+            self.rollback()
+            self.session.close()
+        self.session.close()
+    def commit(self):
+        self.session.commit()
+    def rollback(self):
+        self.session.rollback()
+```
+</details>
+
+
+#### Template of how to use the unit_of_work
+
+```python
+with UnitOfWork() as unit_of_work:
+    repo = OrdersRepository(unit_of_work.session)
+    orders_service = OrdersService(repo)
+    orders_service.place_order(order_details)
+    unit_of_work.commit()
+```
+
+#### Integration between API layer and service layer
+
+Enter the unit of work context
+
+<details><summary>orders/web/api/api.py</summary>
+
+```python
+from orders.orders_service.exceptions import OrderNotFoundError
+from orders.orders_service.orders_service import OrdersService
+from orders.repository.orders_repository import OrdersRepository
+from orders.repository.unit_of_work import UnitOfWork
+
+
+```
+<details>

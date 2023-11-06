@@ -13,12 +13,8 @@ class OrdersRepository:
         return Order(**record.dict(), order_=record)
 
     def _get(self, id_):
-        return (
-            self.session.query(OrderModel)
-            .filter(OrderModel.id == str(id_))
-            .filter_by(**filters)
-            .first()
-        )
+        # .filter_by(**filters) ??
+        return self.session.query(OrderModel).filter(OrderModel.id == str(id_)).first()
 
     def get(self, id_):
         order = self._get(id_)
@@ -36,7 +32,7 @@ class OrdersRepository:
         records = query.filter_by(**filters).limit(limit).all()
         return [Order(**record.dict()) for record in records]
 
-    def update(self, id_, **payload):
+    def update(self, id_, payload):
         record = self._get(id_)
         if "items" in payload:
             for item in record.items:

@@ -10,6 +10,9 @@ class OrderItem:
         self.quantity = quantity
         self.size = size
 
+    def dict(self):
+        return {"product": self.product, "size": self.size, "quantity": self.quantity}
+
 
 class Order:
     def __init__(
@@ -22,6 +25,7 @@ class Order:
         delivery_id=None,
         order_=None,
     ):
+        self._order = order_
         self._id = id
         self._created = created
         self.items = [OrderItem(**item) for item in items]
@@ -56,7 +60,7 @@ class Order:
 
     def pay(self):
         response = requests.post(
-            "http:/ /localhost:3001/payments", json={"order_id": self.id}
+            "http://localhost:3001/payments", json={"order_id": self.id}
         )
         if response.status_code == 201:
             return
@@ -66,9 +70,17 @@ class Order:
 
     def schedule(self):
         response = requests.post(
-            "http:/ /localhost:3000/kitchen/schedules",
+            "http://localhost:3000/kitchen/schedules",
             json={"order": [item.dict() for item in self.items]},
         )
         if response.status_code == 201:
             return response.json()["id"]
         raise APIIntegrationError((f"Could not schedule order with id {self.id}"))
+
+    def dict(self):
+        return {
+            "id": self.id,
+            "order": [item.dict() for item in self.items],
+            "status": self.status,
+            "created": self.created,
+        }
