@@ -226,7 +226,7 @@ from orders.web.api import api
 
 
 ### Check app
-- Lauch it \
+- Launch it \
     **CLI:** ```$ AUTH_ON=True uvicorn orders.web.app:app --reload```
 
     **VSCODE:** add ```"env": {"AUTH_ON": "True"}``` to the *launch.json* config file:
