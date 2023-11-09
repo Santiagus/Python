@@ -39,9 +39,9 @@ class AuthorizeRequestMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        # if os.getenv("AUTH_ON", "False") != "True":
-        #     request.state.user_id = "test"
-        #     return await call_next(request)
+        if os.getenv("AUTH_ON", "False") != "True":
+            request.state.user_id = "test"
+            return await call_next(request)
         if request.url.path in ["/docs/orders", "/openapi/orders.json"]:
             return await call_next(request)
         if request.method == "OPTIONS":

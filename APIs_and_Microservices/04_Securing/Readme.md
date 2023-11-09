@@ -212,7 +212,13 @@ class AuthorizeRequestMiddleware(BaseHTTPMiddleware):
             request.state.user_id = token_payload["sub"]
         return await call_next(request)
 app.add_middleware(AuthorizeRequestMiddleware)
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 from orders.web.api import api
 ```
 </details>
@@ -221,7 +227,26 @@ from orders.web.api import api
 
 ### Check app
 - Lauch it \
-```$ AUTH_ON=True uvicorn orders.web.app:app --reload```
+    **CLI:** ```$ AUTH_ON=True uvicorn orders.web.app:app --reload```
+
+    **VSCODE:** add ```"env": {"AUTH_ON": "True"}``` to the *launch.json* config file:
+    <details><summary>launch.json</summary>
+    ```JSON
+        "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "AUTH_ON": "True"
+            }
+        },
+    ```
+    </details>
+    </br>
 - Request orders without token \
 ```$ curl -i http://localhost:8000/orders```
     ```bash
@@ -233,4 +258,70 @@ from orders.web.api import api
 
     {"detail":"Missing access token","body":"Missing access token"}
     ```
-jwt.decode(access_token, key=public_key, algorithms=['RS256'],audience=["http://127.0.0.1:8000/orders"])
+
+- Request orders with token (and format with ***jq***)
+    <details>
+
+    ```bash
+    $ curl http://127.0.0.1:8000/orders -H 'Authorization: Bearerey JhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGguY29mZmVlbWVzaC5pby8iLCJzdWIiOiJlYzdiYmNjZi1jYTg5LTRhZjMtODJhYy1iNDFlNDgzMWE5NjIiLCJhdWQiOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvb3JkZXJzIiwiaWF0IjoxNjk5NDQzMTY1LjcyNjMxNywiZXhwIjoxNjk5NTI5NTY1LjcyNjMxNywic2NvcGUiOiJvcGVuaWQifQ.hpfxFqDtFz3KG0RQEoA0hBNyPbegnwKL76ZGuaGeLmdi7l61-MOfasQZzKTp6blYAspjF_E7N4nzd3al2RFMHQH9PGZznAD9_llKaSq3NRzNgOvabMOgCLxEaWKHcNAyiyo3vvlpHVsQjkhi-dH3V1mpiBxu_jA8EqvdU2w76_7YKxZowa38UddTi6UCXSdx6Psg8k_EIQRNklorDU1YLzPUHctdsbhtbNecstlmCWHwLYV_yc-KrlnH62c_4r1RpIBijtR1GW_nEW_nPQ_JE5iOzudZE78wbb3O6-XMWZzbvIfz03sCA1OwPhWnOhXqxdNLZVkHYJVIulkP-bgx9A
+    ' | jq
+    ```
+    </details>
+    <details><summary>Output</summary>
+
+    ```json
+    {
+        "orders": [
+            {
+            "order": [
+                {
+                "product": "capuccino",
+                "size": "big",
+                "quantity": 1
+                },
+                {
+                "product": "latte",
+                "size": "medium",
+                "quantity": 2
+                }
+            ],
+            "id": "07eae3cb-c73d-4733-b258-cc2d3f4776cf",
+            "created": "2023-11-06T16:47:07.812091",
+            "status": "created"
+            },
+            {
+            "order": [
+                {
+                "product": "string",
+                "size": "small",
+                "quantity": 1
+                }
+            ],
+            "id": "b96d8e0d-f954-4b1e-8c1d-9030b75dd306",
+            "created": "2023-11-06T16:48:06.022688",
+            "status": "created"
+            }
+        ]
+    }
+    ```
+    </details>
+
+    ### Add CORS Middleware
+    CORS middleware takes care of populating responses with the right information.
+    In the example wildards are used ("*"), for production that should be defined in a proper way.
+
+    ```python
+    # file: orders/app.py
+    from starlette.middleware.cors import CORSMiddleware
+    ...
+    app.add_middleware(AuthorizeRequestMiddleware)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    ```
+
