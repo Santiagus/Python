@@ -1,0 +1,59 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "public_key.pem",
+                "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGguY29mZmVlbWVzaC5pby8iLCJzdWIiOiJlYzdiYmNjZi1jYTg5LTRhZjMtODJhYy1iNDFlNDgzMWE5NjIiLCJhdWQiOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvb3JkZXJzIiwiaWF0IjoxNjk5NDQzMTY1LjcyNjMxNywiZXhwIjoxNjk5NTI5NTY1LjcyNjMxNywic2NvcGUiOiJvcGVuaWQifQ.hpfxFqDtFz3KG0RQEoA0hBNyPbegnwKL76ZGuaGeLmdi7l61-MOfasQZzKTp6blYAspjF_E7N4nzd3al2RFMHQH9PGZznAD9_llKaSq3NRzNgOvabMOgCLxEaWKHcNAyiyo3vvlpHVsQjkhi-dH3V1mpiBxu_jA8EqvdU2w76_7YKxZowa38UddTi6UCXSdx6Psg8k_EIQRNklorDU1YLzPUHctdsbhtbNecstlmCWHwLYV_yc-KrlnH62c_4r1RpIBijtR1GW_nEW_nPQ_JE5iOzudZE78wbb3O6-XMWZzbvIfz03sCA1OwPhWnOhXqxdNLZVkHYJVIulkP-bgx9A"
+            ],
+            "env": {
+                "AUTH_ON": "True"
+            }
+        },
+        {
+            "name": "FastAPI",
+            "type": "python",
+            "pythonArgs": [
+                "-Xfrozen_modules=off"
+            ],
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "orders.web.app:app",
+                "--reload",
+                "--port",
+                "8000",
+            ],
+            "jinja": true,
+            "justMyCode": true,
+        },
+        {
+            "name": "Flask",
+            "type": "python",
+            "pythonArgs": [
+                "-Xfrozen_modules=off"
+            ],
+            "request": "launch",
+            "module": "flask",
+            "args": [
+                "--app",
+                "kitchen.app",
+                "--debug",
+                "run",
+                "--port",
+                "9000",
+            ],
+            "jinja": true,
+            "justMyCode": true,
+        }
+    ]
+}
