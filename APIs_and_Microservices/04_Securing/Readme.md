@@ -306,22 +306,39 @@ from orders.web.api import api
     ```
     </details>
 
-    ### Add CORS Middleware
-    CORS middleware takes care of populating responses with the right information.
-    In the example wildards are used ("*"), for production that should be defined in a proper way.
+### Add CORS Middleware
+CORS middleware takes care of populating responses with the right information.
+In the example wildards are used ("*"), for production that should be defined in a proper way.
 
-    ```python
-    # file: orders/app.py
-    from starlette.middleware.cors import CORSMiddleware
-    ...
-    app.add_middleware(AuthorizeRequestMiddleware)
+```python
+# file: orders/app.py
+from starlette.middleware.cors import CORSMiddleware
+...
+app.add_middleware(AuthorizeRequestMiddleware)
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    ```
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
 
+### Updating the database to link users and orders
+
+#### Remove current stored orders
+Current orders are not associated with a user and will not work after enforcing the association.
+
+```$ python3```
+```bash
+>>> from orders.repository.orders_repository import OrdersRepository
+>>> from orders.repository.unit_of_work import UnitOfWork
+>>> with UnitOfWork() as unit_of_work:
+    orders_repository = OrdersRepository(unit_of_work.session)
+    orders = orders_repository.list()
+    for order in orders: orders_repository.delete(order.id)
+    unit_of_work.commit()
+```
+
+***NOTE:*** Code added in file *clean_database.py*
