@@ -7,17 +7,25 @@ class OrdersRepository:
     def __init__(self, session):
         self.session = session
 
-    def add(self, items):
-        record = OrderModel(items=[OrderItemModel(**item) for item in items])
+    # def add(self, items):
+    def add(self, items, user_id):
+        record = OrderModel(
+            items=[OrderItemModel(**item) for item in items], user_id=user_id
+        )
         self.session.add(record)
         return Order(**record.dict(), order_=record)
 
-    def _get(self, id_):
-        # .filter_by(**filters) ??
-        return self.session.query(OrderModel).filter(OrderModel.id == str(id_)).first()
+    def _get(self, id_, **filters):
+        # return self.session.query(OrderModel).filter(OrderModel.id == str(id_)).first()
+        return (
+            self.session.query(OrderModel)
+            .filter(OrderModel.id == str(id_))
+            .filter_by(**filters)
+            .first()
+        )
 
-    def get(self, id_):
-        order = self._get(id_)
+    def get(self, id_, **filters):
+        order = self._get(id_, **filters)
         if order is not None:
             return Order(**order.dict())
 

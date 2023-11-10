@@ -6,7 +6,9 @@ from datetime import datetime
 from http import HTTPStatus
 from fastapi import HTTPException
 from uuid import UUID
+from flask import request, request_started
 from starlette.responses import Response
+from starlette.requests import Request
 from starlette import status
 
 from orders.orders_service.exceptions import OrderNotFoundError
@@ -34,7 +36,9 @@ ORDERS = []
 
 
 @app.get("/orders", response_model=GetOrdersSchema)
-def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
+def get_orders(
+    request: Request, cancelled: Optional[bool] = None, limit: Optional[int] = None
+):
     # return ORDERS
     # if cancel_order is None and limit is None:
     #     return GetOrdersSchema(orders=ORDERS)
@@ -57,7 +61,9 @@ def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
     with UnitOfWork() as unit_of_work:
         repo = OrdersRepository(unit_of_work.session)
         orders_service = OrdersService(repo)
-        results = orders_service.list_orders(limit=limit, cancelled=cancelled)
+        results = orders_service.list_orders(
+            limit=limit, cancelled=cancelled, user_id=request.state.user_id
+        )
     return {"orders": [result.dict() for result in results]}
 
 
@@ -76,7 +82,8 @@ def get_orders(cancelled: Optional[bool] = None, limit: Optional[int] = None):
 # order["status"] = "created"
 # ORDERS.append(order)
 # return order
-def create_order(payload: CreateOrderSchema):
+# def create_order(payload: CreateOrderSchema):
+def create_order(request: Request, payload: CreateOrderSchema):
     with UnitOfWork() as unit_of_work:
         repo = OrdersRepository(unit_of_work.session)
         orders_service = OrdersService(repo)
@@ -84,14 +91,15 @@ def create_order(payload: CreateOrderSchema):
         order = payload.model_dump()["order"]
         for item in order:
             item["size"] = item["size"].value
-        order = orders_service.place_order(order)
+        # order = orders_service.place_order(order)
+        order = orders_service.place_order(order, request.state.user_id)
         unit_of_work.commit()
         return_payload = order.dict()
     return return_payload
 
 
 @app.get("/orders/{order_id}")
-def get_order(order_id: UUID):
+def get_order(request: Request, order_id: UUID):
     # # return order
     # for order in ORDERS:
     #     if order["id"] == order_id:
@@ -100,7 +108,9 @@ def get_order(order_id: UUID):
         with UnitOfWork() as unit_of_work:
             repo = OrdersRepository(unit_of_work.session)
             orders_service = OrdersService(repo)
-            order = orders_service.get_order(order_id=order_id)
+            order = orders_service.get_order(
+                order_id=order_id, user_id=request.state.user_id
+            )
         return order.dict()
     except OrderNotFoundError:
         raise HTTPException(

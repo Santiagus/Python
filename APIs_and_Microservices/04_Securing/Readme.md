@@ -342,3 +342,87 @@ Current orders are not associated with a user and will not work after enforcing 
 ```
 
 ***NOTE:*** Code added in file *clean_database.py*
+
+Adding user ID foreign key to the order table
+
+```python
+# file: orders/repository/models.py
+class OrderModel(Base):
+    __tablename__ = 'order'
+    user_id = Column(String, nullable=False)
+```
+
+#### Update database schema using Alembic
+
+- Update *migrations/env.py* adding *render_as_batch=True* 
+
+    ```python
+    def run_migrations_online() -> None:
+        ...
+        with connectable.connect() as connection:
+            context.configure(
+                connection=connection, target_metadata=target_metadata, render_as_batch=True
+            )    
+    ```
+
+- Add user id to order table:
+    ```bash
+    (.venv) $ PYTHONPATH=`pwd` alembic revision --autogenerate -m "Add user id to order table"
+    INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+    INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+    INFO  [alembic.autogenerate.compare] Detected added column 'order.user_id'
+    Generating /mnt/e/repos/Python/APIs_and_Microservices/04_Securing/migrations/versions/79d8d6d95a81_add_user_id_to_order_table.py ...  done
+    ```
+- Run migration:
+    ```bash
+    (.venv) $ PYTHONPATH=`pwd` alembic upgrade heads
+    INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+    INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+    INFO  [alembic.runtime.migration] Running upgrade d8aff52545c0 -> 79d8d6d95a81, Add user id to order table
+    ```
+
+### Restrict user access to own resources
+
+##### Update api to capture user_id
+<details>
+
+```python
+# file: orders/web/api/api.py
+def create_order(request: Request, payload: CreateOrderSchema):
+    order = orders_service.place_order(order, request.state.user_id)
+
+def get_orders(request: Request, cancelled: Optional[bool] = None, limit: Optional[int] = None):
+    with UnitOfWork() as unit_of_work:
+        results = orders_service.list_orders(limit=limit, cancelled=cancelled, 
+            user_id=request.state.user_id
+        )
+
+def get_order(request: Request, order_id: UUID):
+    try:
+        with UnitOfWork() as unit_of_work:        
+            order = orders_service.get_order(order_id=order_id, user_id=request.state.user_id)
+
+
+# file: orders/orders_service/orders_service.py    
+class OrdersService:
+    def place_order(self, items, user_id):
+        return self.orders_repository.add(items, user_id)
+    def get_order(self, order_id, **filters):
+        order = self.orders_repository.get(order_id, **filters)
+# file: orders/repository/orders_repository.py
+class OrdersRepository:
+    def add(self, items, user_id):
+        record = OrderModel(
+        items=[OrderItemModel(**item) for item in items],
+        user_id=user_id
+        )
+    def _get(self, id_, **filters):
+        return (
+        self.session.query(OrderModel)
+        .filter(OrderModel.id == str(id_)).filter_by(**filters)
+        .first()
+        )
+        def get(self, id_, **filters):
+        order = self._get(id_, **filters)
+```
+<details>
