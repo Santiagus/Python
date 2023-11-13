@@ -19,7 +19,7 @@ class Size(Enum):
 
 class Status(Enum):
     created = "created"
-    updated = "updated"
+    # updated = "updated"
     paid = "paid"
     progress = "progress"
     cancelled = "cancelled"
@@ -54,7 +54,7 @@ class CreateOrderSchema(BaseModel):
 class GetOrderSchema(CreateOrderSchema):
     id: UUID
     created: datetime
-    updated: datetime
+    # updated: datetime
     status: Status
 
 

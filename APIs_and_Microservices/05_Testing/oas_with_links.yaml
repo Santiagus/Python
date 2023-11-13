@@ -46,6 +46,25 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/GetOrderSchema'
+        # '422':
+        #   $ref: '#/components/responses/UnprocessableEntity'
+
+    post:
+      summary: Creates an order
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderSchema'
+      responses:
+        '201':
+          description: A JSON representation of the created order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderSchema'
           links:
             GetOrder:
               operationId: getOrder
@@ -82,25 +101,6 @@ paths:
               description: >
                 The `id` value returned in the response can be used as
                 the `order_id` parameter in `DELETE /orders/{order_id}/pay
-        # '422':
-        #   $ref: '#/components/responses/UnprocessableEntity'
-
-    post:
-      summary: Creates an order
-      operationId: createOrder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateOrderSchema'
-      responses:
-        '201':
-          description: A JSON representation of the created order
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetOrderSchema'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
 
@@ -292,7 +292,6 @@ components:
       required:
         - id
         - created
-        - updated
         - status
         - order
       properties:
@@ -306,7 +305,6 @@ components:
           type: string
           enum:
             - created
-            - updated
             - paid
             - progress
             - cancelled

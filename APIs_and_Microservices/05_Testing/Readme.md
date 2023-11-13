@@ -237,8 +237,7 @@ def test(payload):
 </br>
 
 **1. Run server in background (or just other terminal)** \
-```$ uvicorn orders.app:app &```
-
+```$ uvicorn orders.app:app --reload --log-level trace &```
 **2. Run schemathesis** \
 ```$ schemathesis run oas.yaml --base-url=http://127.0.0.1:8000 --hypothesis-database=none```
 
@@ -276,3 +275,165 @@ We run additional conformance checks on reports from public repos.
 Hypothesis caches some test in *.hypothesis/* folder that causes misleading results in subsequent test executions.
 
 Set the --hypothesisdatabase flag to none makes Schemathesis to not cache test cases.
+
+### Add links in oas.yaml
+
+<details><summary>oas_with_links.yaml</summary>
+
+```yaml
+  /orders:
+    get:
+      parameters:
+      - name: cancelled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+      summary: Returns a list of orders
+      operationId: getOrders
+      description: >
+        A list of orders made by the customer
+        sorted by date. Allows to filter orders
+        by range of dates.
+      responses:
+        '200':
+          description: A JSON array of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetOrderSchema'
+          links:
+            GetOrder:
+              operationId: getOrder
+              parameters:
+                order_id: '$response.body#/id'
+              description: >
+                The `id` value returned in the response can be used as
+                the `order_id` parameter in `GET /orders/{order_id}`
+                        UpdateOrder:
+              operationId: updateOrder
+              parameters:
+                order_id: '$response.body#/id'
+              description: >
+                The `id` value returned in the response can be used as
+                the `order_id` parameter in `PUT /orders/{order_id}
+            DeleteOrder:
+              operationId: deleteOrder
+              parameters:
+                order_id: '$response.body#/id'
+              description: >
+                The `id` value returned in the response can be used as
+                the `order_id` parameter in `DELETE /orders/{order_id}
+            CancelOrder:
+              operationId: cancelOrder
+              parameters:
+                order_id: '$response.body#/id'
+              description: >
+                The `id` value returned in the response can be used as
+                the `order_id` parameter in `DELETE /orders/{order_id}/cancel
+            PayOrder:
+              operationId: payOrder
+              parameters:
+                order_id: '$response.body#/id'
+              description: >
+                The `id` value returned in the response can be used as
+                the `order_id` parameter in `DELETE /orders/{order_id}/pay
+```
+</details>
+
+<details><summary>output</summary>
+
+```bash
+================== Schemathesis test session starts ==================
+Schema location: file:///mnt/e/repos/Python/APIs_and_Microservices/05_Testing/oas_with_links.yaml
+Base URL: http://127.0.0.1:8000
+Specification version: Open API 3.0.3
+Workers: 1
+Collected API operations: 7
+
+GET /orders .                                           [ 14%]
+    -> PUT /orders/{order_id} .                         [ 25%]
+    -> DELETE /orders/{order_id} .                      [ 33%]
+    -> POST /orders/{order_id}/cancel .                 [ 40%]
+    -> POST /orders/{order_id}/pay .                    [ 45%]
+POST /orders .                                          [ 54%]
+GET /orders/{order_id} .                                [ 63%]
+PUT /orders/{order_id} .                                [ 72%]
+DELETE /orders/{order_id} .                             [ 81%]
+POST /orders/{order_id}/pay .                           [ 90%]
+POST /orders/{order_id}/cancel .                        [100%]
+=============================== SUMMARY ===============================
+
+Performed checks:
+    not_a_server_error                    1109 / 1109 passed          PASSED 
+
+Tip: Use the `--report` CLI option to visualize test results via Schemathesis.io.
+We run additional conformance checks on reports from public repos.
+```
+</details>
+
+To save a report use the flag `--report [file.tar.gz]`
+
+`schemathesis run oas_with_links.yaml --base-url=http://127.0.0.1:8000 --stateful=links --report report_file.tar.gz`
+
+This test indicates that our API passed all checks in the not_a_
+server_error category. By default, Schemathesis only checks that the API doesn’t raise server errors.
+
+To also verify status codes, content types, headers, and schemas use the `--checks all`:
+```schemathesis run oas_with_links.yaml --base-url=http://127.0.0.1:8000 --hypothesis-database=none --stateful=links --checks all --report report_file.tar.gz```
+
+***NOTES:***
+
+Somehow testcases with *Authorization: Bearer* causes problems when running the test but when testing the equivalent CURL command indicated in the output it works without any problem. To solve this a value for that header has to be provided from the command. 
+```-H 'Authorization: Bearer  '```
+
+Used command:
+```schemathesis run oas_with_links.yaml --base-url=http://127.0.0.1:8000 --stateful=links --checks all --validate-schema True --hypothesis-derandomize --fixups fast_api --sanitize-output False -H 'Authorization: Bearer '```
+
+<details><summary>output</summary>
+
+```bash
+================================ Schemathesis test session starts ===============================
+Schema location: file:///mnt/e/repos/Python/APIs_and_Microservices/05_Testing/oas_with_links.yaml
+Base URL: http://127.0.0.1:8000
+Specification version: Open API 3.0.3
+Workers: 1
+Collected API operations: 7
+
+GET /orders .                                                                              [ 14%]
+POST /orders .                                                                             [ 28%]
+    -> PUT /orders/{order_id} .                                                            [ 37%]
+    -> DELETE /orders/{order_id} .                                                         [ 44%]
+    -> POST /orders/{order_id}/cancel .                                                    [ 50%]
+    -> POST /orders/{order_id}/pay .                                                       [ 54%]
+GET /orders/{order_id} .                                                                   [ 63%]
+PUT /orders/{order_id} .                                                                   [ 72%]
+DELETE /orders/{order_id} .                                                                [ 81%]
+POST /orders/{order_id}/pay .                                                              [ 90%]
+POST /orders/{order_id}/cancel .                                                           [100%]
+=============================================== SUMMARY =========================================
+
+Performed checks:
+    not_a_server_error                              1109 / 1109 passed          PASSED
+    status_code_conformance                         1109 / 1109 passed          PASSED
+    content_type_conformance                        1109 / 1109 passed          PASSED
+    response_headers_conformance                    1109 / 1109 passed          PASSED
+    response_schema_conformance                     1109 / 1109 passed          PASSED
+
+Tip: Use the `--report` CLI option to visualize test results via Schemathesis.io.
+We run additional conformance checks on reports from public repos.
+
+========================================= 11 passed in 11.24s ===================================
+```
+</details>
