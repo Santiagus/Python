@@ -188,3 +188,91 @@ INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
 INFO:     Finished server process [31376]
 ```
+
+## Property-based testing with Hypothesis
+
+This approach uses hypothesis framework to generate all possible types of payloads and test them against our API server.
+
+
+Create *orders/test.py*
+<details><summary>orders/test.py</summary>
+
+```python
+from pathlib import Path
+import hypothesis.strategies as st
+import jsonschema
+import yaml
+from fastapi.testclient import TestClient
+from hypothesis import given, Verbosity, settings
+from jsonschema import ValidationError, RefResolver
+from orders.app import app
+
+orders_api_spec = yaml.full_load((Path(__file__).parent / "oas.yaml").read_text())
+create_order_schema = orders_api_spec["components"]["schemas"]["CreateOrderSchema"]
+
+def is_valid_payload(payload, schema):
+    try:
+        jsonschema.validate(
+            payload, schema=schema, resolver=RefResolver("", orders_api_spec)
+        )
+    except ValidationError:
+        return False
+    else:
+        return True
+
+test_client = TestClient(app=app)
+values_strategy = [...]
+order_item_strategy = [...]
+strategy = [...]
+
+@given(strategy)
+def test(payload):
+    response = test_client.post("/orders", json=payload)
+    if is_valid_payload(payload, create_order_schema):
+        assert response.status_code == 201
+    else:
+        assert response.status_code == 422
+```
+</details>
+</br>
+
+**1. Run server in background (or just other terminal)** \
+```$ uvicorn orders.app:app &```
+
+**2. Run schemathesis** \
+```$ schemathesis run oas.yaml --base-url=http://127.0.0.1:8000 --hypothesis-database=none```
+
+<details><summary>output</summary>
+
+```bash
+============= Schemathesis test session starts =============
+Schema location: file:///05_Testing/oas.yaml
+Base URL: http://127.0.0.1:8000
+Specification version: Open API 3.0.3
+Workers: 1
+Collected API operations: 7
+
+GET /orders .                                         [ 14%]
+POST /orders .                                        [ 28%]
+GET /orders/{order_id} .                              [ 42%]
+PUT /orders/{order_id} .                              [ 57%]
+DELETE /orders/{order_id} .                           [ 71%]
+POST /orders/{order_id}/pay .                         [ 85%]
+POST /orders/{order_id}/cancel .                      [100%]
+
+========================== SUMMARY ==========================
+
+Performed checks:
+    not_a_server_error                    705 / 705 passed          PASSED
+Tip: Use the `--report` CLI option to visualize test results via Schemathesis.io.
+We run additional conformance checks on reports from public repos.
+```
+</details>
+</br>
+
+
+**NOTES:**
+
+Hypothesis caches some test in *.hypothesis/* folder that causes misleading results in subsequent test executions.
+
+Set the --hypothesisdatabase flag to none makes Schemathesis to not cache test cases.
