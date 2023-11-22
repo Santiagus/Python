@@ -593,7 +593,7 @@ GET or POST methods can be used to send a request.
 $ curl http://localhost:9002/graphql --data-urlencode 'query={allIngredients{name}}'
 ```
 
-#### Callin a GraphQL query using Python
+#### Calling a GraphQL query using Python
 
 ````python
 import requests
