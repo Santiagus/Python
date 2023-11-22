@@ -406,3 +406,19 @@ fragment beverageProperties on Beverage {
 }
 ```
 </details>
+
+#### Multiple querys in one request
+```GraphQL
+{
+  allProducts {
+    ...commonProperties
+  }
+  allIngredients {
+    name
+  }
+}
+
+fragment commonProperties on ProductInterface {
+  name
+}
+```
