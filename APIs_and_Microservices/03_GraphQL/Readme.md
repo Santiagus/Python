@@ -355,3 +355,54 @@ fragment beverageProperties on Beverage {
 }
 ```
 </details>
+
+#### Running queries with input parameters
+```GraphQL
+{
+    products(input: {maxPrice: 10}) {
+        ...on ProductInterface {
+            name
+        }
+    }
+}
+```
+
+#### Querying nested object types
+<details><summary>sample 1</summary>
+
+```GraphQL
+{
+  allProducts {
+    ... on ProductInterface {
+      name
+      ingredients {
+        ingredient {
+          name
+        }
+      }
+    }
+  }
+}
+```
+</details>
+
+<details><summary>sample 2</summary>
+
+```GraphQL
+{
+  allProducts {
+    ... on ProductInterface {
+      name
+      ingredients {
+        ingredient {
+          name
+          supplier {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+</details>
