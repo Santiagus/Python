@@ -276,3 +276,82 @@ On the left panel run:
 }
 ```
 </details>
+
+#### Sample query with parameters
+
+```bash
+{
+    ingredient (id: "asdg"){
+            name
+        }
+}
+```
+
+<details><summary>Sample error output</summary>
+
+```json
+{
+  "errors": [
+    {
+      "message": "Field \"ingredient\" argument \"id\" of type \"ID!\" is required, but it was not provided.",
+      "locations": [
+        {
+          "line": 2,
+          "column": 1
+        }
+      ]
+    }
+  ]
+}
+```
+</details>
+
+If any Error occurs, output indicate missing required parameters and the exact location in the given query.
+
+#### Multiple types Query
+
+When a GraphQL query returns multiple types we must create selections sets for each type using *inline fragments*
+
+An inline fragment is an anonymous selection set on a specific type.
+
+```GraphQL
+{
+allProducts { 
+  ...on ProductInterface{
+  	name
+	}
+  ...on Cake {
+  	name
+	}
+  ...on Beverage {
+  	name
+	}
+}
+}
+```
+
+Define fragments as standalone variables.
+
+<details>
+
+```GraphQL
+{
+    allProducts {
+        ...commonProperties
+        ...cakeProperties
+        ...beverageProperties
+    }
+}
+fragment commonProperties on ProductInterface {
+    name
+}
+
+fragment cakeProperties on Cake {
+    hasFilling
+}
+
+fragment beverageProperties on Beverage {
+    hasCreamOnTopOption
+}
+```
+</details>
