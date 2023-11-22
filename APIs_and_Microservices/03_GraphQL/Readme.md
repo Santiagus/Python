@@ -491,3 +491,91 @@ fragment commonProperties on ProductInterface {
   name
 }
 ```
+
+#### Parameterized syntax
+
+Parameterized queries allow us to decouple our query/mutation calls from the
+data.
+
+The parameterized argument is marked with a dollar sign ($)
+
+<details><summary>Query document</summary>
+
+```GraphQL
+mutation CreateProduct($name: String!, $type: ProductType!, $input: AddProductInput!) {
+  addProduct(name: $name, type: $type, input: $input) {
+    ...commonProperties
+  }
+}
+
+fragment commonProperties on ProductInterface {
+  name
+}
+```
+</details>
+</br>
+
+Separately, we define our query variables as a JSON document.
+
+<details><summary>Query variables</summary>
+
+```GraphQL
+{
+  "name": "Mocha",
+  "type": "beverage",
+  "input": {
+    "price": 10,
+    "size": "BIG",
+    "ingredients": [
+      {
+        "ingredient": 1,
+        "quantity": 1,
+        "unit": "LITERS"
+      }
+    ]
+  }
+}
+```
+</details>
+
+### Adding deletion in the same request
+
+<details><summary>Query document</summary>
+
+```GraphQL
+mutation CreateAndDeleteProduct($name: String!, $type: ProductType!, $input: AddProductInput!, $id: ID!) {
+  addProduct(name: $name, type: $type, input: $input) {
+    ...commonProperties
+  }
+  deleteProduct(id: $id)
+}
+
+fragment commonProperties on ProductInterface {
+  name
+}
+
+```
+</details>
+</br>
+
+<details><summary>Query variables</summary>
+
+```GraphQL
+{
+  "name": "Mocha",
+  "type": "beverage",
+  "input": {
+    "price": 10,
+    "size": "BIG",
+    "ingredients": [
+      {
+        "ingredient": 1,
+        "quantity": 1,
+        "unit": "LITERS"
+      }
+    ]
+  },
+  "id": "asdf"
+}
+```
+</details>
