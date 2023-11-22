@@ -579,3 +579,16 @@ fragment commonProperties on ProductInterface {
 }
 ```
 </details>
+
+In Examples until now we are using GraphiQL client to explore the GraphQL API and to interact with it.
+GraphQL translates our query documents into HTTP requests that the GraphQL server understands.
+
+HTTP request can be sent directly to the API using cURL or others.
+
+GET or POST methods can be used to send a request.
+- GET : send query document using URL query parameters
+- POST: send query in the request payload.
+
+```bash
+$ curl http://localhost:9002/graphql --data-urlencode 'query={allIngredients{name}}'
+```
