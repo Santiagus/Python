@@ -422,3 +422,37 @@ fragment commonProperties on ProductInterface {
   name
 }
 ```
+
+#### Query aliasing
+**product** alias for *allProcuts* \
+**ingredients** alias for *allIngredients*
+```GraphQL
+{
+  products: allProducts {
+    ...commonProperties
+  }
+  ingredients: allIngredients {
+    name
+  }
+}
+
+fragment commonProperties on ProductInterface {
+  name
+}
+```
+Mandatory if requesting several query multiple times
+
+```GraphQL
+{
+  availableProducts: products(input: {available: true}) {
+    ...commonProperties
+  }
+  unavailableProducts: products(input: {available: false}) {
+    ...commonProperties
+  }
+}
+
+fragment commonProperties on ProductInterface {
+  name
+}
+```
