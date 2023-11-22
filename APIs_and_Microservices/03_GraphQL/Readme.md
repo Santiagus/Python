@@ -456,3 +456,38 @@ fragment commonProperties on ProductInterface {
   name
 }
 ```
+
+### GraphQL mutations
+
+Mutations are GraphQL functions that allow us to create resources or change the state of the server.
+
+Queries are meant to read data from the server, while mutations are meant to
+create or change data in the server.
+
+```GraphQL
+mutation {
+    deleteProduct(id: "asdf")
+}
+```
+
+```GraphQL
+mutation {
+  addProduct(name: "Mocha", type: beverage,
+    input: {
+      price: 10,
+      size: BIG,
+      ingredients: [{
+         ingredient: 1,
+         quantity: 1,
+         unit: LITERS
+      }]
+    })
+  {
+    ...commonProperties
+  }
+}
+
+fragment commonProperties on ProductInterface {
+  name
+}
+```
