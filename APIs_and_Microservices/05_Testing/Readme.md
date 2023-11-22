@@ -237,7 +237,7 @@ def test(payload):
 </br>
 
 **1. Run server in background (or just other terminal)** \
-```$ uvicorn orders.app:app --reload --log-level trace &```
+```$ uvicorn orders.app:app --reload --log-level trace &``` \
 **2. Run schemathesis** \
 ```$ schemathesis run oas.yaml --base-url=http://127.0.0.1:8000 --hypothesis-database=none```
 
