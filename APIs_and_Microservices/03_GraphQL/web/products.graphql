@@ -1,0 +1,84 @@
+scalar Datetime
+
+type Supplier {
+    id: ID!
+    name: String!
+    address: String!
+    contactNumber: String!
+    email: String!
+    ingredients: [Ingredient!]!
+}
+
+enum MeasureUnit {
+    LITERS
+    KILOGRAMS
+    UNITS
+}
+
+type Stock {
+    quantity: Float!
+    unit: MeasureUnit!
+}
+
+type Ingredient {
+    id: ID!
+    name: String!
+    stock: Stock!
+    products: [Product!]!
+    supplier: Supplier
+    description: [String!]
+    lastUpdated: Datetime!
+}
+
+type IngredientRecipe {
+    ingredient: Ingredient!
+    quantity: Float!
+    unit: MeasureUnit!
+}
+
+enum Sizes {
+    SMALL
+    MEDIUM
+    BIG
+}
+
+interface ProductInterface {
+    id: ID!
+    name: String!
+    price: Float
+    size: Sizes
+    ingredients: [IngredientRecipe!]
+    available: Boolean!
+    lastUpdated: Datetime!
+}
+
+type Beverage implements ProductInterface {
+    id: ID!
+    name: String!
+    price: Float
+    size: Sizes
+    ingredients: [IngredientRecipe!]!
+    available: Boolean!
+    lastUpdated: Datetime!
+    hasCreamOnTopOption: Boolean!
+    hasServeOnIceOption: Boolean!
+}
+
+type Cake implements ProductInterface {
+    id: ID!
+    name: String!
+    price: Float
+    size: Sizes
+    ingredients: [IngredientRecipe!]
+    available: Boolean!
+    lastUpdated: Datetime!
+    hasFilling: Boolean!
+    hasNutsToppingOption: Boolean!
+}
+
+union Product = Beverage | Cake
+
+type Query {    
+    allIngredients: [Ingredient!]!
+    allProducts: [Product!]!    
+}
