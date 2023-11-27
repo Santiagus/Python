@@ -1072,3 +1072,73 @@ schema = make_executable_schema(
 )
 ```
 </details>
+
+
+### Handling query parameters
+Example defining *products()* query, which accepts an input filter object
+whose type is *ProductsFilter*.
+
+Update *products.graphql*
+```graphql
+enum SortingOrder {
+    ASCENDING
+    DESCENDING
+}
+
+enum SortBy {
+    price
+    name
+}
+
+input ProductsFilter {
+    maxPrice: Float
+    minPrice: Float
+    available: Boolean=true
+    sortBy: SortBy=price
+    sort: SortingOrder=DESCENDING
+    resultsPerPage: Int = 10
+    page: Int = 1
+}
+
+type Query {
+    products(input: ProductsFilter!): [Product!]!
+}
+```
+
+Add query resolver to *queries.py*
+```python
+@query.field("products")
+def resolve_products(*_, input=None):
+    filtered = [product for product in products]
+    if input is None:
+        return filtered
+    filtered = [
+        product for product in filtered if product["available"] is input["available"]
+    ]
+    if input.get("minPrice") is not None:
+        filtered = [
+            product for product in filtered if product["price"] >= input["minPrice"]
+        ]
+    if input.get("maxPrice") is not None:
+        filtered = [
+            product for product in filtered if product["price"] <= input["maxPrice"]
+        ]
+    filtered.sort(
+        key=lambda product: product.get(input["sortBy"], 0),
+        reverse=input["sort"] == "DESCENDING",
+    )
+    return filtered
+```
+
+Run Query to test the resolver:
+- Run : ```$ uvicorn server:server```
+- Execute query in web interface :  http://127.0.0.1:8000
+```GraphQL
+{
+products(input: {available: true}) {
+    ...on ProductInterface {
+      name
+    }
+  }
+}
+```

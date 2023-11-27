@@ -78,7 +78,29 @@ type Cake implements ProductInterface {
 
 union Product = Beverage | Cake
 
-type Query {    
+enum SortingOrder {
+    ASCENDING
+    DESCENDING
+}
+
+enum SortBy {
+    price
+    name
+}
+
+input ProductsFilter {
+    maxPrice: Float
+    minPrice: Float
+    available: Boolean=true
+    sortBy: SortBy=price
+    sort: SortingOrder=DESCENDING
+    resultsPerPage: Int = 10
+    page: Int = 1
+}
+
+type Query {
+    hello : String
     allIngredients: [Ingredient!]!
-    allProducts: [Product!]!    
+    allProducts: [Product!]!
+    products(input: ProductsFilter!): [Product!]!
 }
