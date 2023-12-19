@@ -31,7 +31,7 @@ products = [
         "name": "Walnut Bomb",
         "price": 37.00,
         "size": "MEDIUM",
-        "available": False,
+        "available": True,
         "ingredients": [
             {
                 "ingredient": "602f2ab3-97bd-468e-a88b-bb9e00531fd0",

@@ -690,6 +690,7 @@ hello: String
 """
 server = GraphQL(make_executable_schema(schema, [query]), debug=True)
 ```
+</details>
 
 Now the response is a string with 10 random characters.
 
@@ -1142,3 +1143,200 @@ products(input: {available: true}) {
   }
 }
 ```
+
+### Resolver for addProduct() mutation
+<details><summary>web/mutations.py</summary>
+
+```python
+import uuid
+from datetime import datetime
+from ariadne import MutationType
+from web.data import products
+
+mutation = MutationType()
+
+
+@mutation.field("addProduct")
+def resolve_add_product(*_, name, type, input):
+    product = {
+        "id": uuid.uuid4(),
+        "name": name,
+        "available": input.get("available", False),
+        "ingredients": input.get("ingredients", []),
+        "lastUpdated": datetime.utcnow(),
+    }
+    if type == "cake":
+        product.update(
+            {
+                "hasFilling": input["hasFilling"],
+                "hasNutsToppingOption": input["hasNutsToppingOption"],
+            }
+        )
+    else:
+        product.update(
+            {
+                "hasCreamOnTopOption": input["hasCreamOnTopOption"],
+                "hasServeOnIceOption": input["hasServeOnIceOption"],
+            }
+        )
+    products.append(product)
+    return product
+```
+</details>
+
+<details><summary> products.graphql</summary>
+
+```GraphQL
+input IngredientRecipeInput {
+    ingredient: ID!
+    quantity: Float!
+    unit: MeasureUnit!
+}
+
+input AddProductInput {
+    price: Float
+    size: Sizes
+    ingredients: [IngredientRecipeInput!]!
+    hasFilling: Boolean = false
+    hasNutsToppingOption: Boolean = false
+    hasCreamOnTopOption: Boolean = false
+    hasServeOnIceOption: Boolean = false
+}
+
+enum ProductType {
+    cake
+    beverage
+}
+
+type Mutation {    
+    addProduct(name: String!, type: ProductType!, input: AddProductInput!): Product!    
+}
+```
+</details>
+
+<details><summary>web/schema.py</summary>
+
+```python
+from web.mutations import mutation
+schema = make_executable_schema(
+  (Path(__file__).parent / 'products.graphql').read_text(), [query, 
+  mutation, product_type]
+)
+```
+</details>
+
+Query test:
+```GraphQL
+mutation {
+  addProduct(name: "Mocha", type: beverage, input: {ingredients: []}) {
+    ... on ProductInterface {
+      name
+      id
+    }
+  }
+}
+```
+Verification :
+```GraphQL
+{
+  allProducts {
+    ... on ProductInterface {
+      name
+    }
+  }
+}
+```
+<details><summary>Response:</summary>
+
+```GraphQL
+{
+  "data": {
+    "allProducts": [
+      {
+        "name": "Walnut Bomb"
+      },
+      {
+        "name": "Cappuccino Star"
+      },
+      {
+        "name": "Mocha"
+      }
+    ]
+  }
+}
+```
+</details>
+
+
+### Resolver for custom scalar types
+For custom scalar types three actions are needed:
+- Serialization (via custom serializer implementation )
+- Deserialization (via parser from scalar to python native data structure)
+- Validation (via own validation methods)
+
+#### Add type resolver 
+<details><summary>web/type.py</summary>
+
+```python
+from ariadne import UnionType, ScalarType
+
+datetime_scalar = ScalarType("Datetime")
+
+@datetime_scalar.serializer
+def serialize_datetime_scalar(date):
+    return date.isoformat()
+
+@datetime_scalar.value_parser
+def parse_datetime_scalar(date):
+    return datetime.fromisoformat(date)
+```
+</details>
+
+#### Enable type resolver adding to the array of bindable objects
+
+<details><summary>web/schema.py</summary>
+
+```python
+from web.types import product_type, datetime_scalar
+
+schema = make_executable_schema(
+    (Path(__file__).parent / "products.graphql").read_text(),
+    [query, mutation, product_type, datetime_scalar],
+)
+```
+</details>
+
+#### Test
+<details><summary>Query</summary>
+
+```GraphQL
+{
+  allProducts {
+    ... on ProductInterface {
+      name
+      lastUpdated
+    }
+  }
+}
+```
+</details>
+
+<details><summary>Output</summary>
+
+```GraphQL
+{
+  "data": {
+    "allProducts": [
+      {
+        "name": "Walnut Bomb",
+        "lastUpdated": "2023-11-29T17:28:41.571832"
+      },
+      {
+        "name": "Cappuccino Star",
+        "lastUpdated": "2023-11-29T17:28:41.571833"
+      }
+    ]
+  }
+}
+```
+</details>

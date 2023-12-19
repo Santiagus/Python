@@ -10,7 +10,7 @@ type Supplier {
 }
 
 enum MeasureUnit {
-    LITERS
+    LITRES
     KILOGRAMS
     UNITS
 }
@@ -103,4 +103,29 @@ type Query {
     allIngredients: [Ingredient!]!
     allProducts: [Product!]!
     products(input: ProductsFilter!): [Product!]!
+}
+
+input IngredientRecipeInput {
+    ingredient: ID!
+    quantity: Float!
+    unit: MeasureUnit!
+}
+
+input AddProductInput {
+    price: Float
+    size: Sizes
+    ingredients: [IngredientRecipeInput!]!
+    hasFilling: Boolean = false
+    hasNutsToppingOption: Boolean = false
+    hasCreamOnTopOption: Boolean = false
+    hasServeOnIceOption: Boolean = false
+}
+
+enum ProductType {
+    cake
+    beverage
+}
+
+type Mutation {    
+    addProduct(name: String!, type: ProductType!, input: AddProductInput!): Product!    
 }
