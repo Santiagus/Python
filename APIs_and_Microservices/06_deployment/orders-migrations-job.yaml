@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: orders-service-migrations
+  namespace: orders-service
+  labels:
+    app: orders-service
+spec:
+  ttlSecondsAfterFinished: 30
+  template:
+    spec:
+      containers:
+        - name: orders-service-migrations
+          image: 414116650220.dkr.ecr.us-east-2.amazonaws.com/coffeemesh-orders-migrations:1.0
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: db-credentials
+      restartPolicy: Never
