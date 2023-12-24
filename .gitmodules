@@ -1,3 +1,6 @@
 [submodule "APIs_and_Microservices/fastapi-benchmark"]
 	path = APIs_and_Microservices/fastapi-benchmark
 	url = https://github.com/Minibrams/fastapi-benchmark
+[submodule "APIs_and_Microservices/swagger-to-locustfile"]
+	path = APIs_and_Microservices/swagger-to-locustfile
+	url = https://github.com/lieldulev/swagger-to-locustfile
