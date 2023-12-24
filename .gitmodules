@@ -1,0 +1,3 @@
+[submodule "APIs_and_Microservices/fastapi-benchmark"]
+	path = APIs_and_Microservices/fastapi-benchmark
+	url = https://github.com/Minibrams/fastapi-benchmark
