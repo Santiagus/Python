@@ -1,0 +1,4860 @@
+[
+{
+"Id": 1,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "BTC",
+"Rank": 1,
+"Price_USD": 42864.1287081049
+},
+{
+"Id": 1027,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ETH",
+"Rank": 2,
+"Price_USD": 2538.52703095365
+},
+{
+"Id": 5426,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "SOL",
+"Rank": 3,
+"Price_USD": 91.7465618758061
+},
+{
+"Id": 52,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "XRP",
+"Rank": 4,
+"Price_USD": 0.575841238809593
+},
+{
+"Id": 11841,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ARB",
+"Rank": 5,
+"Price_USD": 2.13947995027114
+},
+{
+"Id": 20947,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "SUI",
+"Rank": 6,
+"Price_USD": 1.260612094831
+},
+{
+"Id": 1321,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ETC",
+"Rank": 7,
+"Price_USD": 29.2627152470125
+},
+{
+"Id": 2,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "LTC",
+"Rank": 8,
+"Price_USD": 71.6669810810446
+},
+{
+"Id": 5805,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "AVAX",
+"Rank": 9,
+"Price_USD": 35.8400303902603
+},
+{
+"Id": 11840,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "OP",
+"Rank": 10,
+"Price_USD": 3.80415159026821
+},
+{
+"Id": 2010,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "ADA",
+"Rank": 11,
+"Price_USD": 0.546347551470012
+},
+{
+"Id": 1839,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "BNB",
+"Rank": 12,
+"Price_USD": 298.802562739742
+},
+{
+"Id": 3890,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "MATIC",
+"Rank": 13,
+"Price_USD": 0.874301239501628
+},
+{
+"Id": 22861,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "TIA",
+"Rank": 14,
+"Price_USD": 17.4149531116011
+},
+{
+"Id": 74,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "DOGE",
+"Rank": 15,
+"Price_USD": 0.080238594808436
+},
+{
+"Id": 1958,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "TRX",
+"Rank": 16,
+"Price_USD": 0.115448823679834
+},
+{
+"Id": 2280,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "FIL",
+"Rank": 17,
+"Price_USD": 6.05470552554837
+},
+{
+"Id": 1831,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "BCH",
+"Rank": 18,
+"Price_USD": 255.124064819243
+},
+{
+"Id": 21794,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "APT",
+"Rank": 19,
+"Price_USD": 10.1260029902344
+},
+{
+"Id": 23149,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "SEI",
+"Rank": 20,
+"Price_USD": 0.702456433659432
+},
+{
+"Id": 6636,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "DOT",
+"Rank": 21,
+"Price_USD": 7.61901187784663
+},
+{
+"Id": 6535,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "NEAR",
+"Rank": 22,
+"Price_USD": 3.40217614088386
+},
+{
+"Id": 8916,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ICP",
+"Rank": 23,
+"Price_USD": 12.6040383229937
+},
+{
+"Id": 7226,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "INJ",
+"Rank": 24,
+"Price_USD": 36.6368412062828
+},
+{
+"Id": 1765,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "EOS",
+"Rank": 25,
+"Price_USD": 0.761521838718436
+},
+{
+"Id": 3794,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "ATOM",
+"Rank": 26,
+"Price_USD": 10.1722889465274
+},
+{
+"Id": 4157,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "RUNE",
+"Rank": 27,
+"Price_USD": 4.54284910657642
+},
+{
+"Id": 4847,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "STX",
+"Rank": 28,
+"Price_USD": 1.66737425841781
+},
+{
+"Id": 9285,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "MOVR",
+"Rank": 29,
+"Price_USD": 27.9066317539281
+},
+{
+"Id": 328,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "XMR",
+"Rank": 30,
+"Price_USD": 152.5433338752
+},
+{
+"Id": 3602,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "BSV",
+"Rank": 31,
+"Price_USD": 84.5459649031089
+},
+{
+"Id": 4642,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "HBAR",
+"Rank": 32,
+"Price_USD": 0.0792596375966789
+},
+{
+"Id": 4558,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "FLOW",
+"Rank": 33,
+"Price_USD": 0.835939931704501
+},
+{
+"Id": 512,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "XLM",
+"Rank": 34,
+"Price_USD": 0.119521436866953
+},
+{
+"Id": 3513,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "FTM",
+"Rank": 35,
+"Price_USD": 0.393558021386032
+},
+{
+"Id": 3773,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "FET",
+"Rank": 36,
+"Price_USD": 0.669582194786555
+},
+{
+"Id": 1437,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ZEC",
+"Rank": 37,
+"Price_USD": 23.514756150632
+},
+{
+"Id": 4066,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "CHZ",
+"Rank": 38,
+"Price_USD": 0.0868672093933851
+},
+{
+"Id": 12885,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ASTR",
+"Rank": 39,
+"Price_USD": 0.150674942404788
+},
+{
+"Id": 8646,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "MINA",
+"Rank": 40,
+"Price_USD": 1.21854662813645
+},
+{
+"Id": 4172,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "LUNC",
+"Rank": 41,
+"Price_USD": 0.00011922631473158
+},
+{
+"Id": 20314,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "LUNA",
+"Rank": 42,
+"Price_USD": 0.702152349263463
+},
+{
+"Id": 7653,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ROSE",
+"Rank": 43,
+"Price_USD": 0.112255782885431
+},
+{
+"Id": 4030,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ALGO",
+"Rank": 44,
+"Price_USD": 0.187858679088477
+},
+{
+"Id": 11419,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "TONCOIN",
+"Rank": 45,
+"Price_USD": 2.11280836948738
+},
+{
+"Id": 7334,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "CFX",
+"Rank": 46,
+"Price_USD": 0.184246685728818
+},
+{
+"Id": 26680,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "NTRN",
+"Rank": 47,
+"Price_USD": 1.33377344879632
+},
+{
+"Id": 16086,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "BTT",
+"Rank": 48,
+"Price_USD": 1.07883103416702e-06
+},
+{
+"Id": 5567,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "CELO",
+"Rank": 49,
+"Price_USD": 0.801213925623484
+},
+{
+"Id": 23254,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "CORE",
+"Rank": 50,
+"Price_USD": 0.519157970471823
+},
+{
+"Id": 21296,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ETHW",
+"Rank": 51,
+"Price_USD": 3.15941065720919
+},
+{
+"Id": 3640,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "LPT",
+"Rank": 52,
+"Price_USD": 7.94024810960483
+},
+{
+"Id": 1376,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "NEO",
+"Rank": 53,
+"Price_USD": 12.3488840990191
+},
+{
+"Id": 5632,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "AR",
+"Rank": 54,
+"Price_USD": 9.21190758490695
+},
+{
+"Id": 20396,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "KAS",
+"Rank": 55,
+"Price_USD": 0.113145738341374
+},
+{
+"Id": 5034,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "KSM",
+"Rank": 56,
+"Price_USD": 42.1017734316028
+},
+{
+"Id": 2011,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "XTZ",
+"Rank": 57,
+"Price_USD": 1.02158754611899
+},
+{
+"Id": 3077,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "VET",
+"Rank": 58,
+"Price_USD": 0.0309337463821486
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "TOPN",
+"Rank": 59,
+"Price_USD": 0.000395905317064527
+},
+{
+"Id": 1274,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "WAVES",
+"Rank": 60,
+"Price_USD": 2.43178412305804
+},
+{
+"Id": 1698,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "ZEN",
+"Rank": 61,
+"Price_USD": 9.1739045537927
+},
+{
+"Id": 19778,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "FITFI",
+"Rank": 62,
+"Price_USD": 0.00693240812640773
+},
+{
+"Id": 2416,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "THETA",
+"Rank": 63,
+"Price_USD": 1.05336385722118
+},
+{
+"Id": 131,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "DASH",
+"Rank": 64,
+"Price_USD": 28.956792658713
+},
+{
+"Id": 6892,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "EGLD",
+"Rank": 65,
+"Price_USD": 54.1885474213721
+},
+{
+"Id": 4846,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "KAVA",
+"Rank": 66,
+"Price_USD": 0.768621453867283
+},
+{
+"Id": 2634,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "XDC",
+"Rank": 67,
+"Price_USD": 0.0498861078122909
+},
+{
+"Id": 7129,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "USTC",
+"Rank": 68,
+"Price_USD": 0.0264335870535494
+},
+{
+"Id": 5665,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "HNT",
+"Rank": 69,
+"Price_USD": 7.15378817344166
+},
+{
+"Id": 1684,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "QTUM",
+"Rank": 70,
+"Price_USD": 3.12798572072529
+},
+{
+"Id": 2469,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ZIL",
+"Rank": 71,
+"Price_USD": 0.0218039353337702
+},
+{
+"Id": 20362,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "POLYX",
+"Rank": 72,
+"Price_USD": 0.171334261513017
+},
+{
+"Id": 5198,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "CTC",
+"Rank": 73,
+"Price_USD": 0.572744469188164
+},
+{
+"Id": 4256,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "KLAY",
+"Rank": 74,
+"Price_USD": 0.192582852233827
+},
+{
+"Id": 27565,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "ARKM",
+"Rank": 75,
+"Price_USD": 0.543561843025598
+},
+{
+"Id": 5647,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "KDA",
+"Rank": 76,
+"Price_USD": 1.20906328327268
+},
+{
+"Id": 2299,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ELF",
+"Rank": 77,
+"Price_USD": 0.570165651983996
+},
+{
+"Id": 2502,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "HT",
+"Rank": 78,
+"Price_USD": 2.43333223733866
+},
+{
+"Id": 6951,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "REEF",
+"Rank": 79,
+"Price_USD": 0.00155694426130264
+},
+{
+"Id": 3217,
+"TimeStamp": "2024-01-13T14:33:20",
+"Symbol": "ONGAS",
+"Rank": 80,
+"Price_USD": 0.360760093256986
+},
+{
+"Id": 6756,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ACA",
+"Rank": 81,
+"Price_USD": 0.103716111674715
+},
+{
+"Id": 1720,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "MIOTA",
+"Rank": 82,
+"Price_USD": 0.247422588260517
+},
+{
+"Id": 2566,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ONT",
+"Rank": 83,
+"Price_USD": 0.2464653047941
+},
+{
+"Id": 8384,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "CLV",
+"Rank": 84,
+"Price_USD": 0.050928864449892
+},
+{
+"Id": 2405,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "IOST",
+"Rank": 85,
+"Price_USD": 0.00887075152173765
+},
+{
+"Id": 6836,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "GLMR",
+"Rank": 86,
+"Price_USD": 0.414866955224183
+},
+{
+"Id": 3635,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "CRO",
+"Rank": 87,
+"Price_USD": 0.0878580343216248
+},
+{
+"Id": 2577,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "RVN",
+"Rank": 88,
+"Price_USD": 0.0200355166283949
+},
+{
+"Id": 2777,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "IOTX",
+"Rank": 89,
+"Price_USD": 0.0427766612325633
+},
+{
+"Id": 3437,
+"TimeStamp": "2024-01-13T14:33:22",
+"Symbol": "ABBC",
+"Rank": 90,
+"Price_USD": 0.0566923890460244
+},
+{
+"Id": 10791,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "XEC",
+"Rank": 91,
+"Price_USD": 3.54876620422066e-05
+},
+{
+"Id": 2675,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "DOCK",
+"Rank": 92,
+"Price_USD": 0.0278162803037548
+},
+{
+"Id": 1042,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "SC",
+"Rank": 93,
+"Price_USD": 0.00922273852317053
+},
+{
+"Id": 3945,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ONE",
+"Rank": 94,
+"Price_USD": 0.0163057383574191
+},
+{
+"Id": 12220,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "OSMO",
+"Rank": 95,
+"Price_USD": 1.77021848546766
+},
+{
+"Id": 7548,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "WEMIX",
+"Rank": 96,
+"Price_USD": 2.71717639458518
+},
+{
+"Id": 1343,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "STRAX",
+"Rank": 97,
+"Price_USD": 1.00487936186016
+},
+{
+"Id": 5899,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "CSPR",
+"Rank": 98,
+"Price_USD": 0.0467525656390354
+},
+{
+"Id": 7950,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "FLR",
+"Rank": 99,
+"Price_USD": 0.0174257293356218
+},
+{
+"Id": 3029,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "FLUX",
+"Rank": 100,
+"Price_USD": 0.553853056599629
+},
+{
+"Id": 2638,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "CTXC",
+"Rank": 101,
+"Price_USD": 0.377979236469207
+},
+{
+"Id": 9258,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "XCH",
+"Rank": 102,
+"Price_USD": 36.4858510282936
+},
+{
+"Id": 4279,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "SXP",
+"Rank": 103,
+"Price_USD": 0.357965040140551
+},
+{
+"Id": 873,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "XEM",
+"Rank": 104,
+"Price_USD": 0.0349492908211188
+},
+{
+"Id": 4956,
+"TimeStamp": "2024-01-13T14:33:28",
+"Symbol": "MAP",
+"Rank": 105,
+"Price_USD": 0.0357243854219997
+},
+{
+"Id": 4679,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "BAND",
+"Rank": 106,
+"Price_USD": 1.71244646812376
+},
+{
+"Id": 1586,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "ARK",
+"Rank": 107,
+"Price_USD": 0.804088506629923
+},
+{
+"Id": 7431,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "AKT",
+"Rank": 108,
+"Price_USD": 2.79894731176253
+},
+{
+"Id": 14556,
+"TimeStamp": "2024-01-13T14:33:32",
+"Symbol": "BOBA",
+"Rank": 109,
+"Price_USD": 0.251076686626057
+},
+{
+"Id": 2300,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "WAXP",
+"Rank": 110,
+"Price_USD": 0.0619338829344578
+},
+{
+"Id": 5804,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "DFI",
+"Rank": 111,
+"Price_USD": 0.143679695429995
+},
+{
+"Id": 8936,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "TRIAS",
+"Rank": 112,
+"Price_USD": 12.8145211241453
+},
+{
+"Id": 3992,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "COTI",
+"Rank": 113,
+"Price_USD": 0.0608746390127812
+},
+{
+"Id": 2099,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "ICX",
+"Rank": 114,
+"Price_USD": 0.234912357536879
+},
+{
+"Id": 2780,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "NKN",
+"Rank": 115,
+"Price_USD": 0.109817918719177
+},
+{
+"Id": 10442,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "DESO",
+"Rank": 116,
+"Price_USD": 40.0010334915593
+},
+{
+"Id": 22974,
+"TimeStamp": "2024-01-13T14:32:59",
+"Symbol": "TAO",
+"Rank": 117,
+"Price_USD": 216.016709161109
+},
+{
+"Id": 3835,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "ORBS",
+"Rank": 118,
+"Price_USD": 0.0363293311395949
+},
+{
+"Id": 109,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "DGB",
+"Rank": 119,
+"Price_USD": 0.00839639729907038
+},
+{
+"Id": 3822,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "TFUEL",
+"Rank": 120,
+"Price_USD": 0.0445111604931
+},
+{
+"Id": 1214,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "LSK",
+"Rank": 121,
+"Price_USD": 1.12149133288392
+},
+{
+"Id": 1230,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "STEEM",
+"Rank": 122,
+"Price_USD": 0.231417843394834
+},
+{
+"Id": 11948,
+"TimeStamp": "2024-01-13T14:32:46",
+"Symbol": "XRD",
+"Rank": 123,
+"Price_USD": 0.0392550684409483
+},
+{
+"Id": 7878,
+"TimeStamp": "2024-01-13T14:33:24",
+"Symbol": "MOB",
+"Rank": 124,
+"Price_USD": 0.367295505879218
+},
+{
+"Id": 1567,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "NANO",
+"Rank": 125,
+"Price_USD": 1.14623066059176
+},
+{
+"Id": 4807,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "CTK",
+"Rank": 126,
+"Price_USD": 0.699061314018938
+},
+{
+"Id": 14101,
+"TimeStamp": "2024-01-13T14:33:32",
+"Symbol": "RONIN",
+"Rank": 127,
+"Price_USD": 1.82621719721699
+},
+{
+"Id": 11976,
+"TimeStamp": "2024-01-13T14:33:05",
+"Symbol": "AZERO",
+"Rank": 128,
+"Price_USD": 1.29890556890309
+},
+{
+"Id": 18736,
+"TimeStamp": "2024-01-13T14:33:25",
+"Symbol": "BFIC",
+"Rank": 129,
+"Price_USD": 16.8275401927366
+},
+{
+"Id": 693,
+"TimeStamp": "2024-01-13T14:33:09",
+"Symbol": "XVG",
+"Rank": 130,
+"Price_USD": 0.00354633590560387
+},
+{
+"Id": 4660,
+"TimeStamp": "2024-01-13T14:32:51",
+"Symbol": "TLOS",
+"Rank": 131,
+"Price_USD": 0.223606650830287
+},
+{
+"Id": 26914,
+"TimeStamp": "2024-01-13T14:33:23",
+"Symbol": "STT",
+"Rank": 132,
+"Price_USD": 1.19162623902652
+},
+{
+"Id": 8267,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "OKT",
+"Rank": 133,
+"Price_USD": 17.8449681660358
+},
+{
+"Id": 2081,
+"TimeStamp": "2024-01-13T14:33:32",
+"Symbol": "AMB",
+"Rank": 134,
+"Price_USD": 0.00672388074007191
+},
+{
+"Id": 2606,
+"TimeStamp": "2024-01-13T14:33:24",
+"Symbol": "WAN",
+"Rank": 135,
+"Price_USD": 0.212169897305961
+},
+{
+"Id": 5275,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "PCI",
+"Rank": 136,
+"Price_USD": 0.107549238929766
+},
+{
+"Id": 4948,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "CKB",
+"Rank": 137,
+"Price_USD": 0.00330262654413942
+},
+{
+"Id": 3987,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "BDX",
+"Rank": 138,
+"Price_USD": 0.0477311063989557
+},
+{
+"Id": 1659,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "GNO",
+"Rank": 139,
+"Price_USD": 206.646301381422
+},
+{
+"Id": 1414,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "FIRO",
+"Rank": 140,
+"Price_USD": 1.67611772109886
+},
+{
+"Id": 1320,
+"TimeStamp": "2024-01-13T14:33:11",
+"Symbol": "ARDR",
+"Rank": 141,
+"Price_USD": 0.0913553602561758
+},
+{
+"Id": 17591,
+"TimeStamp": "2024-01-13T14:33:34",
+"Symbol": "NYM",
+"Rank": 142,
+"Price_USD": 0.219149521623306
+},
+{
+"Id": 1169,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "PIVX",
+"Rank": 143,
+"Price_USD": 0.299088321589429
+},
+{
+"Id": 4747,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "VLX",
+"Rank": 144,
+"Price_USD": 0.0241760025810566
+},
+{
+"Id": 9104,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "AIOZ",
+"Rank": 145,
+"Price_USD": 0.139541843576836
+},
+{
+"Id": 15185,
+"TimeStamp": "2024-01-13T14:32:55",
+"Symbol": "KUJI",
+"Rank": 146,
+"Price_USD": 3.88490345493733
+},
+{
+"Id": 8258,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "CUDOS",
+"Rank": 147,
+"Price_USD": 0.0100088613166887
+},
+{
+"Id": 7505,
+"TimeStamp": "2024-01-13T14:32:41",
+"Symbol": "EVER",
+"Rank": 148,
+"Price_USD": 0.0681042804826559
+},
+{
+"Id": 1521,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "KMD",
+"Rank": 149,
+"Price_USD": 0.250991515316562
+},
+{
+"Id": 20056,
+"TimeStamp": "2024-01-13T14:32:52",
+"Symbol": "CMP",
+"Rank": 150,
+"Price_USD": 0.0252242069325133
+},
+{
+"Id": 5865,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "FIO",
+"Rank": 151,
+"Price_USD": 0.0252263433645112
+},
+{
+"Id": 5370,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "HIVE",
+"Rank": 152,
+"Price_USD": 0.330405067126891
+},
+{
+"Id": 2087,
+"TimeStamp": "2024-01-13T14:33:13",
+"Symbol": "KCS",
+"Rank": 153,
+"Price_USD": 9.81648805454702
+},
+{
+"Id": 4512,
+"TimeStamp": "2024-01-13T14:33:34",
+"Symbol": "FNSA",
+"Rank": 154,
+"Price_USD": 28.2387705242732
+},
+{
+"Id": 5268,
+"TimeStamp": "2024-01-13T14:33:08",
+"Symbol": "EWT",
+"Rank": 155,
+"Price_USD": 2.30817472835479
+},
+{
+"Id": 3637,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "AERGO",
+"Rank": 156,
+"Price_USD": 0.14036063865933
+},
+{
+"Id": 11823,
+"TimeStamp": "2024-01-13T14:32:44",
+"Symbol": "POKT",
+"Rank": 157,
+"Price_USD": 0.193359309921749
+},
+{
+"Id": 2092,
+"TimeStamp": "2024-01-13T14:33:34",
+"Symbol": "NULS",
+"Rank": 158,
+"Price_USD": 0.260130957218766
+},
+{
+"Id": 5604,
+"TimeStamp": "2024-01-13T14:33:32",
+"Symbol": "SCRT",
+"Rank": 159,
+"Price_USD": 0.412597386612849
+},
+{
+"Id": 3012,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "VTHO",
+"Rank": 160,
+"Price_USD": 0.00232937438707727
+},
+{
+"Id": 19899,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "EVMOS",
+"Rank": 161,
+"Price_USD": 0.11006319910099
+},
+{
+"Id": 16093,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "KUB",
+"Rank": 162,
+"Price_USD": 2.09113283985466
+},
+{
+"Id": 3714,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "LTO",
+"Rank": 163,
+"Price_USD": 0.0803134937391979
+},
+{
+"Id": 2840,
+"TimeStamp": "2024-01-13T14:33:19",
+"Symbol": "QKC",
+"Rank": 164,
+"Price_USD": 0.0101637614947829
+},
+{
+"Id": 5882,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "FIS",
+"Rank": 165,
+"Price_USD": 0.399887494557305
+},
+{
+"Id": 1168,
+"TimeStamp": "2024-01-13T14:33:27",
+"Symbol": "DCR",
+"Rank": 166,
+"Price_USD": 15.9983474198096
+},
+{
+"Id": 2137,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "ETN",
+"Rank": 167,
+"Price_USD": 0.00256537548800176
+},
+{
+"Id": 4189,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "ULTRA",
+"Rank": 168,
+"Price_USD": 0.203342120806973
+},
+{
+"Id": 28419,
+"TimeStamp": "2024-01-13T14:32:34",
+"Symbol": "VRC",
+"Rank": 169,
+"Price_USD": 2.06405908268006
+},
+{
+"Id": 6724,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "KLV",
+"Rank": 170,
+"Price_USD": 0.00358263015388245
+},
+{
+"Id": 5634,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "FUSE",
+"Rank": 171,
+"Price_USD": 0.0747615940937745
+},
+{
+"Id": 2492,
+"TimeStamp": "2024-01-13T14:33:09",
+"Symbol": "ELA",
+"Rank": 172,
+"Price_USD": 3.61080541288004
+},
+{
+"Id": 3709,
+"TimeStamp": "2024-01-13T14:32:56",
+"Symbol": "GRIN",
+"Rank": 173,
+"Price_USD": 0.0821970457029992
+},
+{
+"Id": 541,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "SYS",
+"Rank": 174,
+"Price_USD": 0.126787327081988
+},
+{
+"Id": 4036,
+"TimeStamp": "2024-01-13T14:33:26",
+"Symbol": "COS",
+"Rank": 175,
+"Price_USD": 0.00832389451034068
+},
+{
+"Id": 9720,
+"TimeStamp": "2024-01-13T14:32:52",
+"Symbol": "LAT",
+"Rank": 176,
+"Price_USD": 0.0090382091366159
+},
+{
+"Id": 17799,
+"TimeStamp": "2024-01-13T14:33:25",
+"Symbol": "AXL",
+"Rank": 177,
+"Price_USD": 1.01859333098934
+},
+{
+"Id": 27195,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "XNA",
+"Rank": 178,
+"Price_USD": 0.00400493829682764
+},
+{
+"Id": 14294,
+"TimeStamp": "2024-01-13T14:31:09",
+"Symbol": "NEER",
+"Rank": 179,
+"Price_USD": 0.301567471013726
+},
+{
+"Id": 19819,
+"TimeStamp": "2024-01-13T14:33:12",
+"Symbol": "REI",
+"Rank": 180,
+"Price_USD": 0.0294621502724583
+},
+{
+"Id": 6748,
+"TimeStamp": "2024-01-13T14:32:29",
+"Symbol": "CFG",
+"Rank": 181,
+"Price_USD": 0.654943763860423
+},
+{
+"Id": 2868,
+"TimeStamp": "2024-01-13T14:33:21",
+"Symbol": "DAG",
+"Rank": 182,
+"Price_USD": 0.0594047478576801
+},
+{
+"Id": 14878,
+"TimeStamp": "2024-01-13T14:32:20",
+"Symbol": "ALPH",
+"Rank": 183,
+"Price_USD": 2.14192505368364
+},
+{
+"Id": 5552,
+"TimeStamp": "2024-01-13T14:33:34",
+"Symbol": "HTR",
+"Rank": 184,
+"Price_USD": 0.0748668993588137
+},
+{
+"Id": 2916,
+"TimeStamp": "2024-01-13T14:33:34",
+"Symbol": "NIM",
+"Rank": 185,
+"Price_USD": 0.00120553085762001
+},
+{
+"Id": 5821,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "ALEPH",
+"Rank": 186,
+"Price_USD": 0.154287618154471
+},
+{
+"Id": 2937,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "VITE",
+"Rank": 187,
+"Price_USD": 0.0173474561866754
+},
+{
+"Id": 4566,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "XDB",
+"Rank": 188,
+"Price_USD": 0.000516800970103718
+},
+{
+"Id": 9797,
+"TimeStamp": "2024-01-13T14:33:23",
+"Symbol": "XAVA",
+"Rank": 189,
+"Price_USD": 1.27249141405125
+},
+{
+"Id": 7281,
+"TimeStamp": "2024-01-13T14:33:12",
+"Symbol": "XPRT",
+"Rank": 190,
+"Price_USD": 0.450470918875578
+},
+{
+"Id": 27622,
+"TimeStamp": "2024-01-13T14:33:20",
+"Symbol": "LYX",
+"Rank": 191,
+"Price_USD": 9.66428807140733
+},
+{
+"Id": 28298,
+"TimeStamp": "2024-01-13T14:33:26",
+"Symbol": "BEAMMW",
+"Rank": 192,
+"Price_USD": 0.105653765861309
+},
+{
+"Id": 28067,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "VARA",
+"Rank": 193,
+"Price_USD": 0.07869
+},
+{
+"Id": 8738,
+"TimeStamp": "2024-01-13T14:33:12",
+"Symbol": "PSL",
+"Rank": 194,
+"Price_USD": 0.00046231185009911
+},
+{
+"Id": 22858,
+"TimeStamp": "2024-01-13T14:33:11",
+"Symbol": "DNX",
+"Rank": 195,
+"Price_USD": 0.60856915255135
+},
+{
+"Id": 1925,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "WTC",
+"Rank": 196,
+"Price_USD": 0.0269935457084657
+},
+{
+"Id": 8677,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "XYM",
+"Rank": 197,
+"Price_USD": 0.0281893346193792
+},
+{
+"Id": 3874,
+"TimeStamp": "2024-01-13T14:33:24",
+"Symbol": "IRIS",
+"Rank": 198,
+"Price_USD": 0.0285822630477971
+},
+{
+"Id": 3441,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "DIVI",
+"Rank": 199,
+"Price_USD": 0.00508678630727036
+},
+{
+"Id": 1762,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "ERG",
+"Rank": 200,
+"Price_USD": 1.44034155389543
+},
+{
+"Id": 2474,
+"TimeStamp": "2024-01-13T14:33:22",
+"Symbol": "MAN",
+"Rank": 201,
+"Price_USD": 0.0183238557272318
+},
+{
+"Id": 18031,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "CCD",
+"Rank": 202,
+"Price_USD": 0.00498759697374439
+},
+{
+"Id": 2316,
+"TimeStamp": "2024-01-13T14:33:32",
+"Symbol": "DBC",
+"Rank": 203,
+"Price_USD": 0.00204166609403679
+},
+{
+"Id": 6747,
+"TimeStamp": "2024-01-13T14:32:55",
+"Symbol": "CRU",
+"Rank": 204,
+"Price_USD": 1.38862766983294
+},
+{
+"Id": 11079,
+"TimeStamp": "2024-01-13T14:32:46",
+"Symbol": "BRISE",
+"Rank": 205,
+"Price_USD": 1.53896425274468e-07
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:33:24",
+"Symbol": "JOY",
+"Rank": 206,
+"Price_USD": 0.0401992998685638
+},
+{
+"Id": 4860,
+"TimeStamp": "2024-01-13T14:00:07",
+"Symbol": "ES",
+"Rank": 207,
+"Price_USD": 0.00320564618924505
+},
+{
+"Id": 3657,
+"TimeStamp": "2024-01-13T14:32:37",
+"Symbol": "LAMB",
+"Rank": 208,
+"Price_USD": 0.00181647524307684
+},
+{
+"Id": 1191,
+"TimeStamp": "2024-01-13T14:32:56",
+"Symbol": "MEMETIC",
+"Rank": 209,
+"Price_USD": 0.0249953846033094
+},
+{
+"Id": 15305,
+"TimeStamp": "2024-01-13T14:33:08",
+"Symbol": "KMA",
+"Rank": 210,
+"Price_USD": 0.00336757381701436
+},
+{
+"Id": 2643,
+"TimeStamp": "2024-01-13T14:33:26",
+"Symbol": "DVPN",
+"Rank": 211,
+"Price_USD": 0.00158410225887464
+},
+{
+"Id": 5616,
+"TimeStamp": "2024-01-13T14:33:28",
+"Symbol": "MATH",
+"Rank": 212,
+"Price_USD": 0.195976596748849
+},
+{
+"Id": 3853,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "MTV",
+"Rank": 213,
+"Price_USD": 0.00197415912554693
+},
+{
+"Id": 16697,
+"TimeStamp": "2024-01-13T14:33:27",
+"Symbol": "BLD",
+"Rank": 214,
+"Price_USD": 0.186510171248303
+},
+{
+"Id": 6865,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "CRP",
+"Rank": 215,
+"Price_USD": 0.338528669176372
+},
+{
+"Id": 21796,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "LING",
+"Rank": 216,
+"Price_USD": 0.00426547579264558
+},
+{
+"Id": 12186,
+"TimeStamp": "2024-01-13T14:32:43",
+"Symbol": "SGB",
+"Rank": 217,
+"Price_USD": 0.00726611023612647
+},
+{
+"Id": 4249,
+"TimeStamp": "2024-01-13T14:31:41",
+"Symbol": "FRA",
+"Rank": 218,
+"Price_USD": 0.00148533741612548
+},
+{
+"Id": 8705,
+"TimeStamp": "2024-01-13T14:33:20",
+"Symbol": "BNC",
+"Rank": 219,
+"Price_USD": 0.545294128154272
+},
+{
+"Id": 11451,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "SDN",
+"Rank": 220,
+"Price_USD": 0.419184857861333
+},
+{
+"Id": 19533,
+"TimeStamp": "2024-01-13T14:33:39",
+"Symbol": "MINE",
+"Rank": 221,
+"Price_USD": 0.000213948832959113
+},
+{
+"Id": 5919,
+"TimeStamp": "2024-01-13T14:33:32",
+"Symbol": "MTRG",
+"Rank": 222,
+"Price_USD": 2.93509233276067
+},
+{
+"Id": 28076,
+"TimeStamp": "2024-01-13T14:33:26",
+"Symbol": "OZO",
+"Rank": 223,
+"Price_USD": 0.210953670241211
+},
+{
+"Id": 13916,
+"TimeStamp": "2024-01-13T14:00:28",
+"Symbol": "OMAX",
+"Rank": 224,
+"Price_USD": 0.000816183433511595
+},
+{
+"Id": 2530,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "FSN",
+"Rank": 225,
+"Price_USD": 0.187957755314633
+},
+{
+"Id": 3704,
+"TimeStamp": "2024-01-13T14:32:48",
+"Symbol": "VSYS",
+"Rank": 226,
+"Price_USD": 0.00132171596382466
+},
+{
+"Id": 8463,
+"TimeStamp": "2024-01-13T14:32:30",
+"Symbol": "TAP",
+"Rank": 227,
+"Price_USD": 0.00415406514519162
+},
+{
+"Id": 1918,
+"TimeStamp": "2024-01-13T14:32:48",
+"Symbol": "ACT",
+"Rank": 228,
+"Price_USD": 0.00106951396438205
+},
+{
+"Id": 8635,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "XDAI",
+"Rank": 229,
+"Price_USD": 1.00595188335316
+},
+{
+"Id": 5963,
+"TimeStamp": "2024-01-13T14:32:54",
+"Symbol": "CNS",
+"Rank": 230,
+"Price_USD": 3.35971375916974e-06
+},
+{
+"Id": 2827,
+"TimeStamp": "2024-01-13T14:33:12",
+"Symbol": "SOUL",
+"Rank": 231,
+"Price_USD": 0.141510941152447
+},
+{
+"Id": 26867,
+"TimeStamp": "2024-01-13T14:32:59",
+"Symbol": "WALV",
+"Rank": 232,
+"Price_USD": 0.028772471478371
+},
+{
+"Id": 16352,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "GST",
+"Rank": 233,
+"Price_USD": 0.0129294607806065
+},
+{
+"Id": 8357,
+"TimeStamp": "2024-01-13T14:33:22",
+"Symbol": "BITCI",
+"Rank": 234,
+"Price_USD": 0.00150621527153781
+},
+{
+"Id": 4951,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "ZYN",
+"Rank": 235,
+"Price_USD": 0.0694291779738787
+},
+{
+"Id": 12256,
+"TimeStamp": "2024-01-13T14:31:38",
+"Symbol": "CHEQ",
+"Rank": 236,
+"Price_USD": 0.0755547132698868
+},
+{
+"Id": 3663,
+"TimeStamp": "2024-01-13T14:32:20",
+"Symbol": "XFC",
+"Rank": 237,
+"Price_USD": 0.00809334295688125
+},
+{
+"Id": 5453,
+"TimeStamp": "2024-01-13T14:33:23",
+"Symbol": "KAI",
+"Rank": 238,
+"Price_USD": 0.00564112682173657
+},
+{
+"Id": 3884,
+"TimeStamp": "2024-01-13T14:33:03",
+"Symbol": "FX",
+"Rank": 239,
+"Price_USD": 0.151199155171396
+},
+{
+"Id": 1903,
+"TimeStamp": "2024-01-13T14:32:49",
+"Symbol": "HC",
+"Rank": 240,
+"Price_USD": 0.104812870412385
+},
+{
+"Id": 1866,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "BTM",
+"Rank": 241,
+"Price_USD": 0.0101444483838532
+},
+{
+"Id": 2083,
+"TimeStamp": "2024-01-13T14:31:19",
+"Symbol": "BTG",
+"Rank": 242,
+"Price_USD": 26.5338335268157
+},
+{
+"Id": 3930,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "TT",
+"Rank": 243,
+"Price_USD": 0.00443501636142257
+},
+{
+"Id": 4078,
+"TimeStamp": "2024-01-13T14:32:25",
+"Symbol": "SERO",
+"Rank": 244,
+"Price_USD": 0.00373609355328304
+},
+{
+"Id": 213,
+"TimeStamp": "2024-01-13T14:32:14",
+"Symbol": "MONA",
+"Rank": 245,
+"Price_USD": 0.368667489007762
+},
+{
+"Id": 10093,
+"TimeStamp": "2024-01-13T14:32:47",
+"Symbol": "GSX",
+"Rank": 246,
+"Price_USD": 0.00119978191567162
+},
+{
+"Id": 12131,
+"TimeStamp": "2024-01-13T14:33:32",
+"Symbol": "FRTS",
+"Rank": 247,
+"Price_USD": 8.36639399689243e-06
+},
+{
+"Id": 8245,
+"TimeStamp": "2024-01-13T14:32:48",
+"Symbol": "HYDRA",
+"Rank": 248,
+"Price_USD": 0.644842131645852
+},
+{
+"Id": 3871,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "NEW",
+"Rank": 249,
+"Price_USD": 4.27280975028809e-05
+},
+{
+"Id": 8282,
+"TimeStamp": "2024-01-13T14:30:27",
+"Symbol": "KOIN",
+"Rank": 250,
+"Price_USD": 1.01328934296036
+},
+{
+"Id": 27358,
+"TimeStamp": "2024-01-13T14:28:53",
+"Symbol": "ARCH",
+"Rank": 251,
+"Price_USD": 0.207044554466785
+},
+{
+"Id": 2303,
+"TimeStamp": "2024-01-13T14:33:23",
+"Symbol": "MED",
+"Rank": 252,
+"Price_USD": 0.011412356365649
+},
+{
+"Id": 3418,
+"TimeStamp": "2024-01-13T14:27:07",
+"Symbol": "META",
+"Rank": 253,
+"Price_USD": 0.0392307610216101
+},
+{
+"Id": 463,
+"TimeStamp": "2024-01-13T14:32:53",
+"Symbol": "BTS",
+"Rank": 254,
+"Price_USD": 0.00397562562930319
+},
+{
+"Id": 4200,
+"TimeStamp": "2024-01-13T14:32:53",
+"Symbol": "PCX",
+"Rank": 255,
+"Price_USD": 0.714793076105334
+},
+{
+"Id": 1700,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "AE",
+"Rank": 256,
+"Price_USD": 0.0199639209801829
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:33:37",
+"Symbol": "AEGIS",
+"Rank": 257,
+"Price_USD": 0.000189954571318839
+},
+{
+"Id": 4769,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "EOSC",
+"Rank": 258,
+"Price_USD": 0.00212328988392776
+},
+{
+"Id": 16690,
+"TimeStamp": "2024-01-13T14:00:10",
+"Symbol": "ABEY",
+"Rank": 259,
+"Price_USD": 0.386530676662632
+},
+{
+"Id": 1948,
+"TimeStamp": "2024-01-13T14:30:58",
+"Symbol": "AVT",
+"Rank": 260,
+"Price_USD": 1.65918495436992
+},
+{
+"Id": 2941,
+"TimeStamp": "2024-01-13T14:32:56",
+"Symbol": "CET",
+"Rank": 261,
+"Price_USD": 0.0332200390815982
+},
+{
+"Id": 3260,
+"TimeStamp": "2024-01-13T14:32:47",
+"Symbol": "AMO",
+"Rank": 262,
+"Price_USD": 0.000570075285308626
+},
+{
+"Id": 2346,
+"TimeStamp": "2024-01-13T14:32:25",
+"Symbol": "WICC",
+"Rank": 263,
+"Price_USD": 0.00411209461981596
+},
+{
+"Id": 21769,
+"TimeStamp": "2024-01-13T14:32:53",
+"Symbol": "METAL",
+"Rank": 264,
+"Price_USD": 0.0582689634863615
+},
+{
+"Id": 22359,
+"TimeStamp": "2024-01-13T14:33:28",
+"Symbol": "XPLA",
+"Rank": 265,
+"Price_USD": 0.183299350818008
+},
+{
+"Id": 19686,
+"TimeStamp": "2024-01-13T14:30:46",
+"Symbol": "MNTL",
+"Rank": 266,
+"Price_USD": 0.00539093297793006
+},
+{
+"Id": 14299,
+"TimeStamp": "2024-01-13T14:32:38",
+"Symbol": "JUNO",
+"Rank": 267,
+"Price_USD": 0.595124020047146
+},
+{
+"Id": 154,
+"TimeStamp": "2024-01-13T14:32:49",
+"Symbol": "MRS",
+"Rank": 268,
+"Price_USD": 1.29836400411421
+},
+{
+"Id": 6753,
+"TimeStamp": "2024-01-13T14:26:12",
+"Symbol": "HDX",
+"Rank": 269,
+"Price_USD": 0.0195000795946061
+},
+{
+"Id": 20729,
+"TimeStamp": "2024-01-13T14:33:23",
+"Symbol": "KON",
+"Rank": 270,
+"Price_USD": 0.00233763807861561
+},
+{
+"Id": 3175,
+"TimeStamp": "2024-01-13T14:33:30",
+"Symbol": "MARO",
+"Rank": 271,
+"Price_USD": 0.00209677927209139
+},
+{
+"Id": 8162,
+"TimeStamp": "2024-01-13T14:31:58",
+"Symbol": "AME",
+"Rank": 272,
+"Price_USD": 0.000972841485386011
+},
+{
+"Id": 16389,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "UX",
+"Rank": 273,
+"Price_USD": 0.00514681592749648
+},
+{
+"Id": 5931,
+"TimeStamp": "2024-01-13T14:32:18",
+"Symbol": "KTON",
+"Rank": 274,
+"Price_USD": 4.26201263257213
+},
+{
+"Id": 5221,
+"TimeStamp": "2024-01-13T14:32:36",
+"Symbol": "HNS",
+"Rank": 275,
+"Price_USD": 0.0382019176232882
+},
+{
+"Id": 3218,
+"TimeStamp": "2024-01-13T14:32:46",
+"Symbol": "NRG",
+"Rank": 276,
+"Price_USD": 0.113229825866509
+},
+{
+"Id": 23004,
+"TimeStamp": "2024-01-13T14:31:13",
+"Symbol": "SAMA",
+"Rank": 277,
+"Price_USD": 0.0187862766410297
+},
+{
+"Id": 18051,
+"TimeStamp": "2024-01-13T14:19:59",
+"Symbol": "DARC",
+"Rank": 278,
+"Price_USD": 0.00162875418638519
+},
+{
+"Id": 7809,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "SWTH",
+"Rank": 279,
+"Price_USD": 0.00711906147542224
+},
+{
+"Id": 14925,
+"TimeStamp": "2024-01-13T14:33:36",
+"Symbol": "WIT",
+"Rank": 280,
+"Price_USD": 0.013722470629189
+},
+{
+"Id": 7110,
+"TimeStamp": "2024-01-13T14:33:11",
+"Symbol": "NBS",
+"Rank": 281,
+"Price_USD": 0.000165078340278835
+},
+{
+"Id": 3951,
+"TimeStamp": "2024-01-13T14:33:24",
+"Symbol": "ARRR",
+"Rank": 282,
+"Price_USD": 0.22319979434419
+},
+{
+"Id": 4197,
+"TimeStamp": "2024-01-13T14:32:18",
+"Symbol": "SHR",
+"Rank": 283,
+"Price_USD": 0.00171831917695804
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:31:54",
+"Symbol": "KYVE",
+"Rank": 284,
+"Price_USD": 0.125396083686773
+},
+{
+"Id": 2578,
+"TimeStamp": "2024-01-13T14:30:30",
+"Symbol": "TONE",
+"Rank": 285,
+"Price_USD": 0.00231443874119613
+},
+{
+"Id": 2222,
+"TimeStamp": "2024-01-13T14:32:35",
+"Symbol": "BCD",
+"Rank": 286,
+"Price_USD": 0.0948775616279498
+},
+{
+"Id": 12400,
+"TimeStamp": "2024-01-13T14:33:27",
+"Symbol": "DEL",
+"Rank": 287,
+"Price_USD": 0.0134077767983681
+},
+{
+"Id": 5544,
+"TimeStamp": "2024-01-13T14:33:38",
+"Symbol": "ALN",
+"Rank": 288,
+"Price_USD": 0.00377667098318136
+},
+{
+"Id": 13323,
+"TimeStamp": "2024-01-13T14:30:59",
+"Symbol": "TEER",
+"Rank": 289,
+"Price_USD": 0.824335391803477
+},
+{
+"Id": 21842,
+"TimeStamp": "2024-01-13T14:32:25",
+"Symbol": "ETHF",
+"Rank": 290,
+"Price_USD": 0.178791991464504
+},
+{
+"Id": 22866,
+"TimeStamp": "2024-01-13T14:32:56",
+"Symbol": "RXD",
+"Rank": 291,
+"Price_USD": 0.00190717763999405
+},
+{
+"Id": 10023,
+"TimeStamp": "2024-01-13T14:31:45",
+"Symbol": "AQUA",
+"Rank": 292,
+"Price_USD": 0.000666450735829224
+},
+{
+"Id": 2041,
+"TimeStamp": "2024-01-13T14:32:34",
+"Symbol": "BTCZ",
+"Rank": 293,
+"Price_USD": 0.000119754435742598
+},
+{
+"Id": 5548,
+"TimeStamp": "2024-01-13T14:33:29",
+"Symbol": "MASS",
+"Rank": 294,
+"Price_USD": 0.00344524453291755
+},
+{
+"Id": 20818,
+"TimeStamp": "2024-01-13T14:32:46",
+"Symbol": "INERY",
+"Rank": 295,
+"Price_USD": 0.0203153542378673
+},
+{
+"Id": 9467,
+"TimeStamp": "2024-01-13T14:33:33",
+"Symbol": "CEUR",
+"Rank": 296,
+"Price_USD": 1.0906792797901
+},
+{
+"Id": 7980,
+"TimeStamp": "2024-01-13T14:32:07",
+"Symbol": "PLEX",
+"Rank": 297,
+"Price_USD": 0.0312202268121451
+},
+{
+"Id": 87,
+"TimeStamp": "2024-01-13T14:32:01",
+"Symbol": "TIPS",
+"Rank": 298,
+"Price_USD": 5.01815401610528e-06
+},
+{
+"Id": 4047,
+"TimeStamp": "2024-01-13T14:32:51",
+"Symbol": "NBOT",
+"Rank": 299,
+"Price_USD": 0.00397680099183041
+},
+{
+"Id": 2556,
+"TimeStamp": "2024-01-13T14:32:05",
+"Symbol": "CRDTS",
+"Rank": 300,
+"Price_USD": 0.00366519326087009
+},
+{
+"Id": 2345,
+"TimeStamp": "2024-01-13T14:32:07",
+"Symbol": "HPB",
+"Rank": 301,
+"Price_USD": 0.00625893975138904
+},
+{
+"Id": 2938,
+"TimeStamp": "2024-01-13T14:31:19",
+"Symbol": "GARD",
+"Rank": 302,
+"Price_USD": 1.20802749969955e-05
+},
+{
+"Id": 1908,
+"TimeStamp": "2024-01-13T14:32:08",
+"Symbol": "NAS",
+"Rank": 303,
+"Price_USD": 0.0114754470958729
+},
+{
+"Id": 2282,
+"TimeStamp": "2024-01-13T14:32:34",
+"Symbol": "SBTC",
+"Rank": 304,
+"Price_USD": 0.461872607327562
+},
+{
+"Id": 372,
+"TimeStamp": "2024-01-13T14:32:47",
+"Symbol": "BCN",
+"Rank": 305,
+"Price_USD": 0.000337375563105729
+},
+{
+"Id": 3126,
+"TimeStamp": "2024-01-13T14:31:54",
+"Symbol": "XPX",
+"Rank": 306,
+"Price_USD": 0.000781151014068534
+},
+{
+"Id": 5925,
+"TimeStamp": "2024-01-13T14:32:25",
+"Symbol": "PKOIN",
+"Rank": 307,
+"Price_USD": 0.377442259070031
+},
+{
+"Id": 8216,
+"TimeStamp": "2024-01-13T14:32:51",
+"Symbol": "XEP",
+"Rank": 308,
+"Price_USD": 0.00035223606825611
+},
+{
+"Id": 4424,
+"TimeStamp": "2024-01-13T14:31:43",
+"Symbol": "XDAG",
+"Rank": 309,
+"Price_USD": 0.00875638683381133
+},
+{
+"Id": 9523,
+"TimeStamp": "2024-01-13T14:00:25",
+"Symbol": "PKT",
+"Rank": 310,
+"Price_USD": 0.00165979858208222
+},
+{
+"Id": 5155,
+"TimeStamp": "2024-01-13T14:33:10",
+"Symbol": "NYZO",
+"Rank": 311,
+"Price_USD": 0.0107869221075889
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:31:34",
+"Symbol": "BTCF",
+"Rank": 312,
+"Price_USD": 0.0005065070606392
+},
+{
+"Id": 2242,
+"TimeStamp": "2024-01-13T14:32:30",
+"Symbol": "QBAO",
+"Rank": 313,
+"Price_USD": 0.00191672530439558
+},
+{
+"Id": 7622,
+"TimeStamp": "2024-01-13T14:33:35",
+"Symbol": "UBX",
+"Rank": 314,
+"Price_USD": 2.24950329834648e-05
+},
+{
+"Id": 10228,
+"TimeStamp": "2024-01-13T14:32:53",
+"Symbol": "OMC",
+"Rank": 315,
+"Price_USD": 0.0163390111362017
+},
+{
+"Id": 11392,
+"TimeStamp": "2024-01-13T14:31:40",
+"Symbol": "AAA",
+"Rank": 316,
+"Price_USD": 3.11243048563372e-06
+},
+{
+"Id": 2838,
+"TimeStamp": "2024-01-13T14:32:20",
+"Symbol": "PI",
+"Rank": 317,
+"Price_USD": 0.00467656395563613
+},
+{
+"Id": 11794,
+"TimeStamp": "2024-01-13T14:32:35",
+"Symbol": "FOREX",
+"Rank": 318,
+"Price_USD": 0.00841303968302107
+},
+{
+"Id": 1107,
+"TimeStamp": "2024-01-13T14:31:54",
+"Symbol": "PAC",
+"Rank": 319,
+"Price_USD": 8.57535639369222e-05
+},
+{
+"Id": 2370,
+"TimeStamp": "2024-01-13T14:32:36",
+"Symbol": "GOD",
+"Rank": 320,
+"Price_USD": 1.63193508661099
+},
+{
+"Id": 18995,
+"TimeStamp": "2024-01-13T14:32:05",
+"Symbol": "XX",
+"Rank": 321,
+"Price_USD": 0.0849950057997828
+},
+{
+"Id": 377,
+"TimeStamp": "2024-01-13T14:32:49",
+"Symbol": "NAV",
+"Rank": 322,
+"Price_USD": 0.0464515689422208
+},
+{
+"Id": 5274,
+"TimeStamp": "2024-01-13T14:33:27",
+"Symbol": "EDGEW",
+"Rank": 323,
+"Price_USD": 0.000467813910479507
+},
+{
+"Id": 5906,
+"TimeStamp": "2024-01-13T14:32:48",
+"Symbol": "NVT",
+"Rank": 324,
+"Price_USD": 0.00905235442943113
+},
+{
+"Id": 4678,
+"TimeStamp": "2024-01-13T14:32:47",
+"Symbol": "GDC",
+"Rank": 325,
+"Price_USD": 0.000106010731940017
+},
+{
+"Id": 1703,
+"TimeStamp": "2024-01-13T14:32:53",
+"Symbol": "ETP",
+"Rank": 326,
+"Price_USD": 0.0120607084339893
+},
+{
+"Id": 5999,
+"TimeStamp": "2024-01-13T14:25:20",
+"Symbol": "XT",
+"Rank": 327,
+"Price_USD": 2.11273048917663
+},
+{
+"Id": 1826,
+"TimeStamp": "2024-01-13T14:24:41",
+"Symbol": "PART",
+"Rank": 328,
+"Price_USD": 0.473986396084945
+},
+{
+"Id": 4388,
+"TimeStamp": "2024-01-13T14:32:38",
+"Symbol": "EXCC",
+"Rank": 329,
+"Price_USD": 0.0326114820407901
+},
+{
+"Id": 3,
+"TimeStamp": "2024-01-13T14:32:14",
+"Symbol": "NMC",
+"Rank": 330,
+"Price_USD": 0.613341828116312
+},
+{
+"Id": 23319,
+"TimeStamp": "2024-01-13T14:32:05",
+"Symbol": "PLCU",
+"Rank": 331,
+"Price_USD": 93.663855150518
+},
+{
+"Id": 2481,
+"TimeStamp": "2024-01-13T14:32:35",
+"Symbol": "ZPT",
+"Rank": 332,
+"Price_USD": 0.00024759865165033
+},
+{
+"Id": 2757,
+"TimeStamp": "2024-01-13T14:32:31",
+"Symbol": "CLO",
+"Rank": 333,
+"Price_USD": 0.000772759712734029
+},
+{
+"Id": 7105,
+"TimeStamp": "2024-01-13T14:32:20",
+"Symbol": "ASK",
+"Rank": 334,
+"Price_USD": 0.000412724321497243
+},
+{
+"Id": 2281,
+"TimeStamp": "2024-01-13T14:32:20",
+"Symbol": "BCX",
+"Rank": 335,
+"Price_USD": 0.000218655883595682
+},
+{
+"Id": 15388,
+"TimeStamp": "2024-01-13T14:32:52",
+"Symbol": "ATOLO",
+"Rank": 336,
+"Price_USD": 0.000310540722657562
+},
+{
+"Id": 19210,
+"TimeStamp": "2024-01-13T14:33:31",
+"Symbol": "PANDOP",
+"Rank": 337,
+"Price_USD": 0.00212947476798075
+},
+{
+"Id": 3854,
+"TimeStamp": "2024-01-13T14:11:34",
+"Symbol": "FUND",
+"Rank": 338,
+"Price_USD": 0.174050692264393
+},
+{
+"Id": 5713,
+"TimeStamp": "2024-01-13T14:31:06",
+"Symbol": "RAVENCOINC",
+"Rank": 339,
+"Price_USD": 2.29155813372351e-05
+},
+{
+"Id": 66,
+"TimeStamp": "2024-01-13T14:30:36",
+"Symbol": "NXT",
+"Rank": 340,
+"Price_USD": 0.00135154246387915
+},
+{
+"Id": 5836,
+"TimeStamp": "2024-01-13T14:32:15",
+"Symbol": "IDNA",
+"Rank": 341,
+"Price_USD": 0.0225288721258786
+},
+{
+"Id": 6248,
+"TimeStamp": "2024-01-13T14:26:52",
+"Symbol": "COAL",
+"Rank": 342,
+"Price_USD": 0.00238128916557577
+},
+{
+"Id": 10083,
+"TimeStamp": "2024-01-13T14:33:08",
+"Symbol": "CZZ",
+"Rank": 343,
+"Price_USD": 0.00279535837772642
+},
+{
+"Id": 1955,
+"TimeStamp": "2024-01-13T14:00:23",
+"Symbol": "NEBL",
+"Rank": 344,
+"Price_USD": 0.0250254557546587
+},
+{
+"Id": 258,
+"TimeStamp": "2024-01-13T14:29:53",
+"Symbol": "GRS",
+"Rank": 345,
+"Price_USD": 0.510199277022117
+},
+{
+"Id": 3452,
+"TimeStamp": "2024-01-13T14:00:04",
+"Symbol": "ETHO",
+"Rank": 346,
+"Price_USD": 0.00552473472814866
+},
+{
+"Id": 2665,
+"TimeStamp": "2024-01-13T14:32:14",
+"Symbol": "DERO",
+"Rank": 347,
+"Price_USD": 2.68027663536985
+},
+{
+"Id": 14339,
+"TimeStamp": "2024-01-13T14:18:14",
+"Symbol": "CPH",
+"Rank": 348,
+"Price_USD": 0.0155963453482021
+},
+{
+"Id": 13672,
+"TimeStamp": "2024-01-13T14:20:48",
+"Symbol": "BSX",
+"Rank": 349,
+"Price_USD": 0.000141800534600761
+},
+{
+"Id": 2655,
+"TimeStamp": "2024-01-13T14:33:27",
+"Symbol": "XMC",
+"Rank": 350,
+"Price_USD": 0.351650853812077
+},
+{
+"Id": 4691,
+"TimeStamp": "2024-01-13T14:29:25",
+"Symbol": "ZANO",
+"Rank": 351,
+"Price_USD": 2.94387415004355
+},
+{
+"Id": 24261,
+"TimeStamp": "2024-01-13T14:28:24",
+"Symbol": "OCTA",
+"Rank": 352,
+"Price_USD": 0.702840149897447
+},
+{
+"Id": 1503,
+"TimeStamp": "2024-01-13T14:28:14",
+"Symbol": "JUP",
+"Rank": 353,
+"Price_USD": 0.00419562951885589
+},
+{
+"Id": 3973,
+"TimeStamp": "2024-01-13T14:29:25",
+"Symbol": "AYA",
+"Rank": 354,
+"Price_USD": 0.000704965314073876
+},
+{
+"Id": 25,
+"TimeStamp": "2024-01-13T14:30:51",
+"Symbol": "GLC",
+"Rank": 355,
+"Price_USD": 0.00958224356855581
+},
+{
+"Id": 2861,
+"TimeStamp": "2024-01-13T14:33:24",
+"Symbol": "GO",
+"Rank": 356,
+"Price_USD": 0.00472888279913519
+},
+{
+"Id": 6627,
+"TimeStamp": "2024-01-13T14:32:01",
+"Symbol": "METER",
+"Rank": 357,
+"Price_USD": 1.04731310712767
+},
+{
+"Id": 5524,
+"TimeStamp": "2024-01-13T14:29:39",
+"Symbol": "TNC",
+"Rank": 358,
+"Price_USD": 0.000155967463585741
+},
+{
+"Id": 12306,
+"TimeStamp": "2024-01-13T14:30:25",
+"Symbol": "RTM",
+"Rank": 359,
+"Price_USD": 0.0014900238209314
+},
+{
+"Id": 2662,
+"TimeStamp": "2024-01-13T14:32:46",
+"Symbol": "XHV",
+"Rank": 360,
+"Price_USD": 0.150132817024109
+},
+{
+"Id": 4704,
+"TimeStamp": "2024-01-13T14:32:14",
+"Symbol": "BAN",
+"Rank": 361,
+"Price_USD": 0.0044970750237103
+},
+{
+"Id": 1298,
+"TimeStamp": "2024-01-13T14:29:53",
+"Symbol": "LBC",
+"Rank": 362,
+"Price_USD": 0.00452941378521666
+},
+{
+"Id": 21781,
+"TimeStamp": "2024-01-13T14:32:14",
+"Symbol": "STRD",
+"Rank": 363,
+"Price_USD": 3.43247113156061
+},
+{
+"Id": 5541,
+"TimeStamp": "2024-01-13T14:31:56",
+"Symbol": "XAYA",
+"Rank": 364,
+"Price_USD": 0.0545754357680191
+},
+{
+"Id": 5945,
+"TimeStamp": "2024-01-13T14:32:36",
+"Symbol": "TEM",
+"Rank": 365,
+"Price_USD": 0.222942812730066
+},
+{
+"Id": 99,
+"TimeStamp": "2024-01-13T14:28:53",
+"Symbol": "VTC",
+"Rank": 366,
+"Price_USD": 0.0380774791185258
+},
+{
+"Id": 4189,
+"TimeStamp": "2024-01-13T14:32:47",
+"Symbol": "UOS",
+"Rank": 367,
+"Price_USD": 0.202456199541745
+},
+{
+"Id": 3362,
+"TimeStamp": "2024-01-13T14:00:04",
+"Symbol": "AUX",
+"Rank": 368,
+"Price_USD": 0.000534072811246136
+},
+{
+"Id": 2748,
+"TimeStamp": "2024-01-13T14:32:13",
+"Symbol": "OXEN",
+"Rank": 369,
+"Price_USD": 0.146160710588456
+},
+{
+"Id": 10776,
+"TimeStamp": "2024-01-13T14:24:18",
+"Symbol": "SIGNA",
+"Rank": 370,
+"Price_USD": 0.00128718333274366
+},
+{
+"Id": 9982,
+"TimeStamp": "2024-01-13T14:30:38",
+"Symbol": "DINGO",
+"Rank": 371,
+"Price_USD": 1.0147710269729e-05
+},
+{
+"Id": 4427,
+"TimeStamp": "2024-01-13T14:12:04",
+"Symbol": "BDCC",
+"Rank": 372,
+"Price_USD": 1.16669285231239e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:31:37",
+"Symbol": "LED",
+"Rank": 373,
+"Price_USD": 0.0140970956367297
+},
+{
+"Id": 3200,
+"TimeStamp": "2024-01-13T14:19:51",
+"Symbol": "NSD",
+"Rank": 374,
+"Price_USD": 0.00106620603164274
+},
+{
+"Id": 2276,
+"TimeStamp": "2024-01-13T14:25:26",
+"Symbol": "IGNIS",
+"Rank": 375,
+"Price_USD": 0.00624283787660542
+},
+{
+"Id": 7380,
+"TimeStamp": "2024-01-13T14:31:44",
+"Symbol": "DRC",
+"Rank": 376,
+"Price_USD": 0.000755228357606718
+},
+{
+"Id": 5175,
+"TimeStamp": "2024-01-13T14:00:25",
+"Symbol": "BTCV",
+"Rank": 377,
+"Price_USD": 1.42050072971157
+},
+{
+"Id": 1066,
+"TimeStamp": "2024-01-13T14:31:16",
+"Symbol": "PAK",
+"Rank": 378,
+"Price_USD": 0.00361241698039902
+},
+{
+"Id": 1883,
+"TimeStamp": "2024-01-13T13:00:27",
+"Symbol": "ADS",
+"Rank": 379,
+"Price_USD": 0.370582774517948
+},
+{
+"Id": 3617,
+"TimeStamp": "2024-01-13T14:33:27",
+"Symbol": "ILC",
+"Rank": 380,
+"Price_USD": 0.0013196843066103
+},
+{
+"Id": 1681,
+"TimeStamp": "2024-01-13T14:09:32",
+"Symbol": "PZM",
+"Rank": 381,
+"Price_USD": 0.00102477069968555
+},
+{
+"Id": 4460,
+"TimeStamp": "2024-01-13T14:32:33",
+"Symbol": "PIRATE",
+"Rank": 382,
+"Price_USD": 0.010100706550535
+},
+{
+"Id": 6216,
+"TimeStamp": "2024-01-13T14:00:09",
+"Symbol": "AXEL",
+"Rank": 383,
+"Price_USD": 0.134791275308365
+},
+{
+"Id": 8431,
+"TimeStamp": "2024-01-13T13:24:44",
+"Symbol": "G999",
+"Rank": 384,
+"Price_USD": 0.000803836536969811
+},
+{
+"Id": 2540,
+"TimeStamp": "2024-01-13T06:00:09",
+"Symbol": "LCC",
+"Rank": 385,
+"Price_USD": 0.00388391645838399
+},
+{
+"Id": 5435,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "EPIC",
+"Rank": 386,
+"Price_USD": 0.317192302014145
+},
+{
+"Id": 1694,
+"TimeStamp": "2024-01-13T14:00:07",
+"Symbol": "SUMO",
+"Rank": 387,
+"Price_USD": 0.00894592416256842
+},
+{
+"Id": 1750,
+"TimeStamp": "2024-01-13T14:33:03",
+"Symbol": "GXC",
+"Rank": 388,
+"Price_USD": 0.315231198188922
+},
+{
+"Id": 13502,
+"TimeStamp": "2024-01-13T14:16:45",
+"Symbol": "WDC",
+"Rank": 389,
+"Price_USD": 0.00819790484374807
+},
+{
+"Id": 2315,
+"TimeStamp": "2024-01-13T14:00:10",
+"Symbol": "HTML",
+"Rank": 390,
+"Price_USD": 5.56242798009443e-06
+},
+{
+"Id": 291,
+"TimeStamp": "2024-01-13T12:00:06",
+"Symbol": "MAID",
+"Rank": 391,
+"Price_USD": 0.235246193972678
+},
+{
+"Id": 3361,
+"TimeStamp": "2024-01-13T14:29:53",
+"Symbol": "MINTME",
+"Rank": 392,
+"Price_USD": 0.00277841913927139
+},
+{
+"Id": 293,
+"TimeStamp": "2024-01-13T14:18:23",
+"Symbol": "XBC",
+"Rank": 393,
+"Price_USD": 1.3250336286781
+},
+{
+"Id": 4165,
+"TimeStamp": "2024-01-13T14:29:29",
+"Symbol": "CREDIT",
+"Rank": 394,
+"Price_USD": 3.85916261886279e-06
+},
+{
+"Id": 4268,
+"TimeStamp": "2024-01-13T07:00:11",
+"Symbol": "NYE",
+"Rank": 395,
+"Price_USD": 0.939540676775525
+},
+{
+"Id": 644,
+"TimeStamp": "2024-01-13T14:09:11",
+"Symbol": "BSTY",
+"Rank": 396,
+"Price_USD": 0.0342252708377906
+},
+{
+"Id": 3132,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "EGEM",
+"Rank": 397,
+"Price_USD": 0.000684612910421445
+},
+{
+"Id": 4074,
+"TimeStamp": "2024-01-12T23:39:23",
+"Symbol": "SCP",
+"Rank": 398,
+"Price_USD": 0.100980220367565
+},
+{
+"Id": 1447,
+"TimeStamp": "2024-01-13T12:00:03",
+"Symbol": "ZCL",
+"Rank": 399,
+"Price_USD": 0.0793620915875793
+},
+{
+"Id": 4097,
+"TimeStamp": "2024-01-13T13:00:02",
+"Symbol": "X42",
+"Rank": 400,
+"Price_USD": 0.0049147911453782
+},
+{
+"Id": 3894,
+"TimeStamp": "2024-01-13T12:00:08",
+"Symbol": "CSPN",
+"Rank": 401,
+"Price_USD": 0.00510912456009079
+},
+{
+"Id": 9318,
+"TimeStamp": "2024-01-13T14:31:43",
+"Symbol": "BCMC1",
+"Rank": 402,
+"Price_USD": 0.00138955236057455
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T10:00:15",
+"Symbol": "AION",
+"Rank": 403,
+"Price_USD": 0.00120164040780087
+},
+{
+"Id": 21362,
+"TimeStamp": "2024-01-13T13:00:13",
+"Symbol": "CIC",
+"Rank": 404,
+"Price_USD": 0.00689867725597841
+},
+{
+"Id": 2992,
+"TimeStamp": "2024-01-13T13:00:27",
+"Symbol": "APL",
+"Rank": 405,
+"Price_USD": 3.91925114829122e-05
+},
+{
+"Id": 1070,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "EXP",
+"Rank": 406,
+"Price_USD": 0.00273898234475558
+},
+{
+"Id": 4245,
+"TimeStamp": "2024-01-13T13:00:11",
+"Symbol": "ENQ",
+"Rank": 407,
+"Price_USD": 0.000839839374083807
+},
+{
+"Id": 659,
+"TimeStamp": "2024-01-13T09:00:08",
+"Symbol": "SWIFT",
+"Rank": 408,
+"Price_USD": 0.220079206061338
+},
+{
+"Id": 3118,
+"TimeStamp": "2024-01-13T14:24:41",
+"Symbol": "GIO",
+"Rank": 409,
+"Price_USD": 0.00984307280984915
+},
+{
+"Id": 5174,
+"TimeStamp": "2024-01-13T14:00:17",
+"Symbol": "BUXCOIN",
+"Rank": 410,
+"Price_USD": 0.000226958806768838
+},
+{
+"Id": 7270,
+"TimeStamp": "2024-01-13T14:01:22",
+"Symbol": "SFD",
+"Rank": 411,
+"Price_USD": 0.434455671440703
+},
+{
+"Id": 1828,
+"TimeStamp": "2024-01-13T14:23:26",
+"Symbol": "SMART",
+"Rank": 412,
+"Price_USD": 0.000166124629753934
+},
+{
+"Id": 118,
+"TimeStamp": "2024-01-13T07:00:21",
+"Symbol": "RDD",
+"Rank": 413,
+"Price_USD": 0.000447449396234438
+},
+{
+"Id": 4121,
+"TimeStamp": "2024-01-13T11:00:06",
+"Symbol": "SAPP",
+"Rank": 414,
+"Price_USD": 0.0129154288354645
+},
+{
+"Id": 1654,
+"TimeStamp": "2024-01-13T12:00:02",
+"Symbol": "BTX",
+"Rank": 415,
+"Price_USD": 0.0382398317287949
+},
+{
+"Id": 2386,
+"TimeStamp": "2024-01-13T12:00:02",
+"Symbol": "KZC",
+"Rank": 416,
+"Price_USD": 0.00166446312792801
+},
+{
+"Id": 9537,
+"TimeStamp": "2024-01-13T12:00:18",
+"Symbol": "EPK",
+"Rank": 417,
+"Price_USD": 0.00317068406194476
+},
+{
+"Id": 416,
+"TimeStamp": "2024-01-13T09:00:02",
+"Symbol": "THC",
+"Rank": 418,
+"Price_USD": 0.00142684642387713
+},
+{
+"Id": 945,
+"TimeStamp": "2024-01-12T20:00:18",
+"Symbol": "BTA",
+"Rank": 419,
+"Price_USD": 0.349250771234117
+},
+{
+"Id": 4491,
+"TimeStamp": "2024-01-13T10:00:02",
+"Symbol": "FLS",
+"Rank": 420,
+"Price_USD": 0.0164626020355566
+},
+{
+"Id": 2160,
+"TimeStamp": "2024-01-13T01:00:13",
+"Symbol": "INN",
+"Rank": 421,
+"Price_USD": 0.0218631556704388
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T03:00:30",
+"Symbol": "8BIT",
+"Rank": 422,
+"Price_USD": 19.3338620814686
+},
+{
+"Id": 2230,
+"TimeStamp": "2024-01-13T10:00:02",
+"Symbol": "MONK",
+"Rank": 423,
+"Price_USD": 0.000558785588720354
+},
+{
+"Id": 3752,
+"TimeStamp": "2024-01-13T12:00:03",
+"Symbol": "UPX",
+"Rank": 424,
+"Price_USD": 7.84738961614954e-06
+},
+{
+"Id": 22060,
+"TimeStamp": "2024-01-13T11:00:06",
+"Symbol": "BONTE",
+"Rank": 425,
+"Price_USD": 3.69950057310467e-05
+},
+{
+"Id": 4315,
+"TimeStamp": "2024-01-13T12:00:03",
+"Symbol": "VDL",
+"Rank": 426,
+"Price_USD": 0.0288750523623705
+},
+{
+"Id": 1962,
+"TimeStamp": "2024-01-13T07:59:45",
+"Symbol": "BUZZ",
+"Rank": 427,
+"Price_USD": 2.79933622734677e-06
+},
+{
+"Id": 1306,
+"TimeStamp": "2024-01-13T13:00:21",
+"Symbol": "CJ",
+"Rank": 428,
+"Price_USD": 2.61787280577568e-05
+},
+{
+"Id": 948,
+"TimeStamp": "2024-01-12T15:27:50",
+"Symbol": "ADC",
+"Rank": 429,
+"Price_USD": 5.25263642748235e-05
+},
+{
+"Id": 3364,
+"TimeStamp": "2024-01-13T13:00:01",
+"Symbol": "PLATC",
+"Rank": 430,
+"Price_USD": 0.054988269948744
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:00:19",
+"Symbol": "CRNK",
+"Rank": 431,
+"Price_USD": 0.0678350587584959
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T12:00:23",
+"Symbol": "ZECD",
+"Rank": 432,
+"Price_USD": 2.04993368421625e-07
+},
+{
+"Id": 5926,
+"TimeStamp": "2024-01-12T22:53:43",
+"Symbol": "ZOOM",
+"Rank": 433,
+"Price_USD": 0.0183969141627408
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:00:19",
+"Symbol": "ANTI",
+"Rank": 434,
+"Price_USD": 0.000866642652343991
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T13:45:23",
+"Symbol": "BSTAR",
+"Rank": 435,
+"Price_USD": 2.18e-06
+},
+{
+"Id": 3060,
+"TimeStamp": "2024-01-12T19:00:20",
+"Symbol": "YCC",
+"Rank": 436,
+"Price_USD": 0.0034805094999
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-12T15:11:44",
+"Symbol": "CVNG",
+"Rank": 437,
+"Price_USD": 0.0596573902994628
+},
+{
+"Id": 10999,
+"TimeStamp": "2024-01-13T08:00:20",
+"Symbol": "TKG",
+"Rank": 438,
+"Price_USD": 0.559973740093698
+},
+{
+"Id": 22074,
+"TimeStamp": "2024-01-12T15:15:28",
+"Symbol": "ALEXANDRITE",
+"Rank": 439,
+"Price_USD": 0.00880251
+},
+{
+"Id": 15223,
+"TimeStamp": "2024-01-13T09:00:17",
+"Symbol": "INDIA",
+"Rank": 440,
+"Price_USD": 2.6998853134989e-08
+},
+{
+"Id": 9079,
+"TimeStamp": "2024-01-13T14:00:19",
+"Symbol": "CHIP",
+"Rank": 441,
+"Price_USD": 0.000462328943326599
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T10:00:02",
+"Symbol": "PROTON",
+"Rank": 442,
+"Price_USD": 0.000472818575071069
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "GENIX",
+"Rank": 443,
+"Price_USD": 0.000421905242368677
+},
+{
+"Id": 168,
+"TimeStamp": "2024-01-12T23:00:07",
+"Symbol": "UFOCOIN",
+"Rank": 444,
+"Price_USD": 0.000127482819785282
+},
+{
+"Id": 405,
+"TimeStamp": "2024-01-13T13:00:14",
+"Symbol": "XDN",
+"Rank": 445,
+"Price_USD": 2.57744258448143e-05
+},
+{
+"Id": 916,
+"TimeStamp": "2024-01-13T11:00:06",
+"Symbol": "MEDIC",
+"Rank": 446,
+"Price_USD": 4.27663206472333e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T04:00:29",
+"Symbol": "CMTC",
+"Rank": 447,
+"Price_USD": 0.00368380519446184
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T05:00:22",
+"Symbol": "BIT16",
+"Rank": 448,
+"Price_USD": 0.00205872827382194
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T04:00:29",
+"Symbol": "ALTCOM",
+"Rank": 449,
+"Price_USD": 0.00266578375503137
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:24",
+"Symbol": "BXT",
+"Rank": 450,
+"Price_USD": 0.0408662703837218
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:24",
+"Symbol": "B2X",
+"Rank": 451,
+"Price_USD": 0.234481145189434
+},
+{
+"Id": 23307,
+"TimeStamp": "2024-01-13T09:00:20",
+"Symbol": "BS",
+"Rank": 452,
+"Price_USD": 3.43584865627238e-06
+},
+{
+"Id": 56,
+"TimeStamp": "2024-01-13T09:00:20",
+"Symbol": "ZET",
+"Rank": 453,
+"Price_USD": 0.000748573255148363
+},
+{
+"Id": 2387,
+"TimeStamp": "2024-01-13T00:00:24",
+"Symbol": "BCA",
+"Rank": 454,
+"Price_USD": 0.430837212045526
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T10:00:25",
+"Symbol": "BITOK",
+"Rank": 455,
+"Price_USD": 6.35389325907892e-06
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T13:00:21",
+"Symbol": "YESCOIN",
+"Rank": 456,
+"Price_USD": 9.7556858789288e-08
+},
+{
+"Id": 1218,
+"TimeStamp": "2024-01-12T23:29:03",
+"Symbol": "POST",
+"Rank": 457,
+"Price_USD": 0.000367911490959572
+},
+{
+"Id": 11842,
+"TimeStamp": "2024-01-12T23:56:45",
+"Symbol": "XP",
+"Rank": 458,
+"Price_USD": 1.76576006133483e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-12T23:53:50",
+"Symbol": "CURI",
+"Rank": 459,
+"Price_USD": 0.000771955579698021
+},
+{
+"Id": 298,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "NYC",
+"Rank": 460,
+"Price_USD": 2.58187082802034e-06
+},
+{
+"Id": 3334,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "XCASH",
+"Rank": 461,
+"Price_USD": 1.60500896922815e-05
+},
+{
+"Id": 5049,
+"TimeStamp": "2024-01-12T00:00:12",
+"Symbol": "VRSC",
+"Rank": 462,
+"Price_USD": 0.99808280716492
+},
+{
+"Id": 1312,
+"TimeStamp": "2023-11-21T10:55:36",
+"Symbol": "STEEMD",
+"Rank": 463,
+"Price_USD": 4.68119135386818
+},
+{
+"Id": 15862,
+"TimeStamp": "2024-01-12T11:00:16",
+"Symbol": "DASHD",
+"Rank": 464,
+"Price_USD": 0.00212264462245364
+},
+{
+"Id": 7635,
+"TimeStamp": "2024-01-10T04:00:13",
+"Symbol": "UNW",
+"Rank": 465,
+"Price_USD": 0.00499459558731098
+},
+{
+"Id": 268,
+"TimeStamp": "2023-11-21T10:08:08",
+"Symbol": "XWC",
+"Rank": 466,
+"Price_USD": 0.0209250085588443
+},
+{
+"Id": 1492,
+"TimeStamp": "2023-11-21T10:58:44",
+"Symbol": "GBYTE",
+"Rank": 467,
+"Price_USD": 6.55023341437367
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-12T05:00:39",
+"Symbol": "CCE",
+"Rank": 468,
+"Price_USD": 0.0699971756531206
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "MW",
+"Rank": 469,
+"Price_USD": 0.000345076928388643
+},
+{
+"Id": 9632,
+"TimeStamp": "2023-12-24T00:00:03",
+"Symbol": "UMI",
+"Rank": 470,
+"Price_USD": 0.00131872087849591
+},
+{
+"Id": 5375,
+"TimeStamp": "2023-11-21T10:56:02",
+"Symbol": "HBD",
+"Rank": 471,
+"Price_USD": 0.939227006540988
+},
+{
+"Id": 3936,
+"TimeStamp": "2024-01-01T00:00:27",
+"Symbol": "GNY",
+"Rank": 472,
+"Price_USD": 0.017759099291199
+},
+{
+"Id": 4286,
+"TimeStamp": "2024-01-09T11:00:05",
+"Symbol": "ZNZ",
+"Rank": 473,
+"Price_USD": 0.00320766320845577
+},
+{
+"Id": 4018,
+"TimeStamp": "2023-12-13T00:00:06",
+"Symbol": "KTS",
+"Rank": 474,
+"Price_USD": 0.00124447552063007
+},
+{
+"Id": 3611,
+"TimeStamp": "2024-01-04T00:00:03",
+"Symbol": "NOR",
+"Rank": 475,
+"Price_USD": 0.00522109144106558
+},
+{
+"Id": 4630,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "SIERRA",
+"Rank": 476,
+"Price_USD": 0.000524847878475234
+},
+{
+"Id": 3482,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "TELOS",
+"Rank": 477,
+"Price_USD": 0.000437373232062695
+},
+{
+"Id": 3332,
+"TimeStamp": "2023-12-04T23:00:03",
+"Symbol": "GOSS",
+"Rank": 478,
+"Price_USD": 8.79081232074034e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T08:45:41",
+"Symbol": "DXO",
+"Rank": 479,
+"Price_USD": 0.000186951772676266
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "AEVO",
+"Rank": 480,
+"Price_USD": 4.37373232062695e-05
+},
+{
+"Id": 26947,
+"TimeStamp": "2024-01-07T00:00:03",
+"Symbol": "CHEESE",
+"Rank": 481,
+"Price_USD": 0.000131985269386188
+},
+{
+"Id": 2290,
+"TimeStamp": "2024-01-04T01:00:02",
+"Symbol": "YTN",
+"Rank": 482,
+"Price_USD": 0.00090122337507326
+},
+{
+"Id": 3395,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "STEEP",
+"Rank": 483,
+"Price_USD": 0.000437373232062695
+},
+{
+"Id": 3830,
+"TimeStamp": "2024-01-10T00:00:12",
+"Symbol": "VEIL",
+"Rank": 484,
+"Price_USD": 0.00591173623229249
+},
+{
+"Id": 584,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "N8V",
+"Rank": 485,
+"Price_USD": 0.000587406644465755
+},
+{
+"Id": 3846,
+"TimeStamp": "2023-11-21T10:59:26",
+"Symbol": "VBK",
+"Rank": 486,
+"Price_USD": 0.000373776370114375
+},
+{
+"Id": 3035,
+"TimeStamp": "2023-11-21T09:00:14",
+"Symbol": "BST",
+"Rank": 487,
+"Price_USD": 4.00159244089172e-06
+},
+{
+"Id": 4150,
+"TimeStamp": "2024-01-03T03:00:05",
+"Symbol": "GEX",
+"Rank": 488,
+"Price_USD": 0.000498321485936052
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T17:00:10",
+"Symbol": "LUNES",
+"Rank": 489,
+"Price_USD": 0.00288092927094857
+},
+{
+"Id": 3716,
+"TimeStamp": "2023-12-09T15:00:27",
+"Symbol": "VEO",
+"Rank": 490,
+"Price_USD": 0.307762300147858
+},
+{
+"Id": 3708,
+"TimeStamp": "2023-12-31T00:00:04",
+"Symbol": "EXO",
+"Rank": 491,
+"Price_USD": 0.0032549951738948
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-18T16:00:04",
+"Symbol": "XQR",
+"Rank": 492,
+"Price_USD": 0.000247563971461256
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "LTZ",
+"Rank": 493,
+"Price_USD": 0.00218686616031348
+},
+{
+"Id": 3345,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "DAPS",
+"Rank": 494,
+"Price_USD": 1.31211969618809e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T23:00:26",
+"Symbol": "BTV",
+"Rank": 495,
+"Price_USD": 0.204100042181437
+},
+{
+"Id": 3056,
+"TimeStamp": "2023-12-27T23:00:13",
+"Symbol": "TCH",
+"Rank": 496,
+"Price_USD": 0.000165674890871819
+},
+{
+"Id": 3159,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "XAP",
+"Rank": 497,
+"Price_USD": 0.000393635908856425
+},
+{
+"Id": 3125,
+"TimeStamp": "2023-11-21T08:00:03",
+"Symbol": "XDNA",
+"Rank": 498,
+"Price_USD": 0.00100044460863808
+},
+{
+"Id": 27220,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "NIX",
+"Rank": 499,
+"Price_USD": 0.0153080631221943
+},
+{
+"Id": 3071,
+"TimeStamp": "2024-01-12T00:00:18",
+"Symbol": "EUNO",
+"Rank": 500,
+"Price_USD": 5.98807280077068e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-01T09:00:02",
+"Symbol": "WORX",
+"Rank": 501,
+"Price_USD": 0.000383275740280695
+},
+{
+"Id": 3024,
+"TimeStamp": "2024-01-10T09:00:26",
+"Symbol": "ARO",
+"Rank": 502,
+"Price_USD": 4.7343726880606e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-18T16:00:04",
+"Symbol": "XT3",
+"Rank": 503,
+"Price_USD": 0.0783952576293977
+},
+{
+"Id": 3902,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "XMV",
+"Rank": 504,
+"Price_USD": 0.389262176535799
+},
+{
+"Id": null,
+"TimeStamp": "2023-11-21T00:00:05",
+"Symbol": "KEC",
+"Rank": 505,
+"Price_USD": 0.000937301497166365
+},
+{
+"Id": 3166,
+"TimeStamp": "2024-01-04T00:00:03",
+"Symbol": "XBI",
+"Rank": 506,
+"Price_USD": 0.000686132916139096
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-04T00:00:03",
+"Symbol": "ZEL",
+"Rank": 507,
+"Price_USD": 0.0355502484453162
+},
+{
+"Id": 2395,
+"TimeStamp": "2024-01-10T00:00:09",
+"Symbol": "IC",
+"Rank": 508,
+"Price_USD": 0.0070157825456292
+},
+{
+"Id": 2561,
+"TimeStamp": "2023-12-04T18:00:02",
+"Symbol": "TUBE",
+"Rank": 509,
+"Price_USD": 0.00191486495011044
+},
+{
+"Id": 2457,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "TRUE",
+"Rank": 510,
+"Price_USD": 0.000831009140919121
+},
+{
+"Id": 2616,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "SPD",
+"Rank": 511,
+"Price_USD": 0.00411130838138933
+},
+{
+"Id": 1916,
+"TimeStamp": "2024-01-03T03:00:05",
+"Symbol": "BBP",
+"Rank": 512,
+"Price_USD": 0.000543623439202966
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:30",
+"Symbol": "TOKC",
+"Rank": 513,
+"Price_USD": 5.67096221620939e-05
+},
+{
+"Id": 2489,
+"TimeStamp": "2023-12-13T08:00:04",
+"Symbol": "BTW",
+"Rank": 514,
+"Price_USD": 0.00134644402124013
+},
+{
+"Id": 1106,
+"TimeStamp": "2023-12-27T00:00:05",
+"Symbol": "SHND",
+"Rank": 515,
+"Price_USD": 4.25391285837142e-05
+},
+{
+"Id": 2332,
+"TimeStamp": "2023-12-31T14:00:05",
+"Symbol": "STAK",
+"Rank": 516,
+"Price_USD": 0.00010277973689116
+},
+{
+"Id": 3018,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "KLKS",
+"Rank": 517,
+"Price_USD": 0.000281955189343562
+},
+{
+"Id": 2255,
+"TimeStamp": "2024-01-09T00:00:04",
+"Symbol": "SEND",
+"Rank": 518,
+"Price_USD": 0.000376655236144154
+},
+{
+"Id": 2148,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "DSR",
+"Rank": 519,
+"Price_USD": 0.00393635908856426
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "ECA",
+"Rank": 520,
+"Price_USD": 4.37373232062695e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-04T23:00:03",
+"Symbol": "XLQ",
+"Rank": 521,
+"Price_USD": 0.00167850368840009
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "ISH",
+"Rank": 522,
+"Price_USD": 0.00087474646412539
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "RUPX",
+"Rank": 523,
+"Price_USD": 0.000218686616031348
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T15:00:30",
+"Symbol": "BLHC",
+"Rank": 524,
+"Price_USD": 0.00273127821446908
+},
+{
+"Id": 8560,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "WHL",
+"Rank": 525,
+"Price_USD": 0.00831009140919121
+},
+{
+"Id": 1799,
+"TimeStamp": "2024-01-12T11:00:16",
+"Symbol": "RUP",
+"Rank": 526,
+"Price_USD": 9.2288896628419e-05
+},
+{
+"Id": 2002,
+"TimeStamp": "2024-01-12T00:00:11",
+"Symbol": "TZC",
+"Rank": 527,
+"Price_USD": 4.64224121875262e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-24T02:00:07",
+"Symbol": "SEELE",
+"Rank": 528,
+"Price_USD": 2.30120342584074e-05
+},
+{
+"Id": 1154,
+"TimeStamp": "2023-11-21T10:28:24",
+"Symbol": "VAL",
+"Rank": 529,
+"Price_USD": 1.89491818741531
+},
+{
+"Id": 2009,
+"TimeStamp": "2024-01-06T00:00:03",
+"Symbol": "BIS",
+"Rank": 530,
+"Price_USD": 0.0138771915975217
+},
+{
+"Id": 25249,
+"TimeStamp": "2024-01-10T07:00:22",
+"Symbol": "LINDA",
+"Rank": 531,
+"Price_USD": 3.50957437698432e-05
+},
+{
+"Id": 1382,
+"TimeStamp": "2024-01-07T19:39:32",
+"Symbol": "NLC2",
+"Rank": 532,
+"Price_USD": 0.00040404
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "OTX",
+"Rank": 533,
+"Price_USD": 0.00087474646412539
+},
+{
+"Id": 1736,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "UNIFY",
+"Rank": 534,
+"Price_USD": 0.000437373232062695
+},
+{
+"Id": 1745,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "DCY",
+"Rank": 535,
+"Price_USD": 23.4432052385605
+},
+{
+"Id": 1970,
+"TimeStamp": "2023-12-09T08:47:46",
+"Symbol": "ATB",
+"Rank": 536,
+"Price_USD": 0.000599170382943406
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T10:00:34",
+"Symbol": "USC",
+"Rank": 537,
+"Price_USD": 0.00649195047683117
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "INF",
+"Rank": 538,
+"Price_USD": 0.00310076455542417
+},
+{
+"Id": 27593,
+"TimeStamp": "2024-01-03T11:00:21",
+"Symbol": "BENJI",
+"Rank": 539,
+"Price_USD": 0.000111163103434625
+},
+{
+"Id": 1558,
+"TimeStamp": "2023-12-28T12:00:25",
+"Symbol": "ARGUS",
+"Rank": 540,
+"Price_USD": 0.000449299856596621
+},
+{
+"Id": 1546,
+"TimeStamp": "2024-01-08T18:06:41",
+"Symbol": "CNT",
+"Rank": 541,
+"Price_USD": 6.81349840644881e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T15:00:30",
+"Symbol": "BUCKS",
+"Rank": 542,
+"Price_USD": 0.0130725542977378
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-22T18:00:04",
+"Symbol": "HPC",
+"Rank": 543,
+"Price_USD": 0.00399999
+},
+{
+"Id": 1624,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "ATMOS",
+"Rank": 544,
+"Price_USD": 0.00087474646412539
+},
+{
+"Id": 1623,
+"TimeStamp": "2024-01-09T12:00:33",
+"Symbol": "BLAZR",
+"Rank": 545,
+"Price_USD": 0.000466623666132383
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T21:49:36",
+"Symbol": "APTCOIN",
+"Rank": 546,
+"Price_USD": 0.000834673431828193
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-19T21:00:22",
+"Symbol": "XVE",
+"Rank": 547,
+"Price_USD": 4.77522555938574e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-28T11:00:34",
+"Symbol": "CJC",
+"Rank": 548,
+"Price_USD": 0.000103455226156546
+},
+{
+"Id": 1629,
+"TimeStamp": "2024-01-10T14:00:33",
+"Symbol": "ZENI",
+"Rank": 549,
+"Price_USD": 0.000106213158818879
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-05T22:43:46",
+"Symbol": "BESTC",
+"Rank": 550,
+"Price_USD": 0.00052162
+},
+{
+"Id": 1578,
+"TimeStamp": "2023-11-19T04:00:01",
+"Symbol": "ZER",
+"Rank": 551,
+"Price_USD": 0.00804297645197853
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-03T03:00:05",
+"Symbol": "BIOB",
+"Rank": 552,
+"Price_USD": 0.000897308472341689
+},
+{
+"Id": 18081,
+"TimeStamp": "2024-01-11T22:00:32",
+"Symbol": "BVC",
+"Rank": 553,
+"Price_USD": 0.00240620281786443
+},
+{
+"Id": 1351,
+"TimeStamp": "2024-01-13T00:00:28",
+"Symbol": "ACES",
+"Rank": 554,
+"Price_USD": 6.59256382926329e-06
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "THS",
+"Rank": 555,
+"Price_USD": 3.36777388688275
+},
+{
+"Id": 18350,
+"TimeStamp": "2024-01-13T00:00:24",
+"Symbol": "BTZ",
+"Rank": 556,
+"Price_USD": 0.00131865828565982
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-12T19:00:40",
+"Symbol": "YMC",
+"Rank": 557,
+"Price_USD": 2.31056238594429e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-03T00:00:20",
+"Symbol": "HXX",
+"Rank": 558,
+"Price_USD": 0.0376172979891842
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-07T19:55:12",
+"Symbol": "CRPS",
+"Rank": 559,
+"Price_USD": 8.88888893
+},
+{
+"Id": 12198,
+"TimeStamp": "2024-01-11T15:55:07",
+"Symbol": "BOSS",
+"Rank": 560,
+"Price_USD": 0.0281022969654954
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:30",
+"Symbol": "YAYCOIN",
+"Rank": 561,
+"Price_USD": 2.71092509043601e-06
+},
+{
+"Id": 23890,
+"TimeStamp": "2024-01-13T00:00:26",
+"Symbol": "ACID",
+"Rank": 562,
+"Price_USD": 3.05244152012465e-06
+},
+{
+"Id": 21326,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "XPRO",
+"Rank": 563,
+"Price_USD": 0.00257631739620815
+},
+{
+"Id": 1439,
+"TimeStamp": "2024-01-09T12:14:12",
+"Symbol": "ASAFE2",
+"Rank": 564,
+"Price_USD": 5.54448107976911e-08
+},
+{
+"Id": 1146,
+"TimeStamp": "2024-01-03T00:00:19",
+"Symbol": "AV",
+"Rank": 565,
+"Price_USD": 0.0326053752092697
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-24T21:26:03",
+"Symbol": "XSPT",
+"Rank": 566,
+"Price_USD": 0.00758763
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-16T00:00:05",
+"Symbol": "CCX",
+"Rank": 567,
+"Price_USD": 0.755047757452144
+},
+{
+"Id": 1247,
+"TimeStamp": "2024-01-13T00:00:24",
+"Symbol": "ARCO",
+"Rank": 568,
+"Price_USD": 0.0311341806244949
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T21:00:28",
+"Symbol": "CSMIC",
+"Rank": 569,
+"Price_USD": 0.0346820856376074
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T05:00:22",
+"Symbol": "BRDD",
+"Rank": 570,
+"Price_USD": 0.000799270976921686
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-11T12:27:07",
+"Symbol": "BOSONC",
+"Rank": 571,
+"Price_USD": 3.77701194637959e-06
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-03T00:00:18",
+"Symbol": "365",
+"Rank": 572,
+"Price_USD": 1.20041953537418e-05
+},
+{
+"Id": 1466,
+"TimeStamp": "2023-12-20T17:00:03",
+"Symbol": "HUSH",
+"Rank": 573,
+"Price_USD": 0.221315275609652
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:25",
+"Symbol": "ALC",
+"Rank": 574,
+"Price_USD": 2.41753794637938e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T05:00:20",
+"Symbol": "BASH",
+"Rank": 575,
+"Price_USD": 0.000378399070947974
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:30",
+"Symbol": "IFLT",
+"Rank": 576,
+"Price_USD": 7.81527953999571e-07
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-11T15:00:13",
+"Symbol": "CHOOF",
+"Rank": 577,
+"Price_USD": 4.6677553151512e-06
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-10T08:00:21",
+"Symbol": "2BACCO",
+"Rank": 578,
+"Price_USD": 2.35421008920494e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-03T00:00:15",
+"Symbol": "32BIT",
+"Rank": 579,
+"Price_USD": 0.0126540301427274
+},
+{
+"Id": 1250,
+"TimeStamp": "2024-01-10T23:16:46",
+"Symbol": "ZUR",
+"Rank": 580,
+"Price_USD": 0.000441719830611772
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-03T03:00:19",
+"Symbol": "BRAIN",
+"Rank": 581,
+"Price_USD": 0.00041999
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-28T00:00:23",
+"Symbol": "CRAB",
+"Rank": 582,
+"Price_USD": 0.000438122766329004
+},
+{
+"Id": 898,
+"TimeStamp": "2024-01-11T10:00:39",
+"Symbol": "CF",
+"Rank": 583,
+"Price_USD": 0.00429999
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-23T05:00:23",
+"Symbol": "FJC",
+"Rank": 584,
+"Price_USD": 2.199e-05
+},
+{
+"Id": 6051,
+"TimeStamp": "2024-01-10T19:00:26",
+"Symbol": "888",
+"Rank": 585,
+"Price_USD": 0.000471126800767873
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:25",
+"Symbol": "BBCC",
+"Rank": 586,
+"Price_USD": 0.0022710226030808
+},
+{
+"Id": 1382,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "NLC",
+"Rank": 587,
+"Price_USD": 0.000956972631753177
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T19:00:26",
+"Symbol": "BRONZ",
+"Rank": 588,
+"Price_USD": 0.00954949721564546
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T21:00:29",
+"Symbol": "BTCR",
+"Rank": 589,
+"Price_USD": 8.84989607832595e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-11T22:00:32",
+"Symbol": "ARM",
+"Rank": 590,
+"Price_USD": 1.42583040442707e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:23",
+"Symbol": "B3",
+"Rank": 591,
+"Price_USD": 5.13709986774843e-06
+},
+{
+"Id": 145,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "DOPE",
+"Rank": 592,
+"Price_USD": 0.00262423939237617
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:30",
+"Symbol": "ZNE",
+"Rank": 593,
+"Price_USD": 0.00125789366471087
+},
+{
+"Id": 1389,
+"TimeStamp": "2023-12-26T09:07:16",
+"Symbol": "ZYD",
+"Rank": 594,
+"Price_USD": 0.00059999
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T22:00:14",
+"Symbol": "BTD",
+"Rank": 595,
+"Price_USD": 0.00487693470152686
+},
+{
+"Id": null,
+"TimeStamp": "2023-11-21T10:17:34",
+"Symbol": "EDR",
+"Rank": 596,
+"Price_USD": 1.50057632579956e-05
+},
+{
+"Id": 8731,
+"TimeStamp": "2024-01-10T15:00:30",
+"Symbol": "CRX",
+"Rank": 597,
+"Price_USD": 3.41657809431953e-05
+},
+{
+"Id": 2256,
+"TimeStamp": "2023-12-05T19:00:06",
+"Symbol": "BON",
+"Rank": 598,
+"Price_USD": 0.000437109718120542
+},
+{
+"Id": 20942,
+"TimeStamp": "2024-01-13T00:00:26",
+"Symbol": "COX",
+"Rank": 599,
+"Price_USD": 2.58847054772228e-06
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-28T00:00:30",
+"Symbol": "BONES",
+"Rank": 600,
+"Price_USD": 2.69103828257306e-05
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:28",
+"Symbol": "CLUD",
+"Rank": 601,
+"Price_USD": 2.31960579178702e-05
+},
+{
+"Id": 217,
+"TimeStamp": "2023-12-04T11:00:14",
+"Symbol": "BELA",
+"Rank": 602,
+"Price_USD": 0.000419825170956474
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T00:00:29",
+"Symbol": "404",
+"Rank": 603,
+"Price_USD": 3.33929711329092e-06
+},
+{
+"Id": 1252,
+"TimeStamp": "2024-01-12T02:00:27",
+"Symbol": "2GIVE",
+"Rank": 604,
+"Price_USD": 7.96288777831726e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "611",
+"Rank": 605,
+"Price_USD": 1.96293106549738
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-11T03:00:41",
+"Symbol": "ZEIT",
+"Rank": 606,
+"Price_USD": 1.34309268659199e-05
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-18T01:00:22",
+"Symbol": "BIGUP",
+"Rank": 607,
+"Price_USD": 8.41290489188922e-07
+},
+{
+"Id": 1223,
+"TimeStamp": "2024-01-12T12:00:37",
+"Symbol": "BERN",
+"Rank": 608,
+"Price_USD": 0.000173802319118946
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "MYC",
+"Rank": 609,
+"Price_USD": 0.0455112217005805
+},
+{
+"Id": 1136,
+"TimeStamp": "2024-01-09T00:00:28",
+"Symbol": "ADZ",
+"Rank": 610,
+"Price_USD": 0.000457657233573892
+},
+{
+"Id": 1281,
+"TimeStamp": "2023-11-17T21:00:01",
+"Symbol": "ION",
+"Rank": 611,
+"Price_USD": 0.00438161955521076
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T23:25:01",
+"Symbol": "BLRY",
+"Rank": 612,
+"Price_USD": 0.000828467728926322
+},
+{
+"Id": 1279,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "PWR",
+"Rank": 613,
+"Price_USD": 2.34962657786302e-05
+},
+{
+"Id": 1210,
+"TimeStamp": "2024-01-09T00:00:27",
+"Symbol": "CAB",
+"Rank": 614,
+"Price_USD": 0.00044211856708843
+},
+{
+"Id": 3137,
+"TimeStamp": "2023-12-28T22:00:10",
+"Symbol": "KARMA",
+"Rank": 615,
+"Price_USD": 0.00122780646182412
+},
+{
+"Id": 1135,
+"TimeStamp": "2024-01-03T00:00:21",
+"Symbol": "CLUB",
+"Rank": 616,
+"Price_USD": 0.00284039002049476
+},
+{
+"Id": 1035,
+"TimeStamp": "2023-12-29T14:00:27",
+"Symbol": "AMS",
+"Rank": 617,
+"Price_USD": 4.71003792374463e-06
+},
+{
+"Id": 1004,
+"TimeStamp": "2024-01-12T10:00:13",
+"Symbol": "HNC",
+"Rank": 618,
+"Price_USD": 0.0179990151375993
+},
+{
+"Id": 1020,
+"TimeStamp": "2024-01-10T20:00:26",
+"Symbol": "AXIOM",
+"Rank": 619,
+"Price_USD": 0.0010069496344714
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T22:00:14",
+"Symbol": "CIRC",
+"Rank": 620,
+"Price_USD": 0.0907020515355081
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:30",
+"Symbol": "BITZ",
+"Rank": 621,
+"Price_USD": 0.0144094216518671
+},
+{
+"Id": 993,
+"TimeStamp": "2023-12-15T13:00:02",
+"Symbol": "BSC",
+"Rank": 622,
+"Price_USD": 0.00170473355990477
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-10T17:00:26",
+"Symbol": "ACP",
+"Rank": 623,
+"Price_USD": 0.00383164790392664
+},
+{
+"Id": 367,
+"TimeStamp": "2024-01-10T12:52:22",
+"Symbol": "C2",
+"Rank": 624,
+"Price_USD": 9.97159463663791e-05
+},
+{
+"Id": 276,
+"TimeStamp": "2023-12-30T16:55:40",
+"Symbol": "BITS",
+"Rank": 625,
+"Price_USD": 0.00594357
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T05:00:22",
+"Symbol": "ASN",
+"Rank": 626,
+"Price_USD": 0.000375415155826853
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-28T12:00:25",
+"Symbol": "ABY",
+"Rank": 627,
+"Price_USD": 0.000517507387212248
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T05:00:20",
+"Symbol": "XMG",
+"Rank": 628,
+"Price_USD": 0.0116676566905506
+},
+{
+"Id": 10763,
+"TimeStamp": "2023-12-24T17:19:42",
+"Symbol": "AM",
+"Rank": 629,
+"Price_USD": 0.18765431
+},
+{
+"Id": 184,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "DNOTES",
+"Rank": 630,
+"Price_USD": 2.34962657786302e-05
+},
+{
+"Id": 67,
+"TimeStamp": "2024-01-12T08:00:29",
+"Symbol": "UNOB",
+"Rank": 631,
+"Price_USD": 7.60126260518775
+},
+{
+"Id": 3296,
+"TimeStamp": "2024-01-12T09:00:13",
+"Symbol": "MIN",
+"Rank": 632,
+"Price_USD": 0.00459436241972168
+},
+{
+"Id": null,
+"TimeStamp": "2023-11-21T10:56:27",
+"Symbol": "IOC",
+"Rank": 633,
+"Price_USD": 0.00859598434927051
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-03T00:00:16",
+"Symbol": "FRK",
+"Rank": 634,
+"Price_USD": 0.0204460935397553
+},
+{
+"Id": null,
+"TimeStamp": "2023-11-20T23:00:15",
+"Symbol": "EAC",
+"Rank": 635,
+"Price_USD": 0.000420260348112977
+},
+{
+"Id": 182,
+"TimeStamp": "2023-11-21T10:57:45",
+"Symbol": "XMY",
+"Rank": 636,
+"Price_USD": 1.10040767686763e-05
+},
+{
+"Id": 290,
+"TimeStamp": "2024-01-13T00:00:29",
+"Symbol": "BLU",
+"Rank": 637,
+"Price_USD": 0.000402877839571997
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T21:10:02",
+"Symbol": "2015",
+"Rank": 638,
+"Price_USD": 0.00278503117808936
+},
+{
+"Id": 601,
+"TimeStamp": "2024-01-13T00:00:28",
+"Symbol": "ACOIN",
+"Rank": 639,
+"Price_USD": 0.00866580032384761
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T00:00:31",
+"Symbol": "YBC",
+"Rank": 640,
+"Price_USD": 2354.69852527112
+},
+{
+"Id": 894,
+"TimeStamp": "2024-01-08T00:00:03",
+"Symbol": "NEUTRON",
+"Rank": 641,
+"Price_USD": 0.000443030076633995
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T20:10:08",
+"Symbol": "CAPRICOIN",
+"Rank": 642,
+"Price_USD": 0.0548388177357496
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-12T19:20:36",
+"Symbol": "PLQ",
+"Rank": 643,
+"Price_USD": 0.0471586805367976
+},
+{
+"Id": 2570,
+"TimeStamp": "2024-01-11T02:00:22",
+"Symbol": "TOMO",
+"Rank": 644,
+"Price_USD": 0.829505964873002
+},
+{
+"Id": 11145,
+"TimeStamp": "2023-11-19T10:00:01",
+"Symbol": "PLS",
+"Rank": 645,
+"Price_USD": 6.84431401950319e-05
+},
+{
+"Id": 6498,
+"TimeStamp": "2023-11-21T10:16:25",
+"Symbol": "METAC",
+"Rank": 646,
+"Price_USD": 0.0100884571539024
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-27T10:17:21",
+"Symbol": "NLG",
+"Rank": 647,
+"Price_USD": 0.07531
+},
+{
+"Id": 1159,
+"TimeStamp": "2023-11-21T10:24:08",
+"Symbol": "SLS",
+"Rank": 648,
+"Price_USD": 11.4141707069327
+},
+{
+"Id": 333,
+"TimeStamp": "2024-01-11T00:00:01",
+"Symbol": "CURE",
+"Rank": 649,
+"Price_USD": 0.00700541967521796
+},
+{
+"Id": 3273,
+"TimeStamp": "2023-11-25T01:00:06",
+"Symbol": "IQC",
+"Rank": 650,
+"Price_USD": 0.000377571414390279
+},
+{
+"Id": 1706,
+"TimeStamp": "2024-01-10T10:00:25",
+"Symbol": "ADK",
+"Rank": 651,
+"Price_USD": 0.0915335539168615
+},
+{
+"Id": 83,
+"TimeStamp": "2024-01-11T09:00:05",
+"Symbol": "OMNI",
+"Rank": 652,
+"Price_USD": 1.7
+},
+{
+"Id": 2958,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "TRTL",
+"Rank": 653,
+"Price_USD": 2.32613031208439e-05
+},
+{
+"Id": 21505,
+"TimeStamp": "2024-01-03T00:00:22",
+"Symbol": "REDLC",
+"Rank": 654,
+"Price_USD": 0.0988402728636461
+},
+{
+"Id": 1894,
+"TimeStamp": "2024-01-10T15:00:16",
+"Symbol": "TCC",
+"Rank": 655,
+"Price_USD": 0.000477476148866674
+},
+{
+"Id": 2027,
+"TimeStamp": "2024-01-13T00:00:28",
+"Symbol": "CNX",
+"Rank": 656,
+"Price_USD": 0.844189494033735
+},
+{
+"Id": 14767,
+"TimeStamp": "2023-12-05T01:00:11",
+"Symbol": "COOP",
+"Rank": 657,
+"Price_USD": 0.000113980691359273
+},
+{
+"Id": 4546,
+"TimeStamp": "2024-01-12T18:00:22",
+"Symbol": "ZOC",
+"Rank": 658,
+"Price_USD": 0.000612377726160003
+},
+{
+"Id": 1053,
+"TimeStamp": "2024-01-13T02:00:22",
+"Symbol": "BOLI",
+"Rank": 659,
+"Price_USD": 0.00178166748993853
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-13T00:00:30",
+"Symbol": "ZET2",
+"Rank": 660,
+"Price_USD": 0.0156305590799914
+},
+{
+"Id": 506,
+"TimeStamp": "2024-01-13T14:00:19",
+"Symbol": "CANN",
+"Rank": 661,
+"Price_USD": 0.00413662738737886
+},
+{
+"Id": 3432,
+"TimeStamp": "2023-12-28T20:00:04",
+"Symbol": "RPD",
+"Rank": 662,
+"Price_USD": 0.00298493550104156
+},
+{
+"Id": 3481,
+"TimeStamp": "2024-01-13T14:00:01",
+"Symbol": "PNY",
+"Rank": 663,
+"Price_USD": 0.000556247986938589
+},
+{
+"Id": 4160,
+"TimeStamp": "2024-01-11T09:00:22",
+"Symbol": "YEC",
+"Rank": 664,
+"Price_USD": 0.10479190665342
+},
+{
+"Id": 720,
+"TimeStamp": "2024-01-09T06:00:18",
+"Symbol": "CRW",
+"Rank": 665,
+"Price_USD": 0.219025866576577
+},
+{
+"Id": 2337,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "TAU",
+"Rank": 666,
+"Price_USD": 0.00360843973287757
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-26T00:00:00",
+"Symbol": "GRN",
+"Rank": 667,
+"Price_USD": 0.0239863370138621
+},
+{
+"Id": 1850,
+"TimeStamp": "2024-01-13T00:00:30",
+"Symbol": "CRM",
+"Rank": 668,
+"Price_USD": 0.000371470005635421
+},
+{
+"Id": 3799,
+"TimeStamp": "2023-12-08T00:00:04",
+"Symbol": "SAFE",
+"Rank": 669,
+"Price_USD": 0.0508256711949311
+},
+{
+"Id": null,
+"TimeStamp": "2024-01-09T14:15:36",
+"Symbol": "YOVI",
+"Rank": 670,
+"Price_USD": 1488.43105628807
+},
+{
+"Id": 588,
+"TimeStamp": "2023-11-21T10:44:31",
+"Symbol": "UBQ",
+"Rank": 671,
+"Price_USD": 0.0026196743477431
+},
+{
+"Id": 502,
+"TimeStamp": "2024-01-11T05:00:30",
+"Symbol": "CARBON",
+"Rank": 672,
+"Price_USD": 1.01144165007287e-05
+},
+{
+"Id": 170,
+"TimeStamp": "2023-11-21T10:49:12",
+"Symbol": "BLK",
+"Rank": 673,
+"Price_USD": 0.0101008594251512
+},
+{
+"Id": 760,
+"TimeStamp": "2023-11-21T10:46:10",
+"Symbol": "OK",
+"Rank": 674,
+"Price_USD": 0.00159782814751498
+},
+{
+"Id": 313,
+"TimeStamp": "2023-11-21T10:59:30",
+"Symbol": "PINK",
+"Rank": 675,
+"Price_USD": 1.8007009604753e-05
+},
+{
+"Id": 8,
+"TimeStamp": "2023-11-21T10:55:11",
+"Symbol": "FTC",
+"Rank": 676,
+"Price_USD": 0.00115850998995754
+},
+{
+"Id": 5990,
+"TimeStamp": "2024-01-12T08:00:10",
+"Symbol": "DEV",
+"Rank": 677,
+"Price_USD": 0.000645237691488911
+},
+{
+"Id": 201,
+"TimeStamp": "2023-11-21T10:40:13",
+"Symbol": "EMC2",
+"Rank": 678,
+"Price_USD": 0.000801088254163088
+},
+{
+"Id": 2988,
+"TimeStamp": "2023-11-18T00:00:02",
+"Symbol": "PGN",
+"Rank": 679,
+"Price_USD": 8.23680870795768e-06
+},
+{
+"Id": 558,
+"TimeStamp": "2024-01-11T00:00:01",
+"Symbol": "EMC",
+"Rank": 680,
+"Price_USD": 0.0117224316558288
+},
+{
+"Id": 1156,
+"TimeStamp": "2023-11-17T00:27:33",
+"Symbol": "YOC",
+"Rank": 681,
+"Price_USD": 0.000424360877056108
+},
+{
+"Id": 470,
+"TimeStamp": "2023-11-21T10:42:42",
+"Symbol": "VIA",
+"Rank": 682,
+"Price_USD": 0.0130976740261717
+},
+{
+"Id": 19525,
+"TimeStamp": "2024-01-10T00:00:15",
+"Symbol": "BTCA",
+"Rank": 683,
+"Price_USD": 46158.6455360558
+},
+{
+"Id": 90,
+"TimeStamp": "2024-01-12T12:00:37",
+"Symbol": "DIME",
+"Rank": 684,
+"Price_USD": 8.1271750171352e-07
+},
+{
+"Id": 2558,
+"TimeStamp": "2023-11-21T10:56:17",
+"Symbol": "INSTAR",
+"Rank": 685,
+"Price_USD": 0.0127071620444846
+},
+{
+"Id": 362,
+"TimeStamp": "2024-01-09T01:00:22",
+"Symbol": "CLOAK",
+"Rank": 686,
+"Price_USD": 0.300663721638429
+},
+{
+"Id": 789,
+"TimeStamp": "2023-11-21T10:46:17",
+"Symbol": "NXS",
+"Rank": 687,
+"Price_USD": 0.0269415873399479
+},
+{
+"Id": 1712,
+"TimeStamp": "2023-11-21T10:54:08",
+"Symbol": "QRL",
+"Rank": 688,
+"Price_USD": 0.0444820039237507
+},
+{
+"Id": 5,
+"TimeStamp": "2024-01-13T14:00:05",
+"Symbol": "PPC",
+"Rank": 689,
+"Price_USD": 0.360013071102965
+},
+{
+"Id": 4003,
+"TimeStamp": "2023-11-22T08:00:04",
+"Symbol": "ZNN",
+"Rank": 690,
+"Price_USD": 3.61968370855677
+},
+{
+"Id": 2482,
+"TimeStamp": "2024-01-05T00:00:01",
+"Symbol": "CPC",
+"Rank": 691,
+"Price_USD": 0.000459161750333967
+},
+{
+"Id": 24618,
+"TimeStamp": "2024-01-03T03:00:05",
+"Symbol": "ETI",
+"Rank": 692,
+"Price_USD": 1.44306677597698
+},
+{
+"Id": null,
+"TimeStamp": "2023-12-08T17:38:24",
+"Symbol": "ASA",
+"Rank": 693,
+"Price_USD": 2.34962657786302e-05
+},
+{
+"Id": 2321,
+"TimeStamp": "2023-11-21T07:00:14",
+"Symbol": "QLC",
+"Rank": 694,
+"Price_USD": 0.00411454771770088
+}
+]

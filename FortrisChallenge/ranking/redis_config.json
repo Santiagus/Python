@@ -1,0 +1,8 @@
+{
+    "redis": {
+        "host": "localhost",
+        "port": 6379
+    },
+    "request_queue": "ranking_request_queue",
+    "result_queue": "ranking_result_queue"
+}
