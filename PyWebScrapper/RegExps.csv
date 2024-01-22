@@ -1,0 +1,9 @@
+\d+[.,]?\d*
+Premios por cada serie de boletos de ([0-9]+\.?[0-9]+\.?[0-9]+\.?)
+span>(\d+)
+\d+[.,]?\d*
+\d+[.,]?\d*
+\d+[.,]?\d*
+\d+[.,]?\d+[.,]?\d+
+Precio: (\d*[.,]?\d+)
+Premios por cada serie de boletos de (\d+\.?\d+\.?\d+\.?)

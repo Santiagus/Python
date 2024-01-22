@@ -1,0 +1,731 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WebScrapper</class>
+ <widget class="QWidget" name="WebScrapper">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1061</width>
+    <height>726</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>WebScrapper</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="6" column="1" colspan="4">
+    <widget class="QGroupBox" name="groupSrc">
+     <property name="title">
+      <string>Source Code</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="3">
+       <widget class="QPushButton" name="btSearch">
+        <property name="text">
+         <string>Search</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lbRegExp_2">
+        <property name="text">
+         <string>RegExp</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="lbRegExp">
+        <property name="text">
+         <string>RegExp</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="lnRegExp">
+        <property name="text">
+         <string>\d+[.,]?\d*</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QPushButton" name="btSourceClr">
+        <property name="text">
+         <string>Clear</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QPushButton" name="btRegExp">
+        <property name="text">
+         <string>Apply</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QPushButton" name="btSaveRegExp">
+        <property name="text">
+         <string>Save</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" colspan="6">
+       <widget class="QComboBox" name="cbLoadedRegExp"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="6" column="6" colspan="3">
+    <widget class="QGroupBox" name="groupOutput">
+     <property name="title">
+      <string>GroupBox</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="2" column="0">
+       <widget class="QLabel" name="lbRegExp_3">
+        <property name="text">
+         <string>SQL Query</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QPushButton" name="btCopy2Src">
+        <property name="text">
+         <string>Copy 2 Src</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QPushButton" name="btLoadLinks">
+        <property name="text">
+         <string>LoadLinks</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="8">
+       <widget class="QPushButton" name="btOutputClr">
+        <property name="text">
+         <string>Clear</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1" colspan="8">
+       <widget class="QLineEdit" name="lnSQLQuery">
+        <property name="text">
+         <string>select * from game_info</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QPushButton" name="btSaveOutput">
+        <property name="text">
+         <string>Save2File</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="btMiDiaStats">
+        <property name="text">
+         <string>MiDiaStats</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="btGetRascas">
+        <property name="text">
+         <string>GetRascas</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="btGetData">
+        <property name="text">
+         <string>GetMiDia</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QPushButton" name="btRascaStats">
+        <property name="text">
+         <string>RascaStats</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QFrame" name="frame">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="6">
+    <widget class="QPlainTextEdit" name="txtOutput"/>
+   </item>
+   <item row="7" column="1" rowspan="5" colspan="4">
+    <widget class="QPlainTextEdit" name="txtSrc">
+     <property name="styleSheet">
+      <string notr="true">selection-background-color: rgb(85, 255, 0);</string>
+     </property>
+     <property name="sizeAdjustPolicy">
+      <enum>QAbstractScrollArea::AdjustToContents</enum>
+     </property>
+     <property name="plainText">
+      <string>Premios por cada serie de boletos de ([0-9]+\.?[0-9]+\.?[0-9]+\.?)
+\d+[.,]?\d
+</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1" colspan="8">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="lbUrl">
+       <property name="text">
+        <string>URL: </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lnUrl">
+       <property name="text">
+        <string>https://www.juegosonce.es/rascas-todos</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="cbLinks">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btUrl">
+       <property name="text">
+        <string>Load</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="12" column="6" colspan="3">
+    <widget class="QLabel" name="lbOutputInfo">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1" colspan="8">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QGroupBox" name="Filters">
+       <property name="title">
+        <string>Filters</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="4">
+         <widget class="QPushButton" name="btClearAttr">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Wingdings 2</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string notr="true">O</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="5">
+         <widget class="QLabel" name="lbAttrValue">
+          <property name="text">
+           <string>AttrValue</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QComboBox" name="cbAttributes">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="7">
+         <widget class="QPushButton" name="btClearAttrValue">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Wingdings 2</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string notr="true">O</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="6">
+         <widget class="QComboBox" name="cbAttrValue">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="lbTag">
+          <property name="text">
+           <string>Tags</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3" colspan="4">
+         <widget class="QComboBox" name="cbLoadedFilters"/>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="lbAttributes">
+          <property name="text">
+           <string>Attr</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="cbTags"/>
+        </item>
+        <item row="1" column="8">
+         <widget class="QPushButton" name="btApplyComboFilter">
+          <property name="text">
+           <string>Apply</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="10">
+         <widget class="QPushButton" name="btSaveFilters">
+          <property name="text">
+           <string>Save</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Load Filter</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="8">
+         <widget class="QPushButton" name="btFilter">
+          <property name="text">
+           <string>Filter Tags</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="10">
+         <widget class="QPushButton" name="btGetText">
+          <property name="text">
+           <string>Get Text</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="Extract">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>Extract</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QLabel" name="lbAttr2Extract">
+          <property name="text">
+           <string>Attr</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="cbAttr2Extract">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btClearAttr2Extract">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Wingdings 2</family>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string notr="true">O</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btGetAttrValues">
+          <property name="text">
+           <string>Get</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="12" column="1" colspan="3">
+    <widget class="QLabel" name="lbSrcCodeInfo">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="6">
+    <widget class="QTableView" name="tableView">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="6">
+    <layout class="QHBoxLayout" name="TableControls">
+     <item>
+      <widget class="QLabel" name="lbTables">
+       <property name="text">
+        <string>Tables</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="cbTables">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btAddRow">
+       <property name="maximumSize">
+        <size>
+         <width>23</width>
+         <height>23</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>+</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btRemoveRow">
+       <property name="maximumSize">
+        <size>
+         <width>23</width>
+         <height>23</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>-</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btClearTable">
+       <property name="text">
+        <string>Clear Table</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btRevert">
+       <property name="text">
+        <string>Revert</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btSubmit">
+       <property name="text">
+        <string>Submit</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>lnUrl</sender>
+   <signal>returnPressed()</signal>
+   <receiver>btUrl</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>156</x>
+     <y>17</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1006</x>
+     <y>32</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btSourceClr</sender>
+   <signal>clicked()</signal>
+   <receiver>txtSrc</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>506</x>
+     <y>178</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>314</x>
+     <y>313</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btOutputClr</sender>
+   <signal>clicked()</signal>
+   <receiver>txtOutput</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>997</x>
+     <y>178</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>878</x>
+     <y>316</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btClearAttr</sender>
+   <signal>clicked()</signal>
+   <receiver>cbAttributes</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>277</x>
+     <y>84</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>67</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btClearAttrValue</sender>
+   <signal>clicked()</signal>
+   <receiver>cbAttrValue</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>473</x>
+     <y>84</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>412</x>
+     <y>71</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lnRegExp</sender>
+   <signal>returnPressed()</signal>
+   <receiver>btRegExp</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>173</x>
+     <y>176</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>344</x>
+     <y>178</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btClearAttr2Extract</sender>
+   <signal>clicked()</signal>
+   <receiver>cbAttr2Extract</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>892</x>
+     <y>99</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>866</x>
+     <y>99</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>txtSrc</sender>
+   <signal>blockCountChanged(int)</signal>
+   <receiver>lbSrcCodeInfo</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>183</x>
+     <y>449</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>120</x>
+     <y>716</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>txtOutput</sender>
+   <signal>blockCountChanged(int)</signal>
+   <receiver>lbOutputInfo</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>995</x>
+     <y>440</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1007</x>
+     <y>716</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

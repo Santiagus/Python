@@ -1,0 +1,20 @@
+{
+    "redis": {
+        "host": "localhost",
+        "port": 6379,
+        "stream_names": {
+            "rank_requests": "rank_req",
+            "price_requests": "price_req",
+            "rank_responses": "rank_res",
+            "price_responses": "price_res",
+            "topcoinsrank": "topcoinsrank"
+        },
+        "consumer_groups": {
+            "rank_requests": "rank_req_consumers",
+            "price_requests": "price_req_consumers",
+            "rank_responses": "rank_res_consumers",
+            "price_responses": "price_res_consumers",
+            "topcoinsrank": "topcoinsrank_consumers"
+        }
+    }
+}

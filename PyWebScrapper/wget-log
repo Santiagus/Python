@@ -1,0 +1,6 @@
+--2023-12-23 22:21:12--  https://es.indeed.com/jobs?q=python
+Resolving es.indeed.com (es.indeed.com)... 162.159.130.67, 162.159.129.67
+Connecting to es.indeed.com (es.indeed.com)|162.159.130.67|:443... connected.
+HTTP request sent, awaiting response... 403 Forbidden
+2023-12-23 22:21:12 ERROR 403: Forbidden.
+

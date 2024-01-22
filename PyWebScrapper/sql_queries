@@ -1,0 +1,2 @@
+SELECT result, substr(result,7)||'-'||substr(result,4,2)||'-'||substr(result,1,2) as date FROM results order by date
+

@@ -1,0 +1,7 @@
+select name, tickets_amount, price, sum(amount), sum(prize), 
+sum(amount/tickets_amount) as Probability, 
+sum((prize*amount/tickets_amount)) - sum(price*(tickets_amount-amount)/tickets_amount) as Esperanza
+from game_info g, prizes p 
+where g.id = p.game_id 
+and g.id='25'
+group by game_id
