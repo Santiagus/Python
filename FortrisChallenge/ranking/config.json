@@ -1,0 +1,24 @@
+{
+    "host": "localhost",
+    "port": 6379,
+    "requests": {
+        "group": {
+            "group_name": "rank_req_consumers",
+            "consumer_name": "rank_consumer",
+            "streams": [
+                "rank_req"
+            ],
+            "timeout": 0,
+            "count": 1,
+            "latest_ids": [
+                ">"
+            ],
+            "no_ack": false
+        },
+        "stream": "rank_req",
+        "min_idle_time": 10000
+    },
+    "responses": {
+        "stream": "topcoinsrank"
+    }
+}
