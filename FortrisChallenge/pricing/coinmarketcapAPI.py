@@ -12,6 +12,7 @@ NOT_AVAILABLE = "N/A"  # Default Value when data fetched is not available (Ej. L
 # Update frequency	**Every 1 minute
 
 url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+url_historical = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/historical'
 
 update_frequency_seconds = 60
 
@@ -22,6 +23,16 @@ parameters = {
   "sort" : "volume_24h",
   "cryptocurrency_type" : "coins"
 }
+
+parameters_historical = {
+  'date': "2024-01-12T18:42:33",
+  'start':'1',
+  'limit':'5000',
+  'convert':'USD',
+  "sort" : "volume_24h",
+  "cryptocurrency_type" : "coins"
+}
+
 headers = {
   'Accepts': 'application/json',
   'Accept-Encoding': 'deflate, gzip',
@@ -32,7 +43,8 @@ session = Session()
 session.headers.update(headers)
 
 try:
-  response = session.get(url, params=parameters)
+  # response = session.get(url, params=parameters)
+  response = session.get(url_historical, params=parameters_historical)
   data = json.loads(response.text)
   if data.get("status").get("error_code"):      
       raise Exception(f'Error ({data.get("status").get("error_code")}) : {data.get("status").get("error_message")}')
