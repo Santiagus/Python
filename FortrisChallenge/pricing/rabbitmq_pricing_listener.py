@@ -2,7 +2,7 @@ import os
 import pika
 import json
 import time
-from api_connector import get_api_info
+from pricing.pricing_data_fetcher import get_api_info
 
 def read_config():
     try:

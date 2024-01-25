@@ -1,20 +1,100 @@
 {
-    "redis": {
-        "host": "localhost",
-        "port": 6379,
-        "stream_names": {
-            "rank_requests": "rank_req",
-            "price_requests": "price_req",
-            "rank_responses": "rank_res",
-            "price_responses": "price_res",
-            "topcoinsrank": "topcoinsrank"
+    "host": "localhost",
+    "port": 6379,
+    "groups": {
+        "ranking": {
+            "requests": {
+                "group": {
+                    "group_name": "rank_req_consumers",
+                    "consumer_name": "rank_consumer",
+                    "streams": [
+                        "rank_req"
+                    ],
+                    "timeout": 0,
+                    "count": 1,
+                    "latest_ids": [
+                        ">"
+                    ],
+                    "no_ack": false
+                },
+                "stream": "rank_req",
+                "min_idle_time": 10000
+            },
+            "responses": {
+                "group": {
+                    "group_name": "rank_res_consumers",
+                    "consumer_name": "rank_consumer",
+                    "streams": [
+                        "rank_res"
+                    ],
+                    "timeout": 0,
+                    "count": 1,
+                    "latest_ids": [
+                        ">"
+                    ],
+                    "no_ack": false
+                },
+                "stream": "rank_res",
+                "min_idle_time": 10000
+            }
         },
-        "consumer_groups": {
-            "rank_requests": "rank_req_consumers",
-            "price_requests": "price_req_consumers",
-            "rank_responses": "rank_res_consumers",
-            "price_responses": "price_res_consumers",
-            "topcoinsrank": "topcoinsrank_consumers"
+        "pricing": {
+            "requests": {
+                "group": {
+                    "group_name": "price_req_consumers",
+                    "consumer_name": "price_consumer",
+                    "streams": [
+                        "price_req"
+                    ],
+                    "timeout": 0,
+                    "count": 1,
+                    "latest_ids": [
+                        ">"
+                    ],
+                    "no_ack": false
+                },
+                "stream": "price_req",
+                "min_idle_time": 10000
+            },
+            "responses": {
+                "group": {
+                    "group_name": "price_res_consumers",
+                    "consumer_name": "price_consumer",
+                    "streams": [
+                        "price_res"
+                    ],
+                    "timeout": 0,
+                    "count": 1,
+                    "latest_ids": [
+                        ">"
+                    ],
+                    "no_ack": false
+                },
+                "stream": "price_res",
+                "min_idle_time": 10000
+            }
+        },
+        "topcoinsrank": {
+            "requests": {
+                "group": {
+                    "group_name": "topcoinsrank_consumers",
+                    "consumer_name": "topcoinsrank_consumer",
+                    "streams": [
+                        "topcoinsrank"
+                    ],
+                    "timeout": 0,
+                    "count": 1,
+                    "latest_ids": [
+                        ">"
+                    ],
+                    "no_ack": false
+                },
+                "stream": "topcoinsrank",
+                "min_idle_time": 10000
+            },
+            "responses": {
+                "stream": "topcoinsrank"
+            }
         }
     }
 }

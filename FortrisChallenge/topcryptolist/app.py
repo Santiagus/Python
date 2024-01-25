@@ -1,78 +1,67 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from fastapi import Depends, FastAPI
+# from starlette.lifespan import Lifespan
 from redis import Redis
 # from contextlib import asynccontextmanager
 from redis import exceptions
 import aioredis
 
-import retry
+import tenacity
 import httpx
 import aioredis
 import json
 import utils
+import sys
 
-app = FastAPI(debug=True)
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(3),
+    retry=tenacity.retry_if_exception_type(ConnectionRefusedError),
+    wait=tenacity.wait_fixed(3),
+)
+async def connect_to_redis(host, port):
+    try:
+        redis = await aioredis.create_redis_pool((host, port))
+        if await redis.execute("PING"):
+            print("Connected to Redis successfully.")
+            return redis
+    except ConnectionRefusedError as e:
+        print(f"ConnectionRefusedError: {e}")
+        raise e
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise e
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # try:
+        # Inicialization (Load config, stablish connections, ...)
+        config_path = 'config.json'
+        app.state.redis = None
+        app.state.config = utils.load_config_from_json(config_path)        
+        app.state.redis = await connect_to_redis(app.state.config["host"], app.state.config["port"])
+               
+        yield
+        
+        # Shutdown (Close connections to msg broker, db, ...)
+        if app.state.redis is not None:
+            app.state.redis.close()
+
+    # except json.decoder.JSONDecodeError as e:
+    #         print(f"Config load error : {e}")
+    # except exceptions.ConnectionError as error:
+    #     print(error)
+    # except ConnectionRefusedError as e:
+    #     print(f"Failed to connect to Redis: {e}")
+    # except tenacity.RetryError:
+    #     print("Failed to connect to Redis after retries.")        
+    # except Exception as e:
+    #     print(f"An unexpected error occurred during startup: {e}")
+    # finally:        
+    #     if app.state.redis is not None:
+    #         app.state.redis.close()
+    #     sys.exit(1)  # Exit the application with a non-zero exit code
+
+
+app = FastAPI(lifespan=lifespan)
 
 from topcryptolist.api import api
-
-# @retry.retry(Exception, delay=1, backoff=2, max_delay=10, tries=-1)
-# async def connect_to_redis():
-#     # return Redis(host=app.state.config["redis"]["host"], port=app.state.config["redis"]["port"])    
-#     return await aioredis.create_redis_pool((app.state.config["redis"]["host"], app.state.config["redis"]["port"]))
-#     return = await aioredis.create_redis_pool("redis://localhost")
-
-    # return await aioredis.create_redis_pool("redis://localhost")
-
-async def check_consumer_groups(redis, stream_name):
-    # Use XINFO GROUPS to get information about consumer groups for a stream
-    try:
-        info_groups = await redis.xinfo_groups(stream_name)
-        print(f"Consumer Groups for Stream '{stream_name}': {info_groups}")
-    except Exception as e:
-        print(f"Erron when featching groups info : {stream_name}")
-
-async def create_consumer_groups(redis, stream_names):
-    consumer_group = app.state.config["redis"]["consumer_groups"]["topcoinsrank"]
-    consumer_name="topcoinsrank_consumer"
-    streams = ["topcoinsrank"]
-    latest_ids=[">"]
-    count = 1
-
-    res = ""
-    for stream in stream_names.values():
-        # await app.state.redis.xgroup_create(stream, str(stream + "_consumers"), id='0', mkstream=True)
-        try:
-            await check_consumer_groups(redis, stream)
-            res = await redis.xgroup_create(stream, str(stream + "_consumers"), mkstream=True) #, id='0', mkstream=True)
-            await check_consumer_groups(redis, stream)
-            if res:
-                print(f"Created redis group '{str(stream + '_consumers')}' in stream '{stream}'")
-        except Exception as e:
-            print(f"Redis group '{str(stream + '_consumers')}' in stream '{stream}' already exists.")
-            # print(f"Redis group creation failed ({e}): {res}")
-@app.on_event("startup")
-async def startup_event():
-    try:        
-        config_path = 'config.json'
-        app.state.config = utils.load_config_from_json(config_path)
-        # Use the retry decorator to attempt connection to Redis
-        # app.state.redis = connect_to_redis()
-        # app.state.redis = await aioredis.create_redis_pool("redis://localhost")
-        app.state.redis = await aioredis.create_redis_pool(('localhost', 6379))
-
-        app.state.http_client = httpx.AsyncClient()
-        if await app.state.redis.execute("PING"):
-            print("Connected to Redis successfully.")
-            await create_consumer_groups(app.state.redis, app.state.config["redis"]['stream_names'])
-                # Send a request to Redis Stream
-            # stream_name = "toprank_requests"
-            # consumer_group = "ranking_consumers"
-            # await app.state.redis.xgroup_create(stream_name, consumer_group, id='0', mkstream=True)
-
-    except exceptions.ConnectionError as error:
-        print(error)
-    except Exception as e:
-        print(f"Failed to connect to Redis: {e}")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-   app.state.redis.close()

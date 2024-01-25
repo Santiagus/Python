@@ -5,7 +5,7 @@ import logging
 import ranking_data_fetcher
 import redis.exceptions
 
-data_sample = '[{"Id": 1, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "BTC", "Price_USD": 41334.4409079465}, {"Id": 1027, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "ETH", "Price_USD": 2435.95860533111}, {"Id": 5426, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "SOL", "Price_USD": 89.4960289302982}, {"Id": 74, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "DOGE", "Price_USD": 0.0832146431181928}, {"Id": 13631, "TimeStamp": "2024-01-22T03:13:29", "Symbol": "MANTA", "Price_USD": 2.72213652502557}, {"Id": 52, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "XRP", "Price_USD": 0.542530458136185}]'
+data_sample = '[{"Id": 1, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "BTC"}, {"Id": 1027, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "ETH"}, {"Id": 5426, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "SOL"}, {"Id": 74, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "DOGE"}, {"Id": 13631, "TimeStamp": "2024-01-22T03:13:29", "Symbol": "MANTA"}, {"Id": 52, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "XRP"}]'
 
 async def load_config_from_json(file_path):
     with open(file_path, 'r') as file:
@@ -22,30 +22,41 @@ async def create_redis_group(redis, stream, group_name):
         logging.info(f"Redis group '{group_name}' in stream '{stream}' already exists.")
 
 
-async def process_message(redis, config):
-    try:
+
+async def message_unpack(redis, config):
         msg_pending  = await redis.xlen(config['requests']['stream'])
         logging.info(f"There are {msg_pending} msg pending in {config['requests']['stream']} stream.")
+    
+        if msg_pending:
+            message = await redis.xrange(config['requests']['stream'], '-', '+', count=1)
+            message_id = message[0][0].decode()
+            request_id = message[0][1][b'request_id']
+            get_latest_data = bool(message[0][1][b'get_latest_data'])
+        else:
+            message = await redis.xread_group(**config['requests']['group'])
+            message_id = message[0][1].decode()
+            request_id = message[0][2][b'request_id']
+            get_latest_data = bool(message[0][2][b'get_latest_data'])
+        
+        return message, message_id, request_id, get_latest_data
+
+
+async def process_message(redis, config):
+    try:
         while True:
-            if msg_pending:
-                message = await redis.xrange(config['requests']['stream'], '-', '+', count=1)
-                message_id = message[0][0].decode()
-                request_id = message[0][1][b'request_id']
-                # message_data = message[0][1]
-            else:
-                message = await redis.xread_group(**config['requests']['group'])
-                message_id = message[0][1].decode()
-                request_id = message[0][2][b'request_id']
-                # message_data = message[0][2].decode()
-            if message:                
+            message, message_id, timestamp, get_latest_data = await message_unpack(redis, config)
+            if message:
                 # Extend the lease by reclaiming the message
                 await redis.xclaim(config['requests']['stream'],
                                    config['requests']['group']['group_name'],
                                    config['requests']['group']['consumer_name'],
                                    config['requests']['min_idle_time'], message_id)
                 logging.info(f"Processing message: {message_id}")
-                # response = await ranking_data_fetcher.topcoins_ranking()
-                response = {"request_id": request_id.decode(), "data": data_sample}
+                # if get_latest_data:
+                #     response = await ranking_data_fetcher.topcoins_ranking()
+                # else:
+                #     response = await ranking_data_fetcher.topcoins_ranking(timestamp)
+                response = {"request_id": timestamp.decode(), "data": data_sample}
                 redis.xadd(config['responses']['stream'], response)
                 res = await redis.xack(config['requests']['stream'],
                                        config['requests']['group']['group_name'],

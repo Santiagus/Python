@@ -1,7 +1,24 @@
 {
-    "RABBITMQ_HOST": "localhost",
-    "RABBITMQ_PORT": 5672,
-    "REQUEST_QUEUE": "price_queue",
-    "RESPONSE_EXCHANGE": "price_response",
-    "RESPONSE_ROUTING_KEY": "price_response"
+    "host": "localhost",
+    "port": 6379,
+    "requests": {
+        "group": {
+            "group_name": "price_req_consumers",
+            "consumer_name": "price_consumer",
+            "streams": [
+                "price_req"
+            ],
+            "timeout": 0,
+            "count": 1,
+            "latest_ids": [
+                ">"
+            ],
+            "no_ack": false
+        },
+        "stream": "price_req",
+        "min_idle_time": 10000
+    },
+    "responses": {
+        "stream": "price_res"
+    }
 }

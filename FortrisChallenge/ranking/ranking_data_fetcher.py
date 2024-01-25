@@ -1,3 +1,4 @@
+import asyncio
 from collections import OrderedDict
 from datetime import datetime
 from datetime import timedelta
@@ -12,61 +13,61 @@ top_list_url = 'https://data-api.cryptocompare.com/asset/v1/top/list'
 historical_data_url = 'https://min-api.cryptocompare.com/data/exchange/histohour?tsym=BTC&limit=24&aggregate=1'
 
 
-def get_api_info(timestamp=None):
-  print("get_api_info - getting ranking quotes...")
+# def get_api_info(timestamp=None):
+#   print("get_api_info - getting ranking quotes...")
   
-  # Cryptocompare connection parameters
-  APIKey = os.environ["CRYPTOCOMPARE_API_KEY"]
-  limit = 5000                    # API constraint. Max total results
-  RESULTS_PER_REQUEST = 100       # API constraint. Max results per request
-  NOT_AVAILABLE = "N/A"           # Default Value when data fetched is not available (Ej. LASTUPDATE)
-  pages = limit // RESULTS_PER_REQUEST
+#   # Cryptocompare connection parameters
+#   APIKey = os.environ["CRYPTOCOMPARE_API_KEY"]
+#   limit = 5000                    # API constraint. Max total results
+#   RESULTS_PER_REQUEST = 100       # API constraint. Max results per request
+#   NOT_AVAILABLE = "N/A"           # Default Value when data fetched is not available (Ej. LASTUPDATE)
+#   pages = limit // RESULTS_PER_REQUEST
 
 
-  parameters = {
-      "page" : 1,
-      "page_size" : RESULTS_PER_REQUEST,
-      "asset_type":"BLOCKCHAIN",
-      "sort_by": "SPOT_MOVING_24_HOUR_QUOTE_VOLUME_USD",
-      "sort_direction": "DESC",
-      'api_key': APIKey
-  }
+#   parameters = {
+#       "page" : 1,
+#       "page_size" : RESULTS_PER_REQUEST,
+#       "asset_type":"BLOCKCHAIN",
+#       "sort_by": "SPOT_MOVING_24_HOUR_QUOTE_VOLUME_USD",
+#       "sort_direction": "DESC",
+#       'api_key': APIKey
+#   }
 
-  headers = {
-      'Accepts': 'application/json',
-  }
+#   headers = {
+#       'Accepts': 'application/json',
+#   }
 
-  session = Session()
-  session.headers.update(headers)
+#   session = Session()
+#   session.headers.update(headers)
 
-  filtered_items = []
-  try:
-    for _ in range(pages):
-        response = session.get(top_list_url, params=parameters)
-        data = json.loads(response.text,object_pairs_hook=OrderedDict)
-        if data.get("Err"):
-            print(f'Error : {data.get("Err").get("message")}')
-            break
+#   filtered_items = []
+#   try:
+#     for _ in range(pages):
+#         response = session.get(top_list_url, params=parameters)
+#         data = json.loads(response.text,object_pairs_hook=OrderedDict)
+#         if data.get("Err"):
+#             print(f'Error : {data.get("Err").get("message")}')
+#             break
 
-        filtered_items = [
-            {
-                "Id": alt_id["ID"],
-                "TimeStamp": datetime.utcfromtimestamp(item.get("PRICE_USD_LAST_UPDATE_TS")).isoformat(),
-                "Symbol": item.get("SYMBOL", NOT_AVAILABLE),
-                "Price_USD": item.get("PRICE_USD", NOT_AVAILABLE),
-            }
-            for index, item in enumerate(data.get("Data").get("LIST", []))
-            if (alt_id := next(
-                (int(alt_id.get("ID")) for alt_id in item.get("ASSET_ALTERNATIVE_IDS", []) if alt_id and alt_id.get("NAME") == "CMC"),
-                None  # Set to None if no "CMC"
-            )) is not None
-        ]
+#         filtered_items = [
+#             {
+#                 "Id": alt_id["ID"],
+#                 "TimeStamp": datetime.utcfromtimestamp(item.get("PRICE_USD_LAST_UPDATE_TS")).isoformat(),
+#                 "Symbol": item.get("SYMBOL", NOT_AVAILABLE),
+#                 "Price_USD": item.get("PRICE_USD", NOT_AVAILABLE),
+#             }
+#             for index, item in enumerate(data.get("Data").get("LIST", []))
+#             if (alt_id := next(
+#                 (int(alt_id.get("ID")) for alt_id in item.get("ASSET_ALTERNATIVE_IDS", []) if alt_id and alt_id.get("NAME") == "CMC"),
+#                 None  # Set to None if no "CMC"
+#             )) is not None
+#         ]
 
-        filtered_items.extend(filtered_items)
-        parameters["page"] += 1
-  except (ConnectionError, Timeout, TooManyRedirects) as e:
-      return(e)
-  return filtered_items
+#         filtered_items.extend(filtered_items)
+#         parameters["page"] += 1
+#   except (ConnectionError, Timeout, TooManyRedirects) as e:
+#       return(e)
+#   return filtered_items
 
 
 # Async version
@@ -113,8 +114,9 @@ def filter_data(data):
 
 # Example usage
 async def topcoins_ranking(timestamp = None):
-    print("getting ranking quotes...")
 
+    # TODO: If timestamp fetch historical data ??
+    print("getting ranking quotes...")
     # Cryptocompare connection parameters
     APIKey = os.environ["CRYPTOCOMPARE_API_KEY"]
     limit = 5000                    # API constraint. Max total results
@@ -167,11 +169,10 @@ async def topcoins_ranking(timestamp = None):
         print(f"Error: {e}")
 
 def save_to_json_file(data, file_path = 'cryptocompare_filtered_output.json'):
-
     with open(file_path, "w") as json_file:
         json.dump(data, json_file, indent= 2)
     print(f"JSON data has been saved to {file_path}")
-    
+
 
 def save_symbols_to_file(items, file_path = 'output.json'):
     # Extract 'Symbol' values and create a set
@@ -189,15 +190,6 @@ def load_symbols_from_file(file_path):
     return set(symbol_list)
 
 
-# # Run the event loop
-# asyncio.run(main())
-        
-# https://min-api.cryptocompare.com/data/exchange/histohour?tsym=BTC&limit=24&aggregate=1
-
-import asyncio
-
-# def main():
-
 if __name__ == "__main__":
-    # main()
+
     asyncio.run(topcoins_ranking(timestamp=None))

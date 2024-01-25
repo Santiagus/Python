@@ -19,6 +19,6 @@
         "min_idle_time": 10000
     },
     "responses": {
-        "stream": "topcoinsrank"
+        "stream": "rank_res"
     }
 }
