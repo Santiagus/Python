@@ -61,11 +61,11 @@ async def process_message(redis, config):
                 )
                 logging.info(f"Processing message: {message_id}")
                 # if get_latest_data:
-                #     response = await ranking_data_fetcher.topcoins_ranking()
+                response = await pricing_data_fetcher.get_api_info()
                 # else:
                 #     response = await ranking_data_fetcher.topcoins_ranking(timestamp)
-                response = {"request_id": timestamp.decode(), "data": data_sample}
-                redis.xadd(config["responses"]["stream"], response)
+                # response = {"request_id": timestamp.decode(), "data": data_sample}
+                redis.xadd(config['responses']['stream'], {"request_id": timestamp.decode(), "data": json.dumps(response)})
                 res = await redis.xack(
                     config["requests"]["stream"],
                     config["requests"]["group"]["group_name"],

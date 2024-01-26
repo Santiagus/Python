@@ -100,9 +100,9 @@ def filter_data(data):
                 (int(alt_id.get("ID")) for alt_id in item.get("ASSET_ALTERNATIVE_IDS", []) if alt_id and alt_id.get("NAME") == "CMC"),
                 None  # Set to None if no "CMC"
             ) if item.get("ASSET_ALTERNATIVE_IDS") is not None else None ,
-            "TimeStamp" : datetime.utcfromtimestamp(item.get("PRICE_USD_LAST_UPDATE_TS")).isoformat(),
+            # "TimeStamp" : datetime.utcfromtimestamp(item.get("PRICE_USD_LAST_UPDATE_TS")).isoformat(),
             "Symbol": item.get("SYMBOL", NOT_AVAILABLE),
-            "Price_USD": item.get("PRICE_USD", NOT_AVAILABLE),
+            # "Price_USD": item.get("PRICE_USD", NOT_AVAILABLE),
             }
             for item in data.get("Data").get("LIST",[])
         )
@@ -154,13 +154,13 @@ async def topcoins_ranking(timestamp = None):
             fdata = filter_data(json_data)
             filtered_items.extend(fdata)
         # Filter items where 'Id' is not None
-        # filtered_items = [item for item in filtered_items if item.get('Id') is not None]
+        filtered_items = [item for item in filtered_items if item.get('Id') is not None]
+        # save_to_json_file(filtered_items)        
 
-        save_to_json_file(filtered_items)        
-
-        if not os.path.exists(symbols_file_path):
-            save_symbols_to_file(filtered_items)
-        return json.dumps(filtered_items)
+        # if not os.path.exists(symbols_file_path):
+        #     save_symbols_to_file(filtered_items)
+        return filtered_items
+        # return filtered_items
 
         # print("Data:", data)
     except httpx.HTTPError as e:
@@ -184,11 +184,10 @@ def save_symbols_to_file(items, file_path = 'output.json'):
         json.dump(list(symbol_set), file)
     print(f'Symbols saved to {file_path}')
 
-def load_symbols_from_file(file_path):     
+def load_json_from_file(file_path = 'cryptocompare_filtered_output.json'):     
     with open(file_path, 'r') as file:
-        symbol_list = json.load(file)
-    return set(symbol_list)
-
+        data = json.load(file)
+    return data
 
 if __name__ == "__main__":
 

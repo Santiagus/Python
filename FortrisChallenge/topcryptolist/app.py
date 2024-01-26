@@ -31,6 +31,7 @@ async def connect_to_redis(host, port):
         print(f"An unexpected error occurred: {e}")
         raise e
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # try:
@@ -47,9 +48,7 @@ async def lifespan(app: FastAPI):
             app.state.redis.close()
 
     # except json.decoder.JSONDecodeError as e:
-    #         print(f"Config load error : {e}")
-    # except exceptions.ConnectionError as error:
-    #     print(error)
+    #         print(f"Config load error : {e}")    
     # except ConnectionRefusedError as e:
     #     print(f"Failed to connect to Redis: {e}")
     # except tenacity.RetryError:

@@ -1,14 +1,13 @@
 from datetime import datetime
 from unittest import expectedFailure
 from fastapi import Query
+from fastapi.responses import PlainTextResponse
 from topcryptolist.app import app, connect_to_redis
 from typing import Annotated, List, Optional, Union
 from redis.exceptions import RedisError
 import aioredis
 import asyncio
-import pricing
 import json
-import redis
 import pandas as pd
 from fastapi import HTTPException
 
@@ -22,14 +21,6 @@ async def save_to_redis(redis_key, data):
         print(f'Error setting key "{redis_key}" in Redis: {e}')
     except Exception as e:
         print(f'Unexpected error: {e}')
-
-# async def publish_ranking_request(limit, timestamp = datetime.now()):    
-#     # return f"{{'limit': {limit}, 'timestamp': {timestamp} }}"
-#     msg = {"limit": limit, "timestamp": timestamp}
-#     app.state.redis.lpush("ranking_request_queue", json.dumps(msg))
-#     app.state.redis.lpush("princing_request_queue", json.dumps(msg))
-#     result = app.state.redis.blpop("toplist")[1]
-#     return result.decode('utf-8')
 
 def unix_to_iso(unix_timestamp):
     # Convert Unix timestamp to datetime object
@@ -84,79 +75,21 @@ async def consume_stream(redis, stream, stream_group_config, request_id):
         if request_id == float(message[0][2][b'request_id'].decode()):
             await redis.xdel(stream, message_id)
             return message[0][2][b'data'].decode()
-# #-------------------------------------------------------------
 
-
-# async def consume_stream(redis, stream_name):
-#     while True:
-#         message = await redis.xread({stream_name: '$'}, count=1, timeout=0)
-#         if message:
-#             print(f"Received from {stream_name}: {message}")
-
-# async def main():
-#     # Connect to Redis
-#     redis_connection = await aioredis.create_redis('redis://localhost:6379', encoding='utf-8')
-
-#     # Specify the names of the streams you want to listen to
-#     stream_name_1 = 'stream1'
-#     # stream_name_2 = 'stream2'
-
-#     # Create tasks to consume each stream concurrently
-#     task_1 = asyncio.create_task(consume_stream(redis_connection, stream_name_1))
-#     # task_2 = asyncio.create_task(consume_stream(redis_connection, stream_name_2))
-
-#     # # Wait for both tasks to complete
-#     # await asyncio.gather(task_1, task_2)
-#     # Wait for both tasks to complete and retrieve the results
-#     result_1 = await task_1
-#     # result_2 = await task_2
-
-#     # Merge results
-#     return result_1
-
-#     # Close the Redis connection
-#     redis_connection.close()
-#     await redis_connection.wait_closed()
-
-# if __name__ == "__main__":
-#     asyncio.run(main())
-
-#---------------------------------------------------------------------------
 def merge_results(json_data_array):
     data_sample1 = json_data_array[0]
     data_sample2 = json_data_array[1]
+    
     df1 = pd.DataFrame(json.loads(data_sample1))
-    df2 = pd.DataFrame(json.loads(data_sample2))
-    # Convert the Timestamp strings to datetime objects
-    # df1['TimeStamp'] = pd.to_datetime(df1['TimeStamp'])
-    # df2['TimeStamp'] = pd.to_datetime(df2['TimeStamp'].str.replace("Z", ""))
-
-    # df2 = df2.rename(columns={"TimeStamp": "TimeStamp_y", "Price": "Price_USD_y"})
-
+    df2 = pd.DataFrame(json.loads(data_sample2))    
+    
     # Merge DataFrames
-    merged_df = pd.merge(df1, df2, on=['Id', 'Symbol'], suffixes=('_df1', '_df2'))
-    # merged_df = pd.merge(df_first, df_second,on=["Id"], suffixes=('_First', '_Second'),)
-    merged_df.index = pd.RangeIndex(start=1, stop=len(merged_df)+1, name='Rank')
-
-    # # Calculate the time difference in seconds
-    # # merged_df['TimeDifference_Seconds'] = (merged_df['TimeStamp_First'] - merged_df['TimeStamp_Second']).dt.total_seconds()
-
-    # pd.set_option('display.max_rows', None)
-    # pd.set_option('display.max_columns', None)
-    # pd.set_option('display.width', 1000)  # Set a large width to avoid line breaks
-
-    # # Print the merged DataFrame
-    # print(merged_df)
-    # # Specify the file path for the CSV file
-    # csv_file_path = 'merged.csv'
-    # # Save the DataFrame to a CSV file
-    # merged_df.to_csv(csv_file_path, index=False)
-
-    # # Get the first 200 entries
-    # first_200_entries = merged_df.head(200)
-    return merged_df.to_json(orient='records')
-
-
+    merged_df = pd.merge(df1, df2, on=['Id', 'Symbol'], suffixes=('_df1', '_df2'))    
+    merged_df.index = pd.RangeIndex(start=1, stop=len(merged_df)+1, name='Rank')    
+    merged_df = merged_df.drop('Id', axis=1)    
+    merged_df.reset_index(inplace = True)
+    
+    return merged_df.to_json(orient='records', indent=True)
 
 async def fetch_toprank_data(request_id, get_latest_data):
     
@@ -175,15 +108,10 @@ async def fetch_toprank_data(request_id, get_latest_data):
         # Create tasks to consume each response streams concurrently
         task = asyncio.create_task(consume_stream(app.state.redis, responses_stream, stream_group_config, request_id))
         tasks.append(task)
-        # task_2 = asyncio.create_task(consume_stream(app.state.redis, pricing_stream, stream_group_config, request_id))
 
-    # result_1 = await task_1
     results = await asyncio.gather(*tasks)
-
-    # Wait for both tasks to complete
-    return merge_results(results)
-    # await asyncio.gather(task_1, task_2)
-    # logging.info(f"There are {msg_pending} msg pending in {config['requests']['stream']} stream.")
+    
+    return merge_results(results)    
 
 
 async def json_to_csv(json_data):
@@ -191,8 +119,8 @@ async def json_to_csv(json_data):
     import csv
 
     header = json_data[0].keys() if json_data else []
-    csv_buffer = io.StringIO()
-    csv_writer = csv.DictWriter(csv_buffer, fieldnames=header)
+    csv_buffer = io.StringIO()  # Pass newline='' to force '\n'
+    csv_writer = csv.DictWriter(csv_buffer, fieldnames=header, lineterminator="\n")
     csv_writer.writeheader()
     csv_writer.writerows(json_data)
     csv_content = csv_buffer.getvalue()
@@ -233,7 +161,9 @@ async def getTopCryptoList(
     ranking_data = json.loads(ranking_data)
     ranking_data = ranking_data[:limit]
     if format == 'CSV':
-        return await json_to_csv(ranking_data)
+        csv = await json_to_csv(ranking_data)
+        return PlainTextResponse(content=csv, media_type="text/csv")
+
     return ranking_data
 
     # except json.JSONDecodeError as e:
