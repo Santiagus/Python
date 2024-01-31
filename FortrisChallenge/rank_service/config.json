@@ -1,0 +1,75 @@
+{
+    "logging": {
+        "version": 1,
+        "disable_existing_loggers": false,
+        "formatters": {
+            "verbose": {
+                "format": "{levelname:<8} {asctime} [{module:<16}] {message}",
+                "style": "{"
+            }
+        },
+        "handlers": {
+            "file": {
+                "level": "ERROR",
+                "class": "logging.FileHandler",
+                "filename": "price_service.log",
+                "formatter": "verbose"
+            },
+            "console": {
+                "level": "DEBUG",
+                "class": "logging.StreamHandler",
+                "formatter": "verbose"
+            }
+        },
+        "root": {
+            "level": "INFO",
+            "handlers": [
+                "file",
+                "console"
+            ]
+        }
+    },
+    "redis": {
+        "host": "localhost",
+        "port": 6379,
+        "stream": "rank",
+        "interval": 60
+    },
+    "url": "https://data-api.cryptocompare.com/asset/v1/top/list",
+    "parameters": {
+        "page": 1,
+        "page_size": 100,
+        "asset_type": "BLOCKCHAIN",
+        "sort_by": "SPOT_MOVING_24_HOUR_QUOTE_VOLUME_USD",
+        "sort_direction": "DESC",
+        "api_key": "${API_KEY}"
+    },
+    "headers": {
+        "Accepts": "application/json"
+    },
+    "data_path": "Data.LIST",
+    "fields": [
+        {
+            "name": "Id",
+            "source": "ASSET_ALTERNATIVE_IDS",
+            "default": "NOT_AVAILABLE",
+            "transform": "(lambda alt_ids: next((int(alt_id['ID']) for alt_id in alt_ids if alt_id.get('NAME') == 'CMC'), None))"
+        },
+        {
+            "name": "TimeStamp",
+            "source": "PRICE_USD_LAST_UPDATE_TS",
+            "default": "NOT_AVAILABLE",
+            "transform": "(lambda ts: datetime.utcfromtimestamp(ts).isoformat())"
+        },
+        {
+            "name": "Symbol",
+            "source": "SYMBOL",
+            "default": "NOT_AVAILABLE"
+        },
+        {
+            "name": "Price_USD",
+            "source": "PRICE_USD",
+            "default": "NOT_AVAILABLE"
+        }
+    ]
+}

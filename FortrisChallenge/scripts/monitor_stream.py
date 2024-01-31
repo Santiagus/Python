@@ -7,13 +7,11 @@ async def monitor_redis_stream(stream_name, consumer_name):
     try:
         while True:
             # Use XREAD to get new messages from the stream
-            response = await redis.execute('XREAD', 'BLOCK', 0, 'STREAMS', stream_name, '>', 'COUNT', 1)
-
-            # Process the response
-            for entry in response:
-                for message in entry[1]:
-                    # Access message data as needed
-                    print(f"New message in stream {stream_name}: {message}")
+            response = await redis.xread(streams=['ranking'], count=1)
+            # response = await redis.execute('XREAD', 'BLOCK', 0, 'STREAMS', stream_name, '>', 'COUNT', 1)
+            message_id = response[0][1].decode()
+            data = response[0][2][b'data'].decode()
+            print(f"{message_id}: {data[:80]}")
 
     except asyncio.CancelledError:
         pass

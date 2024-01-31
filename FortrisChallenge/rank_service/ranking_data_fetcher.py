@@ -100,9 +100,9 @@ def filter_data(data):
                 (int(alt_id.get("ID")) for alt_id in item.get("ASSET_ALTERNATIVE_IDS", []) if alt_id and alt_id.get("NAME") == "CMC"),
                 None  # Set to None if no "CMC"
             ) if item.get("ASSET_ALTERNATIVE_IDS") is not None else None ,
-            # "TimeStamp" : datetime.utcfromtimestamp(item.get("PRICE_USD_LAST_UPDATE_TS")).isoformat(),
+            "TimeStamp" : datetime.utcfromtimestamp(item.get("PRICE_USD_LAST_UPDATE_TS")).isoformat(),
             "Symbol": item.get("SYMBOL", NOT_AVAILABLE),
-            # "Price_USD": item.get("PRICE_USD", NOT_AVAILABLE),
+            "Price_USD": item.get("PRICE_USD", NOT_AVAILABLE),
             }
             for item in data.get("Data").get("LIST",[])
         )

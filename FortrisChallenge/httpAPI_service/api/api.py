@@ -113,6 +113,14 @@ async def fetch_toprank_data(request_id, get_latest_data):
     
     return merge_results(results)    
 
+async def read_last_message(redis, stream):
+    try:
+        result = await redis.xrevrange(stream, count=1, start='+', stop='-')
+        return result
+    except Exception as e:
+        print(f'Error reading the most recent message from stream {stream}: {e}')
+        return None
+
 
 async def json_to_csv(json_data):
     import io
@@ -160,7 +168,7 @@ async def getTopCryptoList(
     # Output formating
     ranking_data = json.loads(ranking_data)
     ranking_data = ranking_data[:limit]
-    if format == 'CSV':
+    if format.upper() == 'CSV':
         csv = await json_to_csv(ranking_data)
         return PlainTextResponse(content=csv, media_type="text/csv")
 

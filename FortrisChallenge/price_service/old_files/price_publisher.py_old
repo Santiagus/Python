@@ -1,0 +1,98 @@
+import aioredis
+import asyncio
+import json
+import tenacity
+import logging
+# import pricing_data_fetcher
+from data_fetcher import DataFetcher
+import schedule
+import time
+from datetime import datetime, timedelta
+
+def unix_to_iso(unix_timestamp):
+    # Convert Unix timestamp to datetime object
+    dt_object = datetime.fromtimestamp(unix_timestamp)
+    # Format the datetime object as ISO format -
+    iso_format = dt_object.isoformat()
+    return iso_format
+
+def seconds_until_next_rounded_minute():
+    now = datetime.now()
+    next_minute = (now + timedelta(minutes=1)).replace(second=0, microsecond=0)
+    seconds_until_next_minute = (next_minute - now).total_seconds()
+    return seconds_until_next_minute
+
+async def load_config_from_json(file_path):
+    with open(file_path, 'r') as file:
+        config_data = json.load(file)
+    return config_data
+
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(10),
+    retry=tenacity.retry_if_exception_type(ConnectionRefusedError),
+    wait=tenacity.wait_fixed(3),
+)
+async def connect_to_redis(host, port):
+    try:
+        redis = await aioredis.create_redis_pool((host, port))
+        # redis.xadd()
+        if await redis.execute("PING"):
+            print("Connected to Redis successfully.")
+            return redis
+    except ConnectionRefusedError as e:
+        print(f"ConnectionRefusedError: {e}")
+        raise e
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise e
+
+def get_rounded_timestamp():
+    current_time = int(time.time())
+    rounded_time = (current_time // 60) * 60  # Round down to the nearest minute
+    return current_time
+
+async def send_data_to_redis_stream(redis, stream, data_fetcher):
+    # data = '[{"Id": 52, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "XRP", "Price_USD": 0.542530458136185}, {"Id": 13631, "TimeStamp": "2024-01-22T03:13:29", "Symbol": "MANTA", "Price_USD": 2.72213652502557}, {"Id": 74, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "DOGE", "Price_USD": 0.0832146431181928}, {"Id": 5426, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "SOL", "Price_USD": 89.4960289302982}, {"Id": 1027, "TimeStamp": "2024-01-21T03:12:53", "Symbol": "ETH", "Price_USD": 2435.95860533111}, {"Id": 1, "TimeStamp": "2024-01-21T01:12:53", "Symbol": "BTC", "Price_USD": 41334.4409079465}]'
+    
+    # data = await pricing_data_fetcher.get_api_info()
+    # data = pricing_data_fetcher.load_json_from_file()
+    data = data_fetcher.get_data()
+
+    timestamp = str(get_rounded_timestamp())+ '-0'
+    json_data = json.dumps(data)
+    
+    redis.xadd(stream, {'data': json_data}, message_id=timestamp, max_len=1)
+    # print(f"Send data {json_data} to {stream} at {timestamp}")
+    print(f"[Price] : {unix_to_iso(get_rounded_timestamp())}: {json_data[:100]}")
+
+
+
+async def main():
+    try:
+        config = await load_config_from_json('config.json')
+        redis = await connect_to_redis(config['redis']['host'], config['redis']['port'])
+        print(datetime.now().isoformat())
+        seconds = seconds_until_next_rounded_minute()
+        print(seconds)
+        # Wait till next rounded minute to sync data sending 
+        time.sleep(seconds)
+        datafetcher = DataFetcher()
+        await send_data_to_redis_stream(redis, config['redis']['stream'], datafetcher)
+        schedule.every(config['redis']['interval']).seconds.do(lambda: asyncio.create_task(send_data_to_redis_stream(redis, config['redis']['stream'], datafetcher)))
+        # schedule.every(30).seconds.do(lambda: asyncio.create_task(send_data_to_redis_stream(redis, 'price', datafetcher)))
+
+        while True:
+            schedule.run_pending()
+            await asyncio.sleep(1)
+    
+    except json.decoder.JSONDecodeError as e:
+            print(f"Config load error : {e}")    
+    except ConnectionRefusedError as e:
+        print(f"Failed to connect to Redis: {e}")
+    except tenacity.RetryError:
+        print("Failed to connect to Redis after retries.")        
+    except Exception as e:
+        print(f"An unexpected error occurred during startup: {e}")    
+
+if __name__ == "__main__":
+    asyncio.run(main())

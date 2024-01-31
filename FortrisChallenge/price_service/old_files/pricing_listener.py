@@ -2,7 +2,8 @@ import aioredis
 import asyncio
 import json
 import logging
-import pricing_data_fetcher
+# import pricing_data_fetcher
+import data_fetcher
 import redis.exceptions
 
 data_sample = '[{"Id": 52, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "XRP", "Price_USD": 0.542530458136185}, {"Id": 13631, "TimeStamp": "2024-01-22T03:13:29", "Symbol": "MANTA", "Price_USD": 2.72213652502557}, {"Id": 74, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "DOGE", "Price_USD": 0.0832146431181928}, {"Id": 5426, "TimeStamp": "2024-01-22T03:12:53", "Symbol": "SOL", "Price_USD": 89.4960289302982}, {"Id": 1027, "TimeStamp": "2024-01-21T03:12:53", "Symbol": "ETH", "Price_USD": 2435.95860533111}, {"Id": 1, "TimeStamp": "2024-01-21T01:12:53", "Symbol": "BTC", "Price_USD": 41334.4409079465}]'
@@ -61,7 +62,8 @@ async def process_message(redis, config):
                 )
                 logging.info(f"Processing message: {message_id}")
                 # if get_latest_data:
-                response = await pricing_data_fetcher.get_api_info()
+                # response = await pricing_data_fetcher.get_api_info()
+                response = await data_fetcher.ge()
                 # else:
                 #     response = await ranking_data_fetcher.topcoins_ranking(timestamp)
                 # response = {"request_id": timestamp.decode(), "data": data_sample}
@@ -85,7 +87,7 @@ async def process_message(redis, config):
 
 async def main():
     logging.info(f"Pricing service start")
-
+    df = data_fetcher.DataFetcher()
     redis = None
 
     try:

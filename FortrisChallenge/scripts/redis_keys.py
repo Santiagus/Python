@@ -1,4 +1,5 @@
 import redis
+import json
 
 def get_all_keys(redis_connection):
     keys = []
@@ -27,7 +28,10 @@ def main():
 
     print("All Keys and Values:")
     for key, value in all_keys_and_values.items():
-        print(f"{key}: {value[:100]}...")
+        if value == 'Value not found':
+            print(f"{key}: {value}...")
+        else:
+            print(f"{key}: {json.loads(value)[:1]}...")
 
 if __name__ == "__main__":
     main()

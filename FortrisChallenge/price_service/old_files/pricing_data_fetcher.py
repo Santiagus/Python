@@ -5,6 +5,11 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 import json
 import os
 
+def load_json_from_file(file_path = 'coinmarket_filtered_output.json'):     
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    return data
+
 async def get_api_info(timestamp=None):
     print("getting price quotes...")
     
@@ -39,14 +44,14 @@ async def get_api_info(timestamp=None):
     try:
         response = session.get(url, params=parameters)
         data = json.loads(response.text)
-        print("filtering pricing data...")
+        # print("filtering pricing data...")
         if data.get("status").get("error_code"):      
             raise Exception(f'Error ({data.get("status").get("error_code")}) : {data.get("status").get("error_message")}')
 
         filtered_items = [
             {
             "Id": item.get("id", NOT_AVAILABLE),
-            # "TimeStamp": item.get("quote", {}).get("USD", {}).get("last_updated", NOT_AVAILABLE),
+            "TimeStamp": item.get("quote", {}).get("USD", {}).get("last_updated", NOT_AVAILABLE)[:-5],
             "Symbol": item.get("symbol", NOT_AVAILABLE),
             "Price USD": item.get("quote", {}).get("USD", {}).get("price", NOT_AVAILABLE),
             }
@@ -54,6 +59,6 @@ async def get_api_info(timestamp=None):
             ]        
     except (Exception,ConnectionError, Timeout, TooManyRedirects) as e:
         return e
-    print("Returning pricing data...")
+    # print("Returning pricing data...")
     filtered_items = [item for item in filtered_items if item.get('Id') is not None]
     return filtered_items
