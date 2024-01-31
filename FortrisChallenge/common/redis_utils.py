@@ -36,7 +36,7 @@ def log_retry_info(retry_state):
     stop=stop_after_attempt(3),
     retry=retry_if_exception_type(ConnectionRefusedError),
     wait=wait_fixed(3),
-    before=log_retry_info
+    after=log_retry_info
 )
 async def connect_to_redis(config):
     """

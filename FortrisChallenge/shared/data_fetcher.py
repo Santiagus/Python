@@ -1,10 +1,11 @@
 from requests import Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
+import copy
 import json
 import os
 import logging
 from datetime import datetime
-import importlib
+
 
 class CustomApiException(Exception):
     def __init__(self, json_data, message="API Error"):
@@ -42,14 +43,16 @@ class DataFetcher():
             field_name = field_config["name"]
             field_source = field_config["source"]
             default_value = field_config["default"]
-
+            logging.debug(f"name {field_name} - source {field_source} - default {default_value}")
             # Access to nested field value
             field_value = self.access_nested_fields(json_data, field_source, default_value)
-
+            logging.debug(f"Extracted Value : {field_value}")
             # Apply transformation if specified
             transform_function = field_config.get("transform")
-            if transform_function:
+            logging.debug(f"Tranform : {transform_function}")
+            if transform_function and field_value is not None:
                 field_value = eval(transform_function)(field_value)
+                logging.debug(f"Tranform result: {field_value}")
 
             filtered_item[field_name] = field_value
 
@@ -59,19 +62,25 @@ class DataFetcher():
         try:
             logging.info(f"Requesting data from {self.config.get('url')}")
 
-            response = self.session.get(self.config.get("url"), params=self.config.get("parameters"))
+            # Load request parameters
+            json_params = copy.deepcopy(self.config.get("parameters"))
+            page = json_params.get("page", None)
+            page_size = json_params.get("page_size", None)
 
-            if response.status_code == 200:
-                json_response = json.loads(response.text)
-                # if data.get("status").get("error_code"):      
-                #     raise Exception(f'Error ({data.get("status").get("error_code")}) : {data.get("status").get("error_message")}')
-                logging.debug(f"Filtering data...")
-                # filtered_items = [self.apply_filter(item, self.config) for item in data["data"]]
-                items = self.access_nested_fields(json_response, self.config["data_path"])
-                filtered_items = [self.apply_filter(item, self.config) for item in items]
-
-                return filtered_items
-            else:  
-                raise CustomApiException(response.json(), f"API Error {response.status_code}")
+            filtered_items = []
+            while True:
+                response = self.session.get(self.config.get("url"), params=json_params)
+                if response.status_code == 200:
+                    json_response = json.loads(response.text)
+                    items = self.access_nested_fields(json_response, self.config["data_path"])
+                    logging.info(f"Filtering {len(items)} items")
+                    filtered_items.extend([self.apply_filter(item, self.config) for item in items])
+                    if page is None or len(items) < page_size:
+                        logging.info(f"Total Filtered : {len(filtered_items)} items")
+                        return filtered_items
+                    else:
+                       json_params["page"] += 1
+                else:
+                    raise CustomApiException(response.json(), f"API Error {response.status_code}")
         except (Exception,ConnectionError, Timeout, TooManyRedirects) as e:
             raise e
