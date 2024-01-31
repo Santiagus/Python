@@ -27,6 +27,7 @@ async def main():
 
     :return: None
     """
+    redis = None
     try:
         # Load environment variables from .env file in the pricing folder
         dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -35,11 +36,11 @@ async def main():
         # Configuration
         config = load_config_from_json('rank_service/config.json')
 
-        # Set up logging based on the configuration  
+        # Set up logging based on the configuration
         setup_logging(config.get("logging", {}))
-        
+
         logging.info(f"Service start. Loading configuration...")
-        
+
         # Initialize DataFetcher, Redis and Publisher
         data_fetcher = DataFetcher(config)
         redis = await connect_to_redis(config["redis"])
@@ -49,7 +50,7 @@ async def main():
         # Synchronization to the minute for first stream update
         seconds = seconds_until_next_minute()
         logging.info(f"Synchronizing to rounded minute. Sending data in {seconds} seconds.")
-        # time.sleep(seconds)
+        time.sleep(seconds)
         await publisher.send_data_to_redis_stream()
 
         schedule.every(config['redis']['interval']).seconds.do(
@@ -59,23 +60,22 @@ async def main():
             schedule.run_pending()
             await asyncio.sleep(5)
     except RetryError as e:
-        logging.error(f"Retry operation failed: {e}")        
+        logging.error(f"Retry operation failed: {e}")
     except ConnectionRefusedError as e:
         logging.error(f"Failed to connect to Redis: {e}")
     except CustomApiException as e:
-        # logging.error(f"Caught an API exception: {e.message}")
-        # logging.error("JSON data from the error:")
-        # logging.error(e.json_data)
         logging.error(f'API Error ({e.json_data.get("Err").get("type")}): {e.json_data.get("Err").get("message")}')
-        # logging.error(f'API Error ({api_data.get("status").get("error_code")}): {api_data.get("status").get("error_message")}')        
-        # logging.error(f"Publisher can not access to data source without APIKey.")
+        logging.error(f"Publisher can not access to data source without APIKey.")
     except RuntimeError as e:
         logging.error(f"RuntimeError: {e}")
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
         logging.exception("Stack trace:")
-    finally:        
-        logging.info("Exiting program.")        
+    finally:
+        logging.info("Exiting program.")
+        if redis is not None:
+            redis.close()
+            await redis.wait_closed()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

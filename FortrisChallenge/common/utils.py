@@ -19,11 +19,17 @@ def seconds_until_next_minute():
     seconds_until_next_minute = (next_minute - now).total_seconds()
     return seconds_until_next_minute
 
-
 def rounddown_time_to_minute():
     current_time = int(datetime.now(timezone.utc).timestamp())
     rounded_time = (current_time // 60) * 60  # Round down to the nearest minute
     return rounded_time
+
+def round_to_previous_minute(timestamp, unix_format = False):    
+    if unix_format:
+        timestamp = datetime.fromtimestamp(timestamp)    
+    rounded_dt = timestamp.replace(second=0, microsecond=0)    
+    rounded_timestamp = int(rounded_dt.timestamp())
+    return rounded_timestamp
 
 def load_config_from_json(file_path):
     with open(file_path, 'r') as file:
