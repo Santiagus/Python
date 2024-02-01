@@ -22,7 +22,7 @@
             }
         },
         "root": {
-            "level": "DEBUG",
+            "level": "INFO",
             "handlers": [
                 "file",
                 "console"
