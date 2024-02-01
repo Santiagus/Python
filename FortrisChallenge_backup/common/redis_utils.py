@@ -1,5 +1,5 @@
 import aioredis
-from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_fixed, stop_never, wait_random_exponential
+from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_fixed
 import logging
 from redis import RedisError
 
@@ -26,21 +26,19 @@ def log_retry_info(retry_state):
     logger = logging.getLogger(__name__)
 
     if retry_state:
-        logger.info("Redis connection failed. Retrying in (%d-%d)s. Attempt %d",
-                    retry_state.retry_object.wait.min,
-                    retry_state.retry_object.wait.max,
+        logger.info("Redis connection failed. Retrying in %ds. Attempt %d/%d",
+                    retry_state.retry_object.wait.wait_fixed,
                     retry_state.attempt_number,
-                    )
+                    retry_state.retry_object.stop.max_attempt_number)
     else:
         logger.warning("Retry state or next_action is None. Unable to log retry information.")
 
 
 
 @retry(
-    # stop=stop_after_attempt(3),
-    stop=stop_never,
+    stop=stop_after_attempt(3),
     retry=retry_if_exception_type(ConnectionRefusedError),
-    wait=wait_random_exponential(min=5, max=60),
+    wait=wait_fixed(3),
     after=log_retry_info
 )
 async def connect_to_redis(config):

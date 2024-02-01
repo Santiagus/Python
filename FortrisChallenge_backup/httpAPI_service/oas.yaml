@@ -1,0 +1,137 @@
+openapi: 3.0.3
+
+info:
+  title: Top Cryptocurrency Price List API
+  description: API that expose an endpoint that returns an up-to-date list of top assets and their current prices in USD when fetched
+  termsOfService: http://localhost/terms/
+  contact:
+    email: santiagoabad@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+externalDocs:
+  description: Find out more about Top Cryptocurrency Price List
+  url: http://localhost
+servers:
+  - url: http://localhost:6667
+    description: local development server
+
+paths:
+  /:
+    get:
+      tags:
+       - Top Crypto List
+      summary: Returns Top Crypotocurrency Price List
+      description: >
+        A list of top cryptocurreny sorted by price. Allows to filter orders
+        by date-time and limit the output lenght.
+      operationId: getTopCryptoList
+      parameters:
+      - name: limit
+        in: query
+        description: Max amount of cryptocurrency types returned
+        schema:
+          type: integer
+          example: "200"
+        required: true
+      - name: datetime
+        in: query
+        description: Timestamp of the returned information, Current time if missing        
+        schema:
+          type: string
+          format: date-time
+          example: "2021-01-30T08:30:00Z"
+        required: false
+      - name: format
+        in: query
+        description: Indicates the output format, CSV or JSON.        
+        schema:
+            type: string
+            enum:
+              - CSV
+              - JSON
+        required: false
+      responses:
+        '200':
+          description: A list of top cryptocurrencies
+          content:
+            text/csv:
+              schema:
+                $ref: '#/components/schemas/TopCryptoListSchema'
+            application/json:
+              schema:                
+                $ref: '#/components/schemas/TopCryptoListSchema'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    
+components:
+  responses:
+    NotFound:
+      description: The specified resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: The payload contains invalid values.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    openId:
+      type: openIdConnect
+      openIdConnectUrl: https://topcryptolist-dev.eu.auth0.com/.well-known/openid-configuration
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://topcryptolist-dev.eu.auth0.com/oauth/token
+          scopes: {}
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: array
+      required:
+        - detail
+      additionalProperties: false
+
+    TopCryptoListSchema:
+      type: array
+      items:
+        type: object
+        properties:
+          Rank:
+            type: integer
+            format: int32
+            example: 1
+          Symbol:
+            type: string
+            example: "BTC"
+          PriceUSD:
+            type: number
+            format: float
+            example: '6634.41'
+
+security:
+  - oauth2:
+      - getTopCryptoList      
+  - bearerAuth:
+      - getTopCryptoList

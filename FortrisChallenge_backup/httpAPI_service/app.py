@@ -31,7 +31,6 @@ async def lifespan(app: FastAPI):
         # Perform cleanup operations here, after the lifespan block exits
         ```
     """
-    
     try:
         app.state.redis = None
         app.state.config = load_config_from_json('httpAPI_service/config.json')
@@ -39,7 +38,7 @@ async def lifespan(app: FastAPI):
         # Set up logging based on the configuration
         setup_logging(app.state.config.get("logging", {}))
         logging.info(f"Service start. Loading configuration...")
-        
+
         app.state.redis = await connect_to_redis(app.state.config["redis"])
 
         # Setup data fetchers for direct data adquisition
@@ -48,6 +47,11 @@ async def lifespan(app: FastAPI):
         app.state.price_fetcher = DataFetcher(price_config)
         app.state.rank_fetcher = DataFetcher(rank_config)
 
+        yield
+
+        # Shutdown (Close connections to msg broker, db, ...)
+        if app.state.redis is not None:
+            app.state.redis.close()
 
     except json.decoder.JSONDecodeError as e:
         logging.error(f"Config load error : {e}")
@@ -58,10 +62,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logging.error(f"An unexpected error occurred during startup: {e}")
     finally:
-        yield
-        # Shutdown (Close connections to msg broker, db, ...)
         if app.state.redis is not None:
             app.state.redis.close()
+        sys.exit(1)  # Exit the application with a non-zero exit code
 
 
 app = FastAPI(lifespan=lifespan)
