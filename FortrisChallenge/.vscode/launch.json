@@ -1,0 +1,58 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "httpAPI_service",
+            "type": "python",
+            "python": "${workspaceFolder}/httpAPI_service/.venv_httpAPI/bin/python",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "httpAPI_service.app:app",
+                "--reload",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "6667"
+            ],
+            "jinja": true,
+            "justMyCode": true
+        },
+        {
+            "name": "rank_service",
+            "type": "python",
+            "python": "${workspaceFolder}/rank_service/.venv_rank/bin/python",
+            "request": "launch",
+            "module": "rank_service.rank_publisher",
+            "args": [
+                "-m",
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "price_service",
+            "type": "python",
+            "python": "${workspaceFolder}/price_service/.venv_price/bin/python",
+            "request": "launch",
+            "module": "price_service.price_publisher",
+            "args": [
+                "-m",
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "merge_service",
+            "type": "python",
+            "python": "${workspaceFolder}/merge_service/.venv_merger/bin/python",
+            "request": "launch",
+            "module": "merge_service.merger",
+            "args": [
+                "-m",
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+        }
+    ]
+}

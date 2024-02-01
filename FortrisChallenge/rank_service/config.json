@@ -12,7 +12,7 @@
             "file": {
                 "level": "ERROR",
                 "class": "logging.FileHandler",
-                "filename": "price_service.log",
+                "filename": "rank_service.log",
                 "formatter": "verbose"
             },
             "console": {
@@ -30,7 +30,7 @@
         }
     },
     "redis": {
-        "host": "localhost",
+        "host": "my-redis-container",
         "port": 6379,
         "stream": "rank",
         "interval": 60

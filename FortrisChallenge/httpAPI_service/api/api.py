@@ -1,6 +1,7 @@
 import json
 import logging
 import asyncio
+from datetime import datetime
 from fastapi import Query
 from fastapi import HTTPException
 from fastapi.responses import PlainTextResponse
@@ -11,7 +12,7 @@ from httpAPI_service.app import app
 @app.get("/")
 async def getTopCryptoList(
     limit: int = Query(..., title="The number of items to retrieve", ge=1),
-    timestamp: int = Query(None, title="The timestamp of the request", description="Optional timestamp parameter"),
+    datetime: datetime = Query(None, title="The timestamp of the request", description="Optional timestamp parameter"),
     format: str = Query("JSON", title="The format of the response", description="Optional response format parameter (JSON or CSV)")
 ):
     """
@@ -37,14 +38,15 @@ async def getTopCryptoList(
     try:
         # Check redis connectivity
         if app.state.redis is None:
+            logging.error(f"No redis connection available")
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
         # get_latest_data = False
 
         # Use timestamp as id/key for messages and db/cache
-        if timestamp:
+        if datetime:
             # Check in database/cache
-            request_id = round_to_previous_minute(timestamp, unix_format=True)
+            request_id = round_to_previous_minute(int(datetime.timestamp()), unix_format=True)
             ranking_data = await app.state.redis.get(request_id)
         else:
             # Round current time to the minute and check for cached value
@@ -65,6 +67,7 @@ async def getTopCryptoList(
                 logging.info(f"Returning cached data for {redis_key}")
 
         if ranking_data is None: # Not in cache or "latest" resquest
+            logging.error(f"No data for the specified datetime : {datetime} ")
             raise HTTPException(status_code=404, detail="Data not found for the specified timestamp")
 
         # Output formating
@@ -80,5 +83,3 @@ async def getTopCryptoList(
         logging.error(f"Unexpected UTF-8 BOM (decode using utf-8-sig) - Value: {ranking_data}")
     except TypeError as e:
         logging.error(f'The JSON object must be str, bytes or bytearray')
-    except Exception as e:
-        logging.error(f"Error fetching the data: {e}")

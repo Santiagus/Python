@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  my-redis-container:
+    image: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - my_network
+
+  httpapi-service-container:
+    build:
+      context: .
+      dockerfile: Dockerfile_httpAPI_service
+    ports:
+      - "6667:6667"
+    networks:
+      - my_network
+
+  merge-service-container:
+    build:
+      context: .
+      dockerfile: Dockerfile_merge_service
+    networks:
+      - my_network
+
+  rank-service-container:
+    build:
+      context: .
+      dockerfile: Dockerfile_rank_service
+    networks:
+      - my_network
+
+  price-service-container:
+    build:
+      context: .
+      dockerfile: Dockerfile_price_service
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge

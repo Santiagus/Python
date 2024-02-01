@@ -49,7 +49,8 @@ async def main():
                 if task_name == config["redis"]["main_stream"]:
                     main_stream_id = len(timestamps)
                 timestamps.append(timestamp)
-                data_list.append(json.loads(data))
+                if data != []:
+                    data_list.append(json.loads(data))
                 logging.debug(f"[{task_name:<8}]: {unix_timestamp_to_iso(timestamp)}: {data[:80]}")
                 is_data_missing |= result == []
 

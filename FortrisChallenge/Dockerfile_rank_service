@@ -1,0 +1,20 @@
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Copy only the necessary files and directories
+COPY common/ /app/common/
+COPY config/ /app/config/
+COPY shared/ /app/shared/
+COPY rank_service/ /app/rank_service/
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r rank_service/requirements.txt
+
+# Define environment variable
+ENV CRYPTOCOMPARE_API_KEY 'fcdb5d2533332b620ec9cdedee4661741202d909bc230213e2f92421632d1ec9'
+
+# Run app.py when the container launches
+CMD ["python", "-m", "rank_service.rank_publisher"]

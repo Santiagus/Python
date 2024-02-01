@@ -1,0 +1,24 @@
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Copy only the necessary files and directories
+COPY common/ /app/common/
+COPY config/ /app/config/
+COPY httpAPI_service/ /app/httpAPI_service/
+COPY shared/ /app/shared/
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r httpAPI_service/requirements.txt
+
+# Make port 6667 available to the world outside this container
+EXPOSE 6667
+
+# Define environment variable
+ENV CRYPTOCOMPARE_API_KEY 'fcdb5d2533332b620ec9cdedee4661741202d909bc230213e2f92421632d1ec9'
+ENV COINMARKET_API_KEY 'b8d1c1fe-625c-41be-b758-5d39dc8e55c2'
+
+# Run app.py when the container launches
+CMD ["uvicorn", "httpAPI_service.app:app", "--host", "0.0.0.0", "--port", "6667"]
