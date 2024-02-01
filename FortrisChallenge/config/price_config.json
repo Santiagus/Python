@@ -1,0 +1,34 @@
+{
+    "api_key_env_var_name": "COINMARKET_API_KEY",
+    "url": "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest",
+    "parameters": {
+        "start": "1",
+        "limit": "5000",
+        "convert": "USD",
+        "sort": "volume_24h",
+        "cryptocurrency_type": "coins"
+    },
+    "headers": {
+        "Accepts": "application/json",
+        "Accept-Encoding": "deflate, gzip",
+        "X-CMC_PRO_API_KEY": "${API_KEY}"
+    },
+    "data_path": "data",
+    "fields": [
+        {
+            "name": "Id",
+            "source": "id",
+            "default": "NOT_AVAILABLE"
+        },
+        {
+            "name": "Symbol",
+            "source": "symbol",
+            "default": "NOT_AVAILABLE"
+        },
+        {
+            "name": "Price USD",
+            "source": "quote.USD.price",
+            "default": "NOT_AVAILABLE"
+        }
+    ]
+}

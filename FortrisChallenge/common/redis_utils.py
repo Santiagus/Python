@@ -1,11 +1,12 @@
 import aioredis
 from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_fixed
 import logging
+from redis import RedisError
 
 def log_retry_info(retry_state):
     """
     Logs retry information for Redis connection attempts during tenacity retries.
-    This function, designed to be used as a callback in tenacity, logs retry-related details 
+    This function, designed to be used as a callback in tenacity, logs retry-related details
     when attempting to connect to a Redis server.
 
     Parameters:
@@ -23,7 +24,7 @@ def log_retry_info(retry_state):
     """
 
     logger = logging.getLogger(__name__)
-    
+
     if retry_state:
         logger.info("Redis connection failed. Retrying in %ds. Attempt %d/%d",
                     retry_state.retry_object.wait.wait_fixed,
@@ -31,6 +32,8 @@ def log_retry_info(retry_state):
                     retry_state.retry_object.stop.max_attempt_number)
     else:
         logger.warning("Retry state or next_action is None. Unable to log retry information.")
+
+
 
 @retry(
     stop=stop_after_attempt(3),
@@ -50,12 +53,12 @@ async def connect_to_redis(config):
     - Exception: For any other unexpected errors during the connection attempt.
 
     This function uses the aioredis library to create an asynchronous connection pool to a Redis server.
-    It attempts to connect to the specified host and port, and if successful, verifies the connection with 
-    a PING command. In case of a refused connection, it raises a ConnectionRefusedError. 
+    It attempts to connect to the specified host and port, and if successful, verifies the connection with
+    a PING command. In case of a refused connection, it raises a ConnectionRefusedError.
     For any other unexpected errors, a generic Exception is raised with an associated error message.
     """
 
-    host, port = config['host'], config['port']    
+    host, port = config['host'], config['port']
     redis = None
     try:
         redis = await aioredis.create_redis_pool((host, port))
@@ -68,3 +71,38 @@ async def connect_to_redis(config):
     except Exception as e:
         logging.error(f"Unexpected error occurred: {e}")
         raise e
+
+async def save_to_redis(redis, redis_key, data):
+    """
+    Asynchronously save data to a Redis store with a specified key.
+
+    Parameters:
+        - `redis`: The Redis connection pool or client.
+        - `redis_key` (str): The key under which the data will be stored in Redis.
+        - `data`: The data to be saved to Redis.
+
+    Raises:
+        - `aioredis.RedisError`: If there is an error while interacting with Redis.
+
+    Returns:
+        - bool: True if the data is successfully saved to Redis, False otherwise.
+
+    Example:
+        ```python
+        # Assuming `redis_pool` is an instance of aioredis.Redis connection pool
+        result = await save_to_redis(redis_pool, "my_data_key", {"name": "John", "age": 30})
+        if result:
+            print("Data successfully saved to Redis.")
+        else:
+            print("Failed to save data to Redis.")
+        ```
+    """
+    try:
+        success = await redis.set(redis_key, data)
+        if success:
+            logging.info(f'Successfully set key "{redis_key}" in Redis.')
+        return success
+    except RedisError as e:
+        logging.error(f'Error setting key "{redis_key}" in Redis: {e}')
+    except Exception as e:
+        logging.error(f'Unexpected error: {e}')

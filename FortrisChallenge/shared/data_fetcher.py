@@ -21,10 +21,10 @@ class DataFetcher():
         self.session.headers.update(self.config.get("headers"))
         logging.info(f"Initialized")
 
-    
+
     def _set_api_key(self):
-        json_string = json.dumps(self.config)        
-        new_json_string = json_string.replace("${API_KEY}", os.environ.get("API_KEY", ""))        
+        json_string = json.dumps(self.config)
+        new_json_string = json_string.replace("${API_KEY}", os.environ.get(self.config["api_key_env_var_name"], ""))
         self.config = json.loads(new_json_string)
 
     def access_nested_fields(self, json_data, path, default_value = None):
@@ -37,7 +37,7 @@ class DataFetcher():
                 field_value = default_value
         return field_value
 
-    def apply_filter(self, json_data, filter_config):        
+    def apply_filter(self, json_data, filter_config):
         filtered_item = {}
         for field_config in filter_config["fields"]:
             field_name = field_config["name"]
@@ -73,7 +73,7 @@ class DataFetcher():
                 if response.status_code == 200:
                     json_response = json.loads(response.text)
                     items = self.access_nested_fields(json_response, self.config["data_path"])
-                    logging.info(f"Filtering {len(items)} items")
+                    logging.debug(f"Filtering {len(items)} items")
                     filtered_items.extend([self.apply_filter(item, self.config) for item in items])
                     if page is None or len(items) < page_size:
                         logging.info(f"Total Filtered : {len(filtered_items)} items")
@@ -81,6 +81,6 @@ class DataFetcher():
                     else:
                        json_params["page"] += 1
                 else:
-                    raise CustomApiException(response.json(), f"API Error {response.status_code}")
+                    raise CustomApiException(response.json(), f"API Error ({response.status_code}) : {response.text}")
         except (Exception,ConnectionError, Timeout, TooManyRedirects) as e:
             raise e

@@ -1,0 +1,29 @@
+{
+    "api_key_env_var_name": "CRYPTOCOMPARE_API_KEY",
+    "url": "https://data-api.cryptocompare.com/asset/v1/top/list",
+    "parameters": {
+        "page": 1,
+        "page_size": 100,
+        "asset_type": "BLOCKCHAIN",
+        "sort_by": "SPOT_MOVING_24_HOUR_QUOTE_VOLUME_USD",
+        "sort_direction": "DESC",
+        "api_key": "${API_KEY}"
+    },
+    "headers": {
+        "Accepts": "application/json"
+    },
+    "data_path": "Data.LIST",
+    "fields": [
+        {
+            "name": "Id",
+            "source": "ASSET_ALTERNATIVE_IDS",
+            "default": "NOT_AVAILABLE",
+            "transform": "(lambda alt_ids: next((int(alt_id['ID']) for alt_id in alt_ids if alt_id.get('NAME') == 'CMC'), None))"
+        },
+        {
+            "name": "Symbol",
+            "source": "SYMBOL",
+            "default": "NOT_AVAILABLE"
+        }
+    ]
+}

@@ -42,7 +42,8 @@ async def main():
         logging.info(f"Service start. Loading configuration...")
 
         # Initialize DataFetcher, Redis and Publisher
-        data_fetcher = DataFetcher(config)
+        price_config = load_config_from_json('config/price_config.json')
+        data_fetcher = DataFetcher(price_config)
         redis = await connect_to_redis(config["redis"])
 
         publisher = Publisher(config, data_fetcher, redis)

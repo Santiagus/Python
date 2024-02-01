@@ -1,62 +1,11 @@
-import pandas as pd
 import time
-import aioredis
 import asyncio
 import logging
 import json
 from tenacity import RetryError
 from common.redis_utils import connect_to_redis
-from common.utils import round_to_previous_minute, unix_timestamp_to_iso, load_config_from_json, setup_logging
-# asyncio.set_event_loop(asyncio.new_event_loop())  # Set the event loop
+from common.utils import round_to_previous_minute, unix_timestamp_to_iso, load_config_from_json, setup_logging, merge_data, unpack_message
 
-def print_df(df):
-    # pd.set_option('display.max_rows', 10)  # Adjust the number as needed
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', 1000)  # Set a large width to avoid line breaks
-    print(df.head(20))
-
-async def merge_results(*data_list):
-    # Convert each element in data_list to a DataFrame
-    data_frames = [pd.DataFrame(json.loads(data)) for data in data_list]
-    # for df in data_frames:
-    #     print_df(df)
-
-    # Merge DataFrames
-    merged_df = pd.merge(data_frames[0], data_frames[1], on=['Id', 'Symbol'], suffixes=('_df1', '_df2'))
-    for i in range(2, len(data_frames)):
-        merged_df = pd.merge(merged_df, data_frames[i], on=['Id', 'Symbol'], suffixes=(f'_df{i-1}', f'_df{i}'))
-    merged_df.index = pd.RangeIndex(start=1, stop=len(merged_df) + 1, name='Rank')
-    merged_df = merged_df.drop('Id', axis=1)
-    # print_df(merged_df)
-    # merged_df.reset_index(inplace=True)
-    # print_df(merged_df)
-
-    # Specify the file path for the CSV file
-    # csv_file_path = 'merged.csv'
-    # Save the DataFrame to a CSV file
-    # merged_df.to_csv(csv_file_path, index=False)
-
-    # Drop timestamp columns from the merged DataFrame
-    timestamp_columns_to_drop = [f'TimeStamp_df{i}' for i in range(1, len(data_frames) + 1)]
-    merged_df = merged_df.drop(timestamp_columns_to_drop, axis=1)
-
-    # Return the merged DataFrame as JSON
-    return merged_df.to_json(orient='records', indent=True)
-
-
-def unpack_message(message):
-    timestamp = 0
-    data = []
-    try:
-        logging.debug(f'unpacking message...')
-        timestamp = int(message[0][0].decode()[:-2])
-        data = message[0][1][b'data'].decode()
-    except IndexError as e:
-        logging.debug(f'Empty or innaccesible message.')
-    except Exception as e:
-        logging.error(f'Error unpacking message, check message format')
-    finally:
-        return timestamp, data
 
 async def read_last_message(redis, stream):
     try:
@@ -82,7 +31,7 @@ async def main():
         setup_logging(config.get("logging", {}))
 
         logging.info(f"Service start. Loading configuration...")
-        redis: aioredis.Redis | None = await connect_to_redis(config["redis"])
+        redis = await connect_to_redis(config["redis"])
         tasks = []
 
         while True:
@@ -100,7 +49,7 @@ async def main():
                 if task_name == config["redis"]["main_stream"]:
                     main_stream_id = len(timestamps)
                 timestamps.append(timestamp)
-                data_list.append(data)
+                data_list.append(json.loads(data))
                 logging.debug(f"[{task_name:<8}]: {unix_timestamp_to_iso(timestamp)}: {data[:80]}")
                 is_data_missing |= result == []
 
@@ -121,7 +70,7 @@ async def main():
                 if main_stream_id != 0:
                     # Assure mainstream is in list first position, so it will set the results entries order
                     data_list.insert(0, data_list.pop(main_stream_id))
-                merged_data = await merge_results(*data_list)
+                merged_data = merge_data(*data_list)
 
                 # Save to redis
                 logging.info(f"Saving to Redis: {generated_redis_key} : {json.loads(merged_data)[:1]}")
@@ -131,6 +80,8 @@ async def main():
                     time.sleep(config["redis"]["interval"])
                 else:
                     logging.error(f"{generated_redis_key} Key already exists or there was an issue storing the data")
+            time.sleep(config["redis"]["interval"])
+
     except RetryError as e:
         logging.error(f"Retry operation failed: {e}")
     except ConnectionRefusedError as e:
