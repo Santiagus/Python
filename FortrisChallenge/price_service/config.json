@@ -24,7 +24,6 @@
         "root": {
             "level": "INFO",
             "handlers": [
-                "file",
                 "console"
             ]
         }

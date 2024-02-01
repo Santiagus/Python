@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import logging
-import sys
+import yaml
 import json
 from tenacity import RetryError
 from shared.data_fetcher import DataFetcher
@@ -64,6 +64,14 @@ async def lifespan(app: FastAPI):
             app.state.redis.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Your API",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+with open("httpAPI_service/oas.yaml", "r") as file:
+    oas_doc = yaml.safe_load(file)
+app.openapi = lambda: oas_doc
 
 from httpAPI_service.api import api

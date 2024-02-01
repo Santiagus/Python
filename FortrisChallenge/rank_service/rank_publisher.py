@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import time
-import os
-from dotenv import load_dotenv
+# import os
+# from dotenv import load_dotenv
 from tenacity import RetryError
 import schedule
 from common.utils import seconds_until_next_minute, load_config_from_json, setup_logging
@@ -30,8 +30,8 @@ async def main():
     redis = None
     try:
         # Load environment variables from .env file in the pricing folder
-        dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
-        load_dotenv(dotenv_path)
+        # dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+        # load_dotenv(dotenv_path)
 
         # Configuration
         config = load_config_from_json('rank_service/config.json')
@@ -68,7 +68,7 @@ async def main():
         logging.error(f'API Error ({e.json_data.get("Err").get("type")}): {e.json_data.get("Err").get("message")}')
         logging.error(f"Publisher can not access to data source without APIKey.")
     except RuntimeError as e:
-        logging.error(f"RuntimeError: {e}")
+        logging.error(f"RuntimeError: {e}")    
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
         logging.exception("Stack trace:")
@@ -80,4 +80,9 @@ async def main():
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info("Script interrupted by user.")
+    except asyncio.CancelledError:
+        logging.info("Script cancelled. Cleaning up and exiting gracefully.")

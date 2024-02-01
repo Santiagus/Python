@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from tenacity import RetryError
 import schedule
 from common.utils import seconds_until_next_minute, load_config_from_json, setup_logging
@@ -30,8 +30,8 @@ async def main():
     redis = None
     try:
         # Load environment variables from .env file in the pricing folder
-        dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
-        load_dotenv(dotenv_path)
+        # dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+        # load_dotenv(dotenv_path)
 
         # Configuration
         config = load_config_from_json('price_service/config.json')

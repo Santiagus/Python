@@ -12,9 +12,9 @@ info:
   version: 1.0.0
 externalDocs:
   description: Find out more about Top Cryptocurrency Price List
-  url: http://localhost
+  url: http://127.0.0.1
 servers:
-  - url: http://localhost:6667
+  - url: http://127.0.0.1:8000
     description: local development server
 
 paths:
@@ -37,33 +37,60 @@ paths:
         required: true
       - name: datetime
         in: query
-        description: Timestamp of the returned information, Current time if missing        
+        description: Timestamp of the data to be request. Unix format. Most up to date info if missing
         schema:
           type: string
-          format: date-time
-          example: "2021-01-30T08:30:00Z"
+          format: int
+          example: 1706788260
         required: false
       - name: format
         in: query
         description: Indicates the output format, CSV or JSON.        
-        schema:
-            type: string
-            enum:
-              - CSV
-              - JSON
         required: false
+        schema:
+          type: string
+          format: string
+          example: "JSON"
       responses:
         '200':
           description: A list of top cryptocurrencies
           content:
-            text/csv:
-              schema:
-                $ref: '#/components/schemas/TopCryptoListSchema'
-            application/json:
-              schema:                
-                $ref: '#/components/schemas/TopCryptoListSchema'
+              application/json:
+                example:
+                  - Rank: 1
+                    Symbol: "BTC"
+                    Price USD: 45216.1156
+                  - Rank: 2
+                    Symbol: "ETH"
+                    Price USD: 3210.4567
+                  - Rank: 3
+                    Symbol: "XRP"
+                    Price USD: 0.9501
+                  - Rank: 4
+                    Symbol: "LTC"
+                    Price USD: 125.7890
+                  - Rank: 5
+                    Symbol: "ADA"
+                    Price USD: 1.2345
+              application/csv:
+                example: |
+                  Rank,Symbol,Price USD
+                  1,BTC,42111.5950546021
+                  2,ETH,2268.8872521492
+                  3,SOL,95.1784838831
+                  4,XRP,0.4931889662
+                  5,AVAX,33.0790045024
+                  6,ADA,0.4894635802
+                  7,BNB,298.9500281192
+                  8,SEI,0.6256365317
+                  9,MATIC,0.7826507157
+                  10,DOGE,0.0785864333
+        '404':
+          $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
     
 components:
@@ -74,12 +101,25 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            detail: "The specified resource was not found."
     UnprocessableEntity:
       description: The payload contains invalid values.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            detail: "The payload contains invalid values."
+    InternalServerError:
+      description: Internal Server Error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: "Internal Server Error. Please try again later."
+
 
   securitySchemes:
     openId:
@@ -113,25 +153,8 @@ components:
         - detail
       additionalProperties: false
 
-    TopCryptoListSchema:
-      type: array
-      items:
-        type: object
-        properties:
-          Rank:
-            type: integer
-            format: int32
-            example: 1
-          Symbol:
-            type: string
-            example: "BTC"
-          PriceUSD:
-            type: number
-            format: float
-            example: '6634.41'
-
 security:
   - oauth2:
-      - getTopCryptoList      
+      - getTopCryptoList
   - bearerAuth:
       - getTopCryptoList
