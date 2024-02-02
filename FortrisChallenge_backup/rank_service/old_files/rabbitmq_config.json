@@ -1,7 +1,0 @@
-{
-    "RABBITMQ_HOST": "localhost",
-    "RABBITMQ_PORT": 5672,
-    "REQUEST_QUEUE": "rank_queue",
-    "RESPONSE_EXCHANGE": "rank_response",
-    "RESPONSE_ROUTING_KEY": "rank_response"
-}
