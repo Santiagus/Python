@@ -126,7 +126,7 @@ This way the system can implement many services to fetch and publish the data to
 
 *requirements.txt*: file with the package dependencies needs to run each service. One per service folder.
 *Dockerfile_<service_name>* files: includes the config to build the docker container for <service_name>
-*docker_compose.yaml* : Run all the containers needed for the project. `docker compose up` / `docker compose down`
+*docker/docker_compose.yaml* : Run all the containers needed for the project. `docker compose up` / `docker compose down`
 
 For clarifications ask at santiagoabad@gmail.com
 
