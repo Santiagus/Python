@@ -54,7 +54,7 @@ async def main():
                     main_stream_id = len(timestamps)
                 timestamps.append(timestamp)
                 if data != []:
-                    data_list.append(json.loads(data))
+                    data_list.append(json.loads(data)) # type: ignore
                 logging.debug(f"[{task_name:<8}]: {unix_timestamp_to_iso(timestamp)}: {data[:80]}")
                 is_data_missing |= result == None
 
