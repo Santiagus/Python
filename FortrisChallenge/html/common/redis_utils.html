@@ -27,7 +27,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import aioredis
-from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_fixed
+from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_random_exponential
 import logging
 from redis import RedisError
 
@@ -54,10 +54,11 @@ def log_retry_info(retry_state):
     logger = logging.getLogger(__name__)
 
     if retry_state:
-        logger.info(&#34;Redis connection failed. Retrying in %ds. Attempt %d/%d&#34;,
-                    retry_state.retry_object.wait.wait_fixed,
+        logger.info(&#34;Redis connection failed. Retrying in (%d-%d)s. Attempt %d&#34;,
+                    retry_state.retry_object.wait.min,
+                    retry_state.retry_object.wait.max,
                     retry_state.attempt_number,
-                    retry_state.retry_object.stop.max_attempt_number)
+                    )
     else:
         logger.warning(&#34;Retry state or next_action is None. Unable to log retry information.&#34;)
 
@@ -66,7 +67,7 @@ def log_retry_info(retry_state):
 @retry(
     stop=stop_after_attempt(3),
     retry=retry_if_exception_type(ConnectionRefusedError),
-    wait=wait_fixed(3),
+    wait=wait_random_exponential(min=5, max=20),
     after=log_retry_info
 )
 async def connect_to_redis(config):
@@ -85,7 +86,6 @@ async def connect_to_redis(config):
     a PING command. In case of a refused connection, it raises a ConnectionRefusedError.
     For any other unexpected errors, a generic Exception is raised with an associated error message.
     &#34;&#34;&#34;
-
     host, port = config[&#39;host&#39;], config[&#39;port&#39;]
     redis = None
     try:
@@ -95,10 +95,11 @@ async def connect_to_redis(config):
             return redis
     except ConnectionRefusedError as e:
         logging.error(f&#34;ConnectionRefusedError: {e}&#34;)
-        raise e
+        return None
     except Exception as e:
         logging.error(f&#34;Unexpected error occurred: {e}&#34;)
-        raise e
+        return None
+
 
 async def save_to_redis(redis, redis_key, data):
     &#34;&#34;&#34;
@@ -129,11 +130,14 @@ async def save_to_redis(redis, redis_key, data):
         success = await redis.set(redis_key, data)
         if success:
             logging.info(f&#39;Successfully set key &#34;{redis_key}&#34; in Redis.&#39;)
-        return success
+            return True
+        return False
     except RedisError as e:
         logging.error(f&#39;Error setting key &#34;{redis_key}&#34; in Redis: {e}&#39;)
+        return False
     except Exception as e:
-        logging.error(f&#39;Unexpected error: {e}&#39;)</code></pre>
+        logging.error(f&#39;Unexpected error: {e}&#39;)
+        return False</code></pre>
 </details>
 </section>
 <section>
@@ -166,7 +170,7 @@ For any other unexpected errors, a generic Exception is raised with an associate
 <pre><code class="python">@retry(
     stop=stop_after_attempt(3),
     retry=retry_if_exception_type(ConnectionRefusedError),
-    wait=wait_fixed(3),
+    wait=wait_random_exponential(min=5, max=20),
     after=log_retry_info
 )
 async def connect_to_redis(config):
@@ -185,7 +189,6 @@ async def connect_to_redis(config):
     a PING command. In case of a refused connection, it raises a ConnectionRefusedError.
     For any other unexpected errors, a generic Exception is raised with an associated error message.
     &#34;&#34;&#34;
-
     host, port = config[&#39;host&#39;], config[&#39;port&#39;]
     redis = None
     try:
@@ -195,10 +198,10 @@ async def connect_to_redis(config):
             return redis
     except ConnectionRefusedError as e:
         logging.error(f&#34;ConnectionRefusedError: {e}&#34;)
-        raise e
+        return None
     except Exception as e:
         logging.error(f&#34;Unexpected error occurred: {e}&#34;)
-        raise e</code></pre>
+        return None</code></pre>
 </details>
 </dd>
 <dt id="FortrisChallenge.common.redis_utils.log_retry_info"><code class="name flex">
@@ -244,10 +247,11 @@ when attempting to connect to a Redis server.</p>
     logger = logging.getLogger(__name__)
 
     if retry_state:
-        logger.info(&#34;Redis connection failed. Retrying in %ds. Attempt %d/%d&#34;,
-                    retry_state.retry_object.wait.wait_fixed,
+        logger.info(&#34;Redis connection failed. Retrying in (%d-%d)s. Attempt %d&#34;,
+                    retry_state.retry_object.wait.min,
+                    retry_state.retry_object.wait.max,
                     retry_state.attempt_number,
-                    retry_state.retry_object.stop.max_attempt_number)
+                    )
     else:
         logger.warning(&#34;Retry state or next_action is None. Unable to log retry information.&#34;)</code></pre>
 </details>
@@ -312,11 +316,14 @@ else:
         success = await redis.set(redis_key, data)
         if success:
             logging.info(f&#39;Successfully set key &#34;{redis_key}&#34; in Redis.&#39;)
-        return success
+            return True
+        return False
     except RedisError as e:
         logging.error(f&#39;Error setting key &#34;{redis_key}&#34; in Redis: {e}&#39;)
+        return False
     except Exception as e:
-        logging.error(f&#39;Unexpected error: {e}&#39;)</code></pre>
+        logging.error(f&#39;Unexpected error: {e}&#39;)
+        return False</code></pre>
 </details>
 </dd>
 </dl>

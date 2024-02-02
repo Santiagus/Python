@@ -28,12 +28,11 @@
 </summary>
 <pre><code class="python">import asyncio
 import logging
+import logging.config
 import time
-import os
-from dotenv import load_dotenv
-from tenacity import RetryError
 import schedule
-from common.utils import seconds_until_next_minute, load_config_from_json, setup_logging
+from tenacity import RetryError
+from common.utils import seconds_until_next_minute, load_config_from_json
 from common.redis_utils import connect_to_redis
 from shared.data_fetcher import DataFetcher, CustomApiException
 from shared.publisher import Publisher
@@ -57,15 +56,11 @@ async def main():
     &#34;&#34;&#34;
     redis = None
     try:
-        # Load environment variables from .env file in the pricing folder
-        dotenv_path = os.path.join(os.path.dirname(__file__), &#34;.env&#34;)
-        load_dotenv(dotenv_path)
-
         # Configuration
         config = load_config_from_json(&#39;price_service/config.json&#39;)
 
         # Set up logging based on the configuration
-        setup_logging(config.get(&#34;logging&#34;, {}))
+        logging.config.dictConfig(config[&#34;logging&#34;])
 
         logging.info(f&#34;Service start. Loading configuration...&#34;)
 
@@ -152,15 +147,11 @@ It handles environment configuration, initial data synchronization, scheduled up
     &#34;&#34;&#34;
     redis = None
     try:
-        # Load environment variables from .env file in the pricing folder
-        dotenv_path = os.path.join(os.path.dirname(__file__), &#34;.env&#34;)
-        load_dotenv(dotenv_path)
-
         # Configuration
         config = load_config_from_json(&#39;price_service/config.json&#39;)
 
         # Set up logging based on the configuration
-        setup_logging(config.get(&#34;logging&#34;, {}))
+        logging.config.dictConfig(config[&#34;logging&#34;])
 
         logging.info(f&#34;Service start. Loading configuration...&#34;)
 

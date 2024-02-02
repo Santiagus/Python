@@ -29,10 +29,11 @@
 <pre><code class="python">import time
 import asyncio
 import logging
+import logging.config
 import json
 from tenacity import RetryError
 from common.redis_utils import connect_to_redis
-from common.utils import round_to_previous_minute, unix_timestamp_to_iso, load_config_from_json, setup_logging, merge_data, unpack_message
+from common.utils import round_to_previous_minute, unix_timestamp_to_iso, load_config_from_json, merge_data, unpack_message
 
 
 async def read_last_message(redis, stream):
@@ -56,17 +57,20 @@ async def main():
         config = load_config_from_json(&#39;merge_service/config.json&#39;)
 
         # Set up logging based on the configuration
-        setup_logging(config.get(&#34;logging&#34;, {}))
+        logging.config.dictConfig(config[&#34;logging&#34;])
 
         logging.info(f&#34;Service start. Loading configuration...&#34;)
         redis = await connect_to_redis(config[&#34;redis&#34;])
         tasks = []
 
         while True:
+            if redis is None:
+                redis = await connect_to_redis(config[&#34;redis&#34;])
+
             # Create task per stream to read messages asynchronously
             tasks = [run_task_with_name(stream, read_last_message(redis, stream)) for stream in config[&#34;redis&#34;][&#34;source_streams&#34;]]
             results = await asyncio.gather(*tasks)
-
+            
             # Process the results
             is_data_missing = False
             timestamps = []
@@ -77,9 +81,10 @@ async def main():
                 if task_name == config[&#34;redis&#34;][&#34;main_stream&#34;]:
                     main_stream_id = len(timestamps)
                 timestamps.append(timestamp)
-                data_list.append(json.loads(data))
+                if data != []:
+                    data_list.append(json.loads(data))
                 logging.debug(f&#34;[{task_name:&lt;8}]: {unix_timestamp_to_iso(timestamp)}: {data[:80]}&#34;)
-                is_data_missing |= result == []
+                is_data_missing |= result == None
 
             # In some stream is empty timeout and continue loop
             if is_data_missing:
@@ -151,17 +156,20 @@ if __name__ == &#34;__main__&#34;:
         config = load_config_from_json(&#39;merge_service/config.json&#39;)
 
         # Set up logging based on the configuration
-        setup_logging(config.get(&#34;logging&#34;, {}))
+        logging.config.dictConfig(config[&#34;logging&#34;])
 
         logging.info(f&#34;Service start. Loading configuration...&#34;)
         redis = await connect_to_redis(config[&#34;redis&#34;])
         tasks = []
 
         while True:
+            if redis is None:
+                redis = await connect_to_redis(config[&#34;redis&#34;])
+
             # Create task per stream to read messages asynchronously
             tasks = [run_task_with_name(stream, read_last_message(redis, stream)) for stream in config[&#34;redis&#34;][&#34;source_streams&#34;]]
             results = await asyncio.gather(*tasks)
-
+            
             # Process the results
             is_data_missing = False
             timestamps = []
@@ -172,9 +180,10 @@ if __name__ == &#34;__main__&#34;:
                 if task_name == config[&#34;redis&#34;][&#34;main_stream&#34;]:
                     main_stream_id = len(timestamps)
                 timestamps.append(timestamp)
-                data_list.append(json.loads(data))
+                if data != []:
+                    data_list.append(json.loads(data))
                 logging.debug(f&#34;[{task_name:&lt;8}]: {unix_timestamp_to_iso(timestamp)}: {data[:80]}&#34;)
-                is_data_missing |= result == []
+                is_data_missing |= result == None
 
             # In some stream is empty timeout and continue loop
             if is_data_missing:

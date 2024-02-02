@@ -31,20 +31,6 @@ import json
 import logging.config
 import pandas as pd
 
-def setup_logging(log_config):
-    &#34;&#34;&#34;
-    Set up logging configuration based on the provided log_config.
-
-    Parameters:
-        - `log_config`: A dictionary containing the logging configuration.
-
-    Example:
-        ```python
-        log_configuration = {...}  # Provide your logging configuration
-        setup_logging(log_configuration)
-        ```
-    &#34;&#34;&#34;
-    logging.config.dictConfig(log_config)
 
 def unix_timestamp_to_iso(unix_timestamp):
     &#34;&#34;&#34;
@@ -213,15 +199,37 @@ def merge_data(*data_list):
     # Convert each element in data_list to a DataFrame
     data_frames = [pd.DataFrame(data) for data in data_list]
 
+    all_float_columns = []
+    for df in data_frames:
+        df[&#39;Id&#39;] = df[&#39;Id&#39;].astype(&#39;Int64&#39;) # Assure Id in all tables is int64 (NaN is float by default)
+        float_columns = df.select_dtypes(include=&#39;float64&#39;).columns
+        if float_columns.size &gt; 0:
+            all_float_columns.append(*float_columns)
+        df[float_columns] = df[float_columns].astype(str) # Convert float to str to avoid to round values
+
     # Merge DataFrames
     merged_df = pd.merge(data_frames[0], data_frames[1], on=[&#39;Id&#39;, &#39;Symbol&#39;], suffixes=(&#39;_df1&#39;, &#39;_df2&#39;))
     for i in range(2, len(data_frames)):
-        merged_df = pd.merge(merged_df, data_frames[i], on=[&#39;Id&#39;, &#39;Symbol&#39;], suffixes=(f&#39;_df{i-1}&#39;, f&#39;_df{i}&#39;))
+        merged_df = pd.merge(merged_df, data_frames[i], on=[&#39;Id&#39;, &#39;Symbol&#39;], suffixes=(f&#39;_df{i-1}&#39;, f&#39;_df{i}&#39;)).astype(object)
+
     merged_df = merged_df.drop(&#39;Id&#39;, axis=1)
+
+    # Add Rank
     merged_df.index = pd.RangeIndex(start=1, stop=len(merged_df) + 1, name=&#39;Rank&#39;)
     merged_df.reset_index(inplace=True)
+    result_json = merged_df.to_json(orient=&#39;records&#39;)
 
-    return merged_df.to_json(orient=&#39;records&#39;)
+    # Get floats converted to str back
+    data_list = json.loads(result_json)
+    for entry in data_list:
+        for target_key in all_float_columns:
+            if target_key in entry:
+                entry[target_key] = float(entry[target_key])
+
+    # Convert the list of dictionaries back to a JSON string
+    updated_json_data = json.dumps(data_list)
+
+    return updated_json_data
 
 
 def unpack_message(message):
@@ -244,6 +252,7 @@ def unpack_message(message):
     timestamp = 0
     data = []
     try:
+
         logging.debug(f&#39;unpacking message...&#39;)
         timestamp = int(message[0][0].decode()[:-2])
         data = message[0][1][b&#39;data&#39;].decode()
@@ -397,15 +406,37 @@ print(merged_json)
     # Convert each element in data_list to a DataFrame
     data_frames = [pd.DataFrame(data) for data in data_list]
 
+    all_float_columns = []
+    for df in data_frames:
+        df[&#39;Id&#39;] = df[&#39;Id&#39;].astype(&#39;Int64&#39;) # Assure Id in all tables is int64 (NaN is float by default)
+        float_columns = df.select_dtypes(include=&#39;float64&#39;).columns
+        if float_columns.size &gt; 0:
+            all_float_columns.append(*float_columns)
+        df[float_columns] = df[float_columns].astype(str) # Convert float to str to avoid to round values
+
     # Merge DataFrames
     merged_df = pd.merge(data_frames[0], data_frames[1], on=[&#39;Id&#39;, &#39;Symbol&#39;], suffixes=(&#39;_df1&#39;, &#39;_df2&#39;))
     for i in range(2, len(data_frames)):
-        merged_df = pd.merge(merged_df, data_frames[i], on=[&#39;Id&#39;, &#39;Symbol&#39;], suffixes=(f&#39;_df{i-1}&#39;, f&#39;_df{i}&#39;))
+        merged_df = pd.merge(merged_df, data_frames[i], on=[&#39;Id&#39;, &#39;Symbol&#39;], suffixes=(f&#39;_df{i-1}&#39;, f&#39;_df{i}&#39;)).astype(object)
+
     merged_df = merged_df.drop(&#39;Id&#39;, axis=1)
+
+    # Add Rank
     merged_df.index = pd.RangeIndex(start=1, stop=len(merged_df) + 1, name=&#39;Rank&#39;)
     merged_df.reset_index(inplace=True)
+    result_json = merged_df.to_json(orient=&#39;records&#39;)
 
-    return merged_df.to_json(orient=&#39;records&#39;)</code></pre>
+    # Get floats converted to str back
+    data_list = json.loads(result_json)
+    for entry in data_list:
+        for target_key in all_float_columns:
+            if target_key in entry:
+                entry[target_key] = float(entry[target_key])
+
+    # Convert the list of dictionaries back to a JSON string
+    updated_json_data = json.dumps(data_list)
+
+    return updated_json_data</code></pre>
 </details>
 </dd>
 <dt id="FortrisChallenge.common.utils.print_df"><code class="name flex">
@@ -561,39 +592,6 @@ print(f&quot;Seconds until next minute: {seconds_remaining}&quot;)
     return seconds_until_next_minute</code></pre>
 </details>
 </dd>
-<dt id="FortrisChallenge.common.utils.setup_logging"><code class="name flex">
-<span>def <span class="ident">setup_logging</span></span>(<span>log_config)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Set up logging configuration based on the provided log_config.</p>
-<h2 id="parameters">Parameters</h2>
-<ul>
-<li><code>log_config</code>: A dictionary containing the logging configuration.</li>
-</ul>
-<h2 id="example">Example</h2>
-<pre><code class="language-python">log_configuration = {...}  # Provide your logging configuration
-setup_logging(log_configuration)
-</code></pre></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def setup_logging(log_config):
-    &#34;&#34;&#34;
-    Set up logging configuration based on the provided log_config.
-
-    Parameters:
-        - `log_config`: A dictionary containing the logging configuration.
-
-    Example:
-        ```python
-        log_configuration = {...}  # Provide your logging configuration
-        setup_logging(log_configuration)
-        ```
-    &#34;&#34;&#34;
-    logging.config.dictConfig(log_config)</code></pre>
-</details>
-</dd>
 <dt id="FortrisChallenge.common.utils.unix_timestamp_to_iso"><code class="name flex">
 <span>def <span class="ident">unix_timestamp_to_iso</span></span>(<span>unix_timestamp)</span>
 </code></dt>
@@ -678,6 +676,7 @@ print(f&quot;Timestamp: {timestamp}, Data: {data}&quot;)
     timestamp = 0
     data = []
     try:
+
         logging.debug(f&#39;unpacking message...&#39;)
         timestamp = int(message[0][0].decode()[:-2])
         data = message[0][1][b&#39;data&#39;].decode()
@@ -714,7 +713,6 @@ print(f&quot;Timestamp: {timestamp}, Data: {data}&quot;)
 <li><code><a title="FortrisChallenge.common.utils.round_to_previous_minute" href="#FortrisChallenge.common.utils.round_to_previous_minute">round_to_previous_minute</a></code></li>
 <li><code><a title="FortrisChallenge.common.utils.rounddown_time_to_minute" href="#FortrisChallenge.common.utils.rounddown_time_to_minute">rounddown_time_to_minute</a></code></li>
 <li><code><a title="FortrisChallenge.common.utils.seconds_until_next_minute" href="#FortrisChallenge.common.utils.seconds_until_next_minute">seconds_until_next_minute</a></code></li>
-<li><code><a title="FortrisChallenge.common.utils.setup_logging" href="#FortrisChallenge.common.utils.setup_logging">setup_logging</a></code></li>
 <li><code><a title="FortrisChallenge.common.utils.unix_timestamp_to_iso" href="#FortrisChallenge.common.utils.unix_timestamp_to_iso">unix_timestamp_to_iso</a></code></li>
 <li><code><a title="FortrisChallenge.common.utils.unpack_message" href="#FortrisChallenge.common.utils.unpack_message">unpack_message</a></code></li>
 </ul>

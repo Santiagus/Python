@@ -36,10 +36,13 @@ async def main():
         tasks = []
 
         while True:
+            if redis is None:
+                redis = await connect_to_redis(config["redis"])
+
             # Create task per stream to read messages asynchronously
             tasks = [run_task_with_name(stream, read_last_message(redis, stream)) for stream in config["redis"]["source_streams"]]
             results = await asyncio.gather(*tasks)
-
+            
             # Process the results
             is_data_missing = False
             timestamps = []
@@ -53,7 +56,7 @@ async def main():
                 if data != []:
                     data_list.append(json.loads(data))
                 logging.debug(f"[{task_name:<8}]: {unix_timestamp_to_iso(timestamp)}: {data[:80]}")
-                is_data_missing |= result == []
+                is_data_missing |= result == None
 
             # In some stream is empty timeout and continue loop
             if is_data_missing:

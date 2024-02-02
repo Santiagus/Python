@@ -29,6 +29,7 @@
 <pre><code class="python">import json
 import logging
 import asyncio
+from datetime import datetime
 from fastapi import Query
 from fastapi import HTTPException
 from fastapi.responses import PlainTextResponse
@@ -39,7 +40,7 @@ from httpAPI_service.app import app
 @app.get(&#34;/&#34;)
 async def getTopCryptoList(
     limit: int = Query(..., title=&#34;The number of items to retrieve&#34;, ge=1),
-    timestamp: int = Query(None, title=&#34;The timestamp of the request&#34;, description=&#34;Optional timestamp parameter&#34;),
+    datetime: datetime = Query(None, title=&#34;The timestamp of the request&#34;, description=&#34;Optional timestamp parameter&#34;),
     format: str = Query(&#34;JSON&#34;, title=&#34;The format of the response&#34;, description=&#34;Optional response format parameter (JSON or CSV)&#34;)
 ):
     &#34;&#34;&#34;
@@ -65,14 +66,18 @@ async def getTopCryptoList(
     try:
         # Check redis connectivity
         if app.state.redis is None:
+            logging.error(f&#34;No redis connection available&#34;)
             raise HTTPException(status_code=500, detail=&#34;Internal Server Error&#34;)
 
-        # get_latest_data = False
+        # Check parameters are correct
+        if not (isinstance(limit, int) and limit &gt; 0):
+            raise HTTPException(status_code=422, detail=&#34;Limit must be an integer greater than 0&#34;)
+        
 
         # Use timestamp as id/key for messages and db/cache
-        if timestamp:
+        if datetime:
             # Check in database/cache
-            request_id = round_to_previous_minute(timestamp, unix_format=True)
+            request_id = round_to_previous_minute(int(datetime.timestamp()), unix_format=True)
             ranking_data = await app.state.redis.get(request_id)
         else:
             # Round current time to the minute and check for cached value
@@ -93,6 +98,7 @@ async def getTopCryptoList(
                 logging.info(f&#34;Returning cached data for {redis_key}&#34;)
 
         if ranking_data is None: # Not in cache or &#34;latest&#34; resquest
+            logging.error(f&#34;No data for the specified datetime : {datetime} &#34;)
             raise HTTPException(status_code=404, detail=&#34;Data not found for the specified timestamp&#34;)
 
         # Output formating
@@ -100,16 +106,14 @@ async def getTopCryptoList(
         ranking_data = ranking_data[:limit]
         if format.upper() == &#39;CSV&#39;:
             csv = json_to_csv(ranking_data)
-            return PlainTextResponse(content=csv, media_type=&#34;text/csv&#34;)
+            return PlainTextResponse(content=csv, media_type=&#34;application/csv&#34;)
 
         return ranking_data
 
     except json.JSONDecodeError as e:
         logging.error(f&#34;Unexpected UTF-8 BOM (decode using utf-8-sig) - Value: {ranking_data}&#34;)
     except TypeError as e:
-        logging.error(f&#39;The JSON object must be str, bytes or bytearray&#39;)
-    except Exception as e:
-        logging.error(f&#34;Error fetching the data: {e}&#34;)</code></pre>
+        logging.error(f&#39;The JSON object must be str, bytes or bytearray&#39;)</code></pre>
 </details>
 </section>
 <section>
@@ -120,7 +124,7 @@ async def getTopCryptoList(
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="FortrisChallenge.httpAPI_service.api.api.getTopCryptoList"><code class="name flex">
-<span>async def <span class="ident">getTopCryptoList</span></span>(<span>limit: int = Query(PydanticUndefined), timestamp: int = Query(None), format: str = Query(JSON))</span>
+<span>async def <span class="ident">getTopCryptoList</span></span>(<span>limit: int = Query(PydanticUndefined), datetime: datetime.datetime = Query(None), format: str = Query(JSON))</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Get the top cryptocurrencies based on specified parameters.</p>
@@ -146,7 +150,7 @@ Possible values: "JSON" (default) or "CSV".</li>
 <pre><code class="python">@app.get(&#34;/&#34;)
 async def getTopCryptoList(
     limit: int = Query(..., title=&#34;The number of items to retrieve&#34;, ge=1),
-    timestamp: int = Query(None, title=&#34;The timestamp of the request&#34;, description=&#34;Optional timestamp parameter&#34;),
+    datetime: datetime = Query(None, title=&#34;The timestamp of the request&#34;, description=&#34;Optional timestamp parameter&#34;),
     format: str = Query(&#34;JSON&#34;, title=&#34;The format of the response&#34;, description=&#34;Optional response format parameter (JSON or CSV)&#34;)
 ):
     &#34;&#34;&#34;
@@ -172,14 +176,18 @@ async def getTopCryptoList(
     try:
         # Check redis connectivity
         if app.state.redis is None:
+            logging.error(f&#34;No redis connection available&#34;)
             raise HTTPException(status_code=500, detail=&#34;Internal Server Error&#34;)
 
-        # get_latest_data = False
+        # Check parameters are correct
+        if not (isinstance(limit, int) and limit &gt; 0):
+            raise HTTPException(status_code=422, detail=&#34;Limit must be an integer greater than 0&#34;)
+        
 
         # Use timestamp as id/key for messages and db/cache
-        if timestamp:
+        if datetime:
             # Check in database/cache
-            request_id = round_to_previous_minute(timestamp, unix_format=True)
+            request_id = round_to_previous_minute(int(datetime.timestamp()), unix_format=True)
             ranking_data = await app.state.redis.get(request_id)
         else:
             # Round current time to the minute and check for cached value
@@ -200,6 +208,7 @@ async def getTopCryptoList(
                 logging.info(f&#34;Returning cached data for {redis_key}&#34;)
 
         if ranking_data is None: # Not in cache or &#34;latest&#34; resquest
+            logging.error(f&#34;No data for the specified datetime : {datetime} &#34;)
             raise HTTPException(status_code=404, detail=&#34;Data not found for the specified timestamp&#34;)
 
         # Output formating
@@ -207,16 +216,14 @@ async def getTopCryptoList(
         ranking_data = ranking_data[:limit]
         if format.upper() == &#39;CSV&#39;:
             csv = json_to_csv(ranking_data)
-            return PlainTextResponse(content=csv, media_type=&#34;text/csv&#34;)
+            return PlainTextResponse(content=csv, media_type=&#34;application/csv&#34;)
 
         return ranking_data
 
     except json.JSONDecodeError as e:
         logging.error(f&#34;Unexpected UTF-8 BOM (decode using utf-8-sig) - Value: {ranking_data}&#34;)
     except TypeError as e:
-        logging.error(f&#39;The JSON object must be str, bytes or bytearray&#39;)
-    except Exception as e:
-        logging.error(f&#34;Error fetching the data: {e}&#34;)</code></pre>
+        logging.error(f&#39;The JSON object must be str, bytes or bytearray&#39;)</code></pre>
 </details>
 </dd>
 </dl>

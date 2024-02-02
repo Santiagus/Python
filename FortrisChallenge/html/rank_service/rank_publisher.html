@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>FortrisChallenge.httpAPI_service.app API documentation</title>
+<title>FortrisChallenge.rank_service.rank_publisher API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,85 +19,96 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>FortrisChallenge.httpAPI_service.app</code></h1>
+<h1 class="title">Module <code>FortrisChallenge.rank_service.rank_publisher</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from contextlib import asynccontextmanager
-from fastapi import FastAPI
+<pre><code class="python">import asyncio
 import logging
-import sys
-import json
+import logging.config
+import time
 from tenacity import RetryError
-from shared.data_fetcher import DataFetcher
+import schedule
+from common.utils import seconds_until_next_minute, load_config_from_json
 from common.redis_utils import connect_to_redis
-from common.utils import load_config_from_json, setup_logging
+from shared.data_fetcher import DataFetcher, CustomApiException
+from shared.publisher import Publisher
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+
+
+async def main():
     &#34;&#34;&#34;
-    Async context manager for managing the lifespan of a FastAPI application.
+    Orchestrates the execution of the ranking-related service.
 
-    This context manager is typically used to handle setup and cleanup operations
-    during the application&#39;s lifespan, such as initializing and closing connections
-    or resources.
+    This function initializes components, such as data fetching, Redis connection, and the main publisher.
+    It handles environment configuration, initial data synchronization, scheduled updates, error handling, and a graceful exit.
 
-    Parameters:
-        - `app` (FastAPI): The FastAPI application instance.
+    :raises RetryError: If retry operation fails.
+    :raises ConnectionRefusedError: If connection to Redis is refused.
+    :raises APIKeyMissingError: If the API key is missing.
+    :raises RuntimeError: If a runtime error occurs.
+    :raises Exception: For any unexpected errors.
 
-    Yields:
-        - None: The async context manager yields control to the enclosed block.
-
-    Example:
-        ```python
-        async with lifespan(my_app):
-            # Perform setup operations here
-
-        # Perform cleanup operations here, after the lifespan block exits
-        ```
+    :return: None
     &#34;&#34;&#34;
+    redis = None
     try:
-        app.state.redis = None
-        app.state.config = load_config_from_json(&#39;httpAPI_service/config.json&#39;)
+        # Configuration
+        config = load_config_from_json(&#39;rank_service/config.json&#39;)
 
         # Set up logging based on the configuration
-        setup_logging(app.state.config.get(&#34;logging&#34;, {}))
+        logging.config.dictConfig(config[&#34;logging&#34;])
+
         logging.info(f&#34;Service start. Loading configuration...&#34;)
 
-        app.state.redis = await connect_to_redis(app.state.config[&#34;redis&#34;])
-
-        # Setup data fetchers for direct data adquisition
-        price_config = load_config_from_json(&#39;config/price_config.json&#39;)
+        # Initialize DataFetcher, Redis and Publisher
         rank_config = load_config_from_json(&#39;config/rank_config.json&#39;)
-        app.state.price_fetcher = DataFetcher(price_config)
-        app.state.rank_fetcher = DataFetcher(rank_config)
+        data_fetcher = DataFetcher(rank_config)
+        redis = await connect_to_redis(config[&#34;redis&#34;])
 
-        yield
+        publisher = Publisher(config, data_fetcher, redis)
 
-        # Shutdown (Close connections to msg broker, db, ...)
-        if app.state.redis is not None:
-            app.state.redis.close()
+        # Synchronization to the minute for first stream update
+        seconds = seconds_until_next_minute()
+        logging.info(f&#34;Synchronizing to rounded minute. Sending data in {seconds} seconds.&#34;)
+        time.sleep(seconds)
+        await publisher.send_data_to_redis_stream()
 
-    except json.decoder.JSONDecodeError as e:
-        logging.error(f&#34;Config load error : {e}&#34;)
+        schedule.every(config[&#39;redis&#39;][&#39;interval&#39;]).seconds.do(
+            lambda: asyncio.create_task(publisher.send_data_to_redis_stream())
+        )
+        while True:
+            schedule.run_pending()
+            await asyncio.sleep(5)
+    except RetryError as e:
+        logging.error(f&#34;Retry operation failed: {e}&#34;)
     except ConnectionRefusedError as e:
         logging.error(f&#34;Failed to connect to Redis: {e}&#34;)
-    except RetryError:
-        logging.error(&#34;Failed to connect to Redis after retries.&#34;)
+    except CustomApiException as e:
+        logging.error(f&#39;API Error ({e.json_data.get(&#34;Err&#34;).get(&#34;type&#34;)}): {e.json_data.get(&#34;Err&#34;).get(&#34;message&#34;)}&#39;)
+        logging.error(f&#34;Publisher can not access to data source without APIKey.&#34;)
+    except RuntimeError as e:
+        logging.error(f&#34;RuntimeError: {e}&#34;)    
     except Exception as e:
-        logging.error(f&#34;An unexpected error occurred during startup: {e}&#34;)
+        logging.error(f&#34;Unexpected error: {e}&#34;)
+        logging.exception(&#34;Stack trace:&#34;)
     finally:
-        if app.state.redis is not None:
-            app.state.redis.close()
-        sys.exit(1)  # Exit the application with a non-zero exit code
+        logging.info(&#34;Exiting program.&#34;)
+        if redis is not None:
+            redis.close()
+            await redis.wait_closed()
 
-
-app = FastAPI(lifespan=lifespan)
-
-from httpAPI_service.api import api</code></pre>
+if __name__ == &#34;__main__&#34;:
+    logging.basicConfig(level=logging.INFO)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info(&#34;Script interrupted by user.&#34;)
+    except asyncio.CancelledError:
+        logging.info(&#34;Script cancelled. Cleaning up and exiting gracefully.&#34;)</code></pre>
 </details>
 </section>
 <section>
@@ -107,89 +118,84 @@ from httpAPI_service.api import api</code></pre>
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="FortrisChallenge.httpAPI_service.app.lifespan"><code class="name flex">
-<span>async def <span class="ident">lifespan</span></span>(<span>app: fastapi.applications.FastAPI)</span>
+<dt id="FortrisChallenge.rank_service.rank_publisher.main"><code class="name flex">
+<span>async def <span class="ident">main</span></span>(<span>)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Async context manager for managing the lifespan of a FastAPI application.</p>
-<p>This context manager is typically used to handle setup and cleanup operations
-during the application's lifespan, such as initializing and closing connections
-or resources.</p>
-<h2 id="parameters">Parameters</h2>
-<ul>
-<li><code>app</code> (FastAPI): The FastAPI application instance.</li>
-</ul>
-<h2 id="yields">Yields</h2>
-<ul>
-<li>None: The async context manager yields control to the enclosed block.</li>
-</ul>
-<h2 id="example">Example</h2>
-<pre><code class="language-python">async with lifespan(my_app):
-    # Perform setup operations here
-
-# Perform cleanup operations here, after the lifespan block exits
-</code></pre></div>
+<div class="desc"><p>Orchestrates the execution of the ranking-related service.</p>
+<p>This function initializes components, such as data fetching, Redis connection, and the main publisher.
+It handles environment configuration, initial data synchronization, scheduled updates, error handling, and a graceful exit.</p>
+<p>:raises RetryError: If retry operation fails.
+:raises ConnectionRefusedError: If connection to Redis is refused.
+:raises APIKeyMissingError: If the API key is missing.
+:raises RuntimeError: If a runtime error occurs.
+:raises Exception: For any unexpected errors.</p>
+<p>:return: None</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">@asynccontextmanager
-async def lifespan(app: FastAPI):
+<pre><code class="python">async def main():
     &#34;&#34;&#34;
-    Async context manager for managing the lifespan of a FastAPI application.
+    Orchestrates the execution of the ranking-related service.
 
-    This context manager is typically used to handle setup and cleanup operations
-    during the application&#39;s lifespan, such as initializing and closing connections
-    or resources.
+    This function initializes components, such as data fetching, Redis connection, and the main publisher.
+    It handles environment configuration, initial data synchronization, scheduled updates, error handling, and a graceful exit.
 
-    Parameters:
-        - `app` (FastAPI): The FastAPI application instance.
+    :raises RetryError: If retry operation fails.
+    :raises ConnectionRefusedError: If connection to Redis is refused.
+    :raises APIKeyMissingError: If the API key is missing.
+    :raises RuntimeError: If a runtime error occurs.
+    :raises Exception: For any unexpected errors.
 
-    Yields:
-        - None: The async context manager yields control to the enclosed block.
-
-    Example:
-        ```python
-        async with lifespan(my_app):
-            # Perform setup operations here
-
-        # Perform cleanup operations here, after the lifespan block exits
-        ```
+    :return: None
     &#34;&#34;&#34;
+    redis = None
     try:
-        app.state.redis = None
-        app.state.config = load_config_from_json(&#39;httpAPI_service/config.json&#39;)
+        # Configuration
+        config = load_config_from_json(&#39;rank_service/config.json&#39;)
 
         # Set up logging based on the configuration
-        setup_logging(app.state.config.get(&#34;logging&#34;, {}))
+        logging.config.dictConfig(config[&#34;logging&#34;])
+
         logging.info(f&#34;Service start. Loading configuration...&#34;)
 
-        app.state.redis = await connect_to_redis(app.state.config[&#34;redis&#34;])
-
-        # Setup data fetchers for direct data adquisition
-        price_config = load_config_from_json(&#39;config/price_config.json&#39;)
+        # Initialize DataFetcher, Redis and Publisher
         rank_config = load_config_from_json(&#39;config/rank_config.json&#39;)
-        app.state.price_fetcher = DataFetcher(price_config)
-        app.state.rank_fetcher = DataFetcher(rank_config)
+        data_fetcher = DataFetcher(rank_config)
+        redis = await connect_to_redis(config[&#34;redis&#34;])
 
-        yield
+        publisher = Publisher(config, data_fetcher, redis)
 
-        # Shutdown (Close connections to msg broker, db, ...)
-        if app.state.redis is not None:
-            app.state.redis.close()
+        # Synchronization to the minute for first stream update
+        seconds = seconds_until_next_minute()
+        logging.info(f&#34;Synchronizing to rounded minute. Sending data in {seconds} seconds.&#34;)
+        time.sleep(seconds)
+        await publisher.send_data_to_redis_stream()
 
-    except json.decoder.JSONDecodeError as e:
-        logging.error(f&#34;Config load error : {e}&#34;)
+        schedule.every(config[&#39;redis&#39;][&#39;interval&#39;]).seconds.do(
+            lambda: asyncio.create_task(publisher.send_data_to_redis_stream())
+        )
+        while True:
+            schedule.run_pending()
+            await asyncio.sleep(5)
+    except RetryError as e:
+        logging.error(f&#34;Retry operation failed: {e}&#34;)
     except ConnectionRefusedError as e:
         logging.error(f&#34;Failed to connect to Redis: {e}&#34;)
-    except RetryError:
-        logging.error(&#34;Failed to connect to Redis after retries.&#34;)
+    except CustomApiException as e:
+        logging.error(f&#39;API Error ({e.json_data.get(&#34;Err&#34;).get(&#34;type&#34;)}): {e.json_data.get(&#34;Err&#34;).get(&#34;message&#34;)}&#39;)
+        logging.error(f&#34;Publisher can not access to data source without APIKey.&#34;)
+    except RuntimeError as e:
+        logging.error(f&#34;RuntimeError: {e}&#34;)    
     except Exception as e:
-        logging.error(f&#34;An unexpected error occurred during startup: {e}&#34;)
+        logging.error(f&#34;Unexpected error: {e}&#34;)
+        logging.exception(&#34;Stack trace:&#34;)
     finally:
-        if app.state.redis is not None:
-            app.state.redis.close()
-        sys.exit(1)  # Exit the application with a non-zero exit code</code></pre>
+        logging.info(&#34;Exiting program.&#34;)
+        if redis is not None:
+            redis.close()
+            await redis.wait_closed()</code></pre>
 </details>
 </dd>
 </dl>
@@ -205,12 +211,12 @@ async def lifespan(app: FastAPI):
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="FortrisChallenge.httpAPI_service" href="index.html">FortrisChallenge.httpAPI_service</a></code></li>
+<li><code><a title="FortrisChallenge.rank_service" href="index.html">FortrisChallenge.rank_service</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="FortrisChallenge.httpAPI_service.app.lifespan" href="#FortrisChallenge.httpAPI_service.app.lifespan">lifespan</a></code></li>
+<li><code><a title="FortrisChallenge.rank_service.rank_publisher.main" href="#FortrisChallenge.rank_service.rank_publisher.main">main</a></code></li>
 </ul>
 </li>
 </ul>
