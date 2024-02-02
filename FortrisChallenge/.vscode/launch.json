@@ -70,6 +70,19 @@
                 "WaitOnNormalExit",
                 "RedirectOutput"
             ]
+        },
+        {
+            "name": "Pytest merge",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "program": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "pytest",
+                "merge_service/tests/test_merger.py"
+            ],
         }
     ]
 }

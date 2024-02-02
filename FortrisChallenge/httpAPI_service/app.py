@@ -7,7 +7,7 @@ import json
 from tenacity import RetryError
 from shared.data_fetcher import DataFetcher
 from common.redis_utils import connect_to_redis
-from common.utils import load_config_from_json, setup_logging
+from common.utils import load_config_from_json
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -41,7 +41,10 @@ async def getTopCryptoList(
             logging.error(f"No redis connection available")
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
-        # get_latest_data = False
+        # Check parameters are correct
+        if not (isinstance(limit, int) and limit > 0):
+            raise HTTPException(status_code=422, detail="Limit must be an integer greater than 0")
+        
 
         # Use timestamp as id/key for messages and db/cache
         if datetime:
@@ -75,7 +78,7 @@ async def getTopCryptoList(
         ranking_data = ranking_data[:limit]
         if format.upper() == 'CSV':
             csv = json_to_csv(ranking_data)
-            return PlainTextResponse(content=csv, media_type="text/csv")
+            return PlainTextResponse(content=csv, media_type="application/csv")
 
         return ranking_data
 

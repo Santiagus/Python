@@ -11,6 +11,8 @@
 │   ├── app.py
 │   ├── config.json
 │   ├── oas.yaml
+    ├── tests
+│   │   ├── test_api.py
 ├── merge_service
 │   ├── config.json
 │   ├── merger.py

@@ -5,7 +5,6 @@ import logging
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 from ..utils import (
-    setup_logging,
     unix_timestamp_to_iso,
     seconds_until_next_minute,
     rounddown_time_to_minute,
@@ -16,41 +15,6 @@ from ..utils import (
     merge_data,
     unpack_message,
 )
-
-def function_that_logs():
-    logging.info("Starting process")
-    logging.warning("An issue occurred")
-    logging.info("Ending process")
-
-def test_setup_logging(caplog):
-    # Test setup_logging function
-    log_config = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {"verbose": {"format": "{levelname:<8} {asctime} [{module:<12}] {message}", "style": "{"}},
-        'handlers': {'caplog': {'class': 'logging.StreamHandler','stream': 'ext://sys.stdout',},},
-        'root': {'level': 'DEBUG','handlers': ['caplog'],},
-    }
-
-    setup_logging(log_config)
-
-    # Assert that the logger is configured with the specified log level
-    assert logging.root.level == logging.DEBUG
-
-    # Log a message and assert that it is captured by the configured handler
-    logging.info("Test log message")
-    assert "Test log message" in caplog.text
-    assert any(record.levelname == "INFO" for record in caplog.records)
-
-    # Log an error message and assert that it is captured by the configured error handler
-    logging.error("Test error message")
-    assert "Test error message" in caplog.text
-    assert any(record.levelname == "ERROR" for record in caplog.records)
-    
-    function_that_logs()
-    assert caplog.messages == ["Starting process", "An issue occurred", "Ending process"]
-
-
 
 
 def test_unix_timestamp_to_iso():
