@@ -3,20 +3,6 @@ import json
 import logging.config
 import pandas as pd
 
-def setup_logging(log_config):
-    """
-    Set up logging configuration based on the provided log_config.
-
-    Parameters:
-        - `log_config`: A dictionary containing the logging configuration.
-
-    Example:
-        ```python
-        log_configuration = {...}  # Provide your logging configuration
-        setup_logging(log_configuration)
-        ```
-    """
-    logging.config.dictConfig(log_config)
 
 def unix_timestamp_to_iso(unix_timestamp):
     """
@@ -185,15 +171,37 @@ def merge_data(*data_list):
     # Convert each element in data_list to a DataFrame
     data_frames = [pd.DataFrame(data) for data in data_list]
 
+    all_float_columns = []
+    for df in data_frames:
+        df['Id'] = df['Id'].astype('Int64') # Assure Id in all tables is int64 (NaN is float by default)
+        float_columns = df.select_dtypes(include='float64').columns
+        if float_columns.size > 0:
+            all_float_columns.append(*float_columns)
+        df[float_columns] = df[float_columns].astype(str) # Convert float to str to avoid to round values
+
     # Merge DataFrames
     merged_df = pd.merge(data_frames[0], data_frames[1], on=['Id', 'Symbol'], suffixes=('_df1', '_df2'))
     for i in range(2, len(data_frames)):
-        merged_df = pd.merge(merged_df, data_frames[i], on=['Id', 'Symbol'], suffixes=(f'_df{i-1}', f'_df{i}'))
+        merged_df = pd.merge(merged_df, data_frames[i], on=['Id', 'Symbol'], suffixes=(f'_df{i-1}', f'_df{i}')).astype(object)
+
     merged_df = merged_df.drop('Id', axis=1)
+
+    # Add Rank
     merged_df.index = pd.RangeIndex(start=1, stop=len(merged_df) + 1, name='Rank')
     merged_df.reset_index(inplace=True)
+    result_json = merged_df.to_json(orient='records')
 
-    return merged_df.to_json(orient='records')
+    # Get floats converted to str back
+    data_list = json.loads(result_json)
+    for entry in data_list:
+        for target_key in all_float_columns:
+            if target_key in entry:
+                entry[target_key] = float(entry[target_key])
+
+    # Convert the list of dictionaries back to a JSON string
+    updated_json_data = json.dumps(data_list)
+
+    return updated_json_data
 
 
 def unpack_message(message):
@@ -216,6 +224,7 @@ def unpack_message(message):
     timestamp = 0
     data = []
     try:
+
         logging.debug(f'unpacking message...')
         timestamp = int(message[0][0].decode()[:-2])
         data = message[0][1][b'data'].decode()

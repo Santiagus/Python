@@ -1,11 +1,12 @@
 import asyncio
 import logging
+import logging.config
 import time
 # import os
 # from dotenv import load_dotenv
 from tenacity import RetryError
 import schedule
-from common.utils import seconds_until_next_minute, load_config_from_json, setup_logging
+from common.utils import seconds_until_next_minute, load_config_from_json
 from common.redis_utils import connect_to_redis
 from shared.data_fetcher import DataFetcher, CustomApiException
 from shared.publisher import Publisher
@@ -37,7 +38,7 @@ async def main():
         config = load_config_from_json('rank_service/config.json')
 
         # Set up logging based on the configuration
-        setup_logging(config.get("logging", {}))
+        logging.config.dictConfig(config["logging"])
 
         logging.info(f"Service start. Loading configuration...")
 

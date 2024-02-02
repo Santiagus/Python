@@ -1,10 +1,11 @@
 import time
 import asyncio
 import logging
+import logging.config
 import json
 from tenacity import RetryError
 from common.redis_utils import connect_to_redis
-from common.utils import round_to_previous_minute, unix_timestamp_to_iso, load_config_from_json, setup_logging, merge_data, unpack_message
+from common.utils import round_to_previous_minute, unix_timestamp_to_iso, load_config_from_json, merge_data, unpack_message
 
 
 async def read_last_message(redis, stream):
@@ -28,7 +29,7 @@ async def main():
         config = load_config_from_json('merge_service/config.json')
 
         # Set up logging based on the configuration
-        setup_logging(config.get("logging", {}))
+        logging.config.dictConfig(config["logging"])
 
         logging.info(f"Service start. Loading configuration...")
         redis = await connect_to_redis(config["redis"])

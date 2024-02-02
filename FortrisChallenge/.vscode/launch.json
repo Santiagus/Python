@@ -53,6 +53,23 @@
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
+        },
+        {
+            "name": "Pytest",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "program": "${workspaceFolder}/.venv/bin/pytest",
+            "args": [
+                "${file}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ]
         }
     ]
 }

@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import logging
+import logging.config
 import yaml
 import json
 from tenacity import RetryError
@@ -37,7 +38,8 @@ async def lifespan(app: FastAPI):
         app.state.config = load_config_from_json('httpAPI_service/config.json')
 
         # Set up logging based on the configuration
-        setup_logging(app.state.config.get("logging", {}))
+        logging.config.dictConfig(app.state.config["logging"])
+
         logging.info(f"Service start. Loading configuration...")
         
         app.state.redis = await connect_to_redis(app.state.config["redis"])
