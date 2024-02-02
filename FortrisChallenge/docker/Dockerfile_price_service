@@ -5,13 +5,16 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy only the necessary files and directories
-COPY common/ /app/common/
-COPY config/ /app/config/
-COPY shared/ /app/shared/
-COPY price_service/ /app/price_service/
+COPY common/*.py /app/common/
+COPY config/*.json /app/config/
+COPY shared/*.py /app/shared/
+COPY price_service/*.py /app/price_service/
+COPY price_service/*.json /app/price_service/
+COPY price_service/requirements.txt /app/price_service/
+
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r price_service/requirements.txt
+RUN pip install --no-cache-dir -r /app/price_service/requirements.txt
 
 # Define environment variable
 ENV COINMARKET_API_KEY 'b8d1c1fe-625c-41be-b758-5d39dc8e55c2'

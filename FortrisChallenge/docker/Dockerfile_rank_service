@@ -5,13 +5,16 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy only the necessary files and directories
-COPY common/ /app/common/
-COPY config/ /app/config/
-COPY shared/ /app/shared/
-COPY rank_service/ /app/rank_service/
+COPY common/*.py /app/common/
+COPY config/*.json /app/config/
+COPY shared/*.py /app/shared/
+COPY rank_service/*.py /app/rank_service/
+COPY rank_service/*.json /app/rank_service/
+COPY rank_service/requirements.txt /app/rank_service/
+
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r rank_service/requirements.txt
+RUN pip install --no-cache-dir -r /app/rank_service/requirements.txt
 
 # Define environment variable
 ENV CRYPTOCOMPARE_API_KEY 'fcdb5d2533332b620ec9cdedee4661741202d909bc230213e2f92421632d1ec9'

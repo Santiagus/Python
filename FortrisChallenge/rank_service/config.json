@@ -30,7 +30,7 @@
         }
     },
     "redis": {
-        "host": "localhost",
+        "host": "redis-container",
         "port": 6379,
         "stream": "rank",
         "interval": 60

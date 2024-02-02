@@ -5,13 +5,18 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy only the necessary files and directories
-COPY common/ /app/common/
-COPY config/ /app/config/
-COPY httpAPI_service/ /app/httpAPI_service/
-COPY shared/ /app/shared/
+COPY common/*.py /app/common/
+COPY config/*.json /app/config/
+COPY shared/*.py /app/shared/
+COPY httpAPI_service/*.py /app/httpAPI_service/
+COPY httpAPI_service/api/*.py /app/httpAPI_service/api/
+COPY httpAPI_service/*.json /app/httpAPI_service/
+COPY httpAPI_service/oas.yaml /app/httpAPI_service/
+COPY httpAPI_service/requirements.txt /app/httpAPI_service/
+
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r httpAPI_service/requirements.txt
+RUN pip install --no-cache-dir -r /app/httpAPI_service/requirements.txt
 
 # Make port 6667 available to the world outside this container
 EXPOSE 6667

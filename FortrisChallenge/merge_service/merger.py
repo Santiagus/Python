@@ -72,19 +72,22 @@ async def main():
                 generated_redis_key = round_to_previous_minute(max(timestamps), unix_format=True)
 
                 # Merge data
-                if main_stream_id != 0:
+                if main_stream_id != 0 and data_list:
                     # Assure mainstream is in list first position, so it will set the results entries order
                     data_list.insert(0, data_list.pop(main_stream_id))
-                merged_data = merge_data(*data_list)
 
-                # Save to redis
-                logging.info(f"Saving to Redis: {generated_redis_key} : {json.loads(merged_data)[:1]}")
-                success = await redis.set(generated_redis_key, merged_data)
-                if success:
-                    logging.info(f"Data stored successfully with key {generated_redis_key} data time {unix_timestamp_to_iso(generated_redis_key)}")
-                    time.sleep(config["redis"]["interval"])
-                else:
-                    logging.error(f"{generated_redis_key} Key already exists or there was an issue storing the data")
+                if data_list:
+                    merged_data = merge_data(*data_list)
+                    # Save to redis
+                    logging.info(f"Saving to Redis: {generated_redis_key} : {json.loads(merged_data)[:1]}")
+                
+                    success = False
+                    if redis is not None:
+                        success = await redis.set(generated_redis_key, merged_data)
+                    if success:
+                        logging.info(f"Data stored successfully with key {generated_redis_key} data time {unix_timestamp_to_iso(generated_redis_key)}")                        
+                    else:
+                        logging.error(f"{generated_redis_key} Key already exists or there was an issue storing the data")
             time.sleep(config["redis"]["interval"])
 
     except RetryError as e:

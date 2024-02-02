@@ -166,8 +166,12 @@ def merge_data(*data_list):
         print(merged_json)
         ```
     """
-    logging.info(f"Merging data from {len(data_list)} sources")
+    if not data_list:
+        logging.info(f"No data to merge")
+        return {}
 
+    logging.info(f"Merging data from {len(data_list)} sources")
+    
     # Convert each element in data_list to a DataFrame
     data_frames = [pd.DataFrame(data) for data in data_list]
 

@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  my-redis-container:
+  redis-container:
     image: redis
     ports:
       - "6379:6379"
@@ -10,8 +10,8 @@ services:
 
   httpapi-service-container:
     build:
-      context: .
-      dockerfile: Dockerfile_httpAPI_service
+      context: ../
+      dockerfile: docker/Dockerfile_httpAPI_service
     ports:
       - "6667:6667"
     networks:
@@ -19,22 +19,22 @@ services:
 
   merge-service-container:
     build:
-      context: .
-      dockerfile: Dockerfile_merge_service
+      context: ../
+      dockerfile: docker/Dockerfile_merge_service
     networks:
       - my_network
 
   rank-service-container:
     build:
-      context: .
-      dockerfile: Dockerfile_rank_service
+      context: ../
+      dockerfile: docker/Dockerfile_rank_service
     networks:
       - my_network
 
   price-service-container:
     build:
-      context: .
-      dockerfile: Dockerfile_price_service
+      context: ../
+      dockerfile: docker/Dockerfile_price_service
     networks:
       - my_network
 
