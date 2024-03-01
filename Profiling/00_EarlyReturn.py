@@ -1,9 +1,10 @@
-from async_performance_decortors import time_measurer
-import asyncio
+from performance_decorators import time_measurer, memory_usage, cpu_usage
 
 
 @time_measurer
-async def search_fast(haystack, needle):
+@memory_usage
+@cpu_usage
+def search_fast(haystack, needle):
     for item in haystack:
         if item == needle:
             return True
@@ -11,7 +12,9 @@ async def search_fast(haystack, needle):
 
 
 @time_measurer
-async def search_slow(haystack, needle):
+@memory_usage
+@cpu_usage
+def search_slow(haystack, needle):
     return_value = False
 
     for item in haystack:
@@ -24,7 +27,7 @@ print("Program start...")
 needle = 10000000
 haystack = [i for i in range(needle)]
 
-asyncio.run(search_slow(haystack, needle))
-asyncio.run(search_fast(haystack, needle))
+search_slow(haystack, needle)
+search_fast(haystack, needle)
 
 print("Program finished.")

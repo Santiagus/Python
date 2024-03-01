@@ -1,4 +1,4 @@
-from async_performance_decortors import time_measurer, memory_usage
+from async_performance_decorators import time_measurer, memory_usage
 import asyncio
 
 
