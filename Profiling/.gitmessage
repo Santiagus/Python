@@ -1,0 +1,31 @@
+# .gitmessage
+
+# <type>[optional scope]: <description>
+
+# ! After <type> for breaking change.
+
+# Reference : https://www.conventionalcommits.org/en/v1.0.0/#summary
+
+# feat:       A new feature for the user or a significant enhancement
+# fix:        A bug fix or a correction to existing functionality
+# docs:       Documentation-related changes
+# style:      Changes that do not affect the code's functionality but improve its readability
+# refactor:   Changes to the codebase that neither fix a bug nor add a new feature
+# test:       Additions or modifications to test cases or test infrastructure
+# chore:      Miscellaneous or unclassified tasks
+# build:      Changes that affect the build system or external dependencies
+# ci:         Changes to the continuous integration (CI) configuration or setup
+# perf:       Changes that optimize performance
+# revert:     A commit that undoes a previous commit
+
+# Trailers examples
+# -----------------------------------------
+# reviewed-by: John Doe <john@example.com>
+# refs: #123
+# co-authored-by: John Doe <john@example.com>
+# signed-off-by: Jane Doe <jane@example.com>
+# tested-by: QA Team
+# acked-by: Team Lead
+# related-merge-request: !123
+# related-issue: #555
+# fixes-bug-introduced-by: <hash>

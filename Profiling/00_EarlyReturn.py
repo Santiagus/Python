@@ -1,4 +1,4 @@
-from performance_fixtures import time_measurer
+from async_performance_decortors import time_measurer
 import asyncio
 
 
