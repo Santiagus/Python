@@ -31,7 +31,8 @@ Install with: `sudo apt install time`
 
 <details><summary>Example</summary>
 
-```/Profiling$ /usr/bin/time -p python 03_JuliaSet.py 
+```bash
+/Profiling$ /usr/bin/time -p python 03_JuliaSet.py 
 Length of x: 1000
 Total elements: 1000000
 calculate_z_serial_purepython took 2.4911041259765625 seconds
@@ -44,7 +45,7 @@ sys 0.12
 
 <details><summary>Verbose Example</summary>
 
-```
+```bash
 /Profiling$ /usr/bin/time --verbose python 03_JuliaSet.py 
 Length of x: 1000
 Total elements: 1000000
@@ -74,3 +75,55 @@ calculate_z_serial_purepython took 2.610788106918335 seconds
     Exit status: 0
 ```
 </details>
+
+
+### CProfiling Module
+
+CMD: `$ python -m cProfile -s cumulative 03_JuliaSet.py`
+
+<details><summary>Example</summary>
+
+```bash
+
+Length of x: 1000
+Total elements: 1000000
+calculate_z_serial_purepython took 7.626293420791626 seconds
+         36221995 function calls in 8.172 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    8.172    8.172 {built-in method builtins.exec}
+        1    0.047    0.047    8.172    8.172 03_JuliaSet.py:1(<module>)
+        1    0.397    0.397    8.125    8.125 03_JuliaSet.py:30(calc_pure_python)
+        1    5.567    5.567    7.626    7.626 03_JuliaSet.py:16(calculate_z_serial_purepython)
+ 34219980    2.059    0.000    2.059    0.000 {built-in method builtins.abs}
+  2002000    0.098    0.000    0.098    0.000 {method 'append' of 'list' objects}
+        1    0.003    0.003    0.003    0.003 {built-in method builtins.sum}
+        3    0.000    0.000    0.000    0.000 {built-in method builtins.print}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        2    0.000    0.000    0.000    0.000 {built-in method time.time}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+```
+</details>
+
+
+### Python cProfile load 
+
+
+This Python script will give the same info showed in the previous report:
+
+<details><summary>04_JuliaSetStats.py</summary>
+
+```python 
+import pstats
+
+p = pstats.Stats("profile.stats")
+p.sort_stats("cumulative")
+p.print_stats("cumulative")
+p.print_callers()
+``` 
+</details>
+
+
