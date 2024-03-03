@@ -27,6 +27,7 @@ def calculate_z_serial_purepython(maxiter, zs, cs):
     return output
 
 
+@profile
 def calc_pure_python(desired_width, max_iterations):
     """Create a list of complex coordinates (zs) and complex parameters (cs),
     build Julia set"""
