@@ -32,7 +32,7 @@ Install with: `sudo apt install time`
 <details><summary>Example</summary>
 
 ```bash
-/Profiling$ /usr/bin/time -p python 03_JuliaSet.py 
+/Profiling$ /usr/bin/time -p python 03_JuliaSet.py
 Length of x: 1000
 Total elements: 1000000
 calculate_z_serial_purepython took 2.4911041259765625 seconds
@@ -46,7 +46,7 @@ sys 0.12
 <details><summary>Verbose Example</summary>
 
 ```bash
-/Profiling$ /usr/bin/time --verbose python 03_JuliaSet.py 
+/Profiling$ /usr/bin/time --verbose python 03_JuliaSet.py
 Length of x: 1000
 Total elements: 1000000
 calculate_z_serial_purepython took 2.610788106918335 seconds
@@ -109,21 +109,97 @@ calculate_z_serial_purepython took 7.626293420791626 seconds
 </details>
 
 
-### Python cProfile load 
+### Python cProfile load
 
 
 This Python script will give the same info showed in the previous report:
 
 <details><summary>04_JuliaSetStats.py</summary>
 
-```python 
+```python
 import pstats
 
 p = pstats.Stats("profile.stats")
 p.sort_stats("cumulative")
 p.print_stats("cumulative")
 p.print_callers()
-``` 
+```
+</details>
+
+
+### Visualizing cProfile Output with SnakeViz
+
+[Snakeviz](https://jiffyclub.github.io/snakeviz/) is a visualizer that draws the output of cProfile
+
+`python -m pip install --upgrade pip setuptools wheel`
+`pip install snakeviz`
+
+1. Generate profile.stats
+`python -m cProfile -o profile.stats 03_JuliaSet.py`
+2. Run snakeviz
+`snakeviz profile.stats -s`
+
+### line_profiler for Line-by-Line Measurements
+1. Install line profiler : `pip install line_profiler`
+
+2. Use ***@profile*** decorator to mark the chosen function
+
+3. Execute the profler: `kernprof -l -v 03_JuliaSet.py`
+
+
+<details><summary> Output </summary>
+
+```bash
+kernprof -l -v 03_JuliaSet.py
+Length of x: 1000
+Total elements: 1000000
+calculate_z_serial_purepython took 8.200989961624146 seconds
+Wrote profile results to 03_JuliaSet.py.lprof
+Timer unit: 1e-06 s
+
+Total time: 8.74415 s
+File: 03_JuliaSet.py
+Function: calc_pure_python at line 30
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    30                                           @profile
+    31                                           def calc_pure_python(desired_width, max_iterations):
+    32                                               """Create a list of complex coordinates (zs) and complex parameters (cs),
+    33                                               build Julia set"""
+    34         1          1.7      1.7      0.0      x_step = (x2 - x1) / desired_width
+    35         1          0.3      0.3      0.0      y_step = (y1 - y2) / desired_width
+    36         1          0.2      0.2      0.0      x = []
+    37         1          0.1      0.1      0.0      y = []
+    38         1          0.1      0.1      0.0      ycoord = y2
+    39      1001        100.4      0.1      0.0      while ycoord > y1:
+    40      1000        141.4      0.1      0.0          y.append(ycoord)
+    41      1000         97.5      0.1      0.0          ycoord += y_step
+    42         1          0.1      0.1      0.0      xcoord = x1
+    43      1001        101.5      0.1      0.0      while xcoord < x2:
+    44      1000        124.7      0.1      0.0          x.append(xcoord)
+    45      1000        105.4      0.1      0.0          xcoord += x_step
+    46                                               # build a list of coordinates and the initial condition for each cell.
+    47                                               # Note that our initial condition is a constant and could easily be removed,
+    48                                               # we use it to simulate a real-world scenario with several inputs to our
+    49                                               # function
+    50         1          0.1      0.1      0.0      zs = []
+    51         1          0.1      0.1      0.0      cs = []
+    52      1001        133.0      0.1      0.0      for ycoord in y:
+    53   1001000      94495.5      0.1      1.1          for xcoord in x:
+    54   1000000     215159.6      0.2      2.5              zs.append(complex(xcoord, ycoord))
+    55   1000000     229558.1      0.2      2.6              cs.append(complex(c_real, c_imag))
+    56         1         54.6     54.6      0.0      print("Length of x:", len(x))
+    57         1          4.5      4.5      0.0      print("Total elements:", len(zs))
+    58         1          2.6      2.6      0.0      start_time = time.time()
+    59         1    8200978.3    8e+06     93.8      output = calculate_z_serial_purepython(max_iterations, zs, cs)
+    60         1          2.5      2.5      0.0      end_time = time.time()
+    61         1          0.9      0.9      0.0      secs = end_time - start_time
+    62         1         49.1     49.1      0.0      print(calculate_z_serial_purepython.__name__ + " took", secs, "seconds")
+    63                                               # This sum is expected for a 1000^2 grid with 300 iterations
+    64                                               # It ensures that our code evolves exactly as we'd intended
+    65         1       3033.4   3033.4      0.0      assert sum(output) == 33219980
+```
 </details>
 
 
