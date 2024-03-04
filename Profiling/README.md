@@ -140,11 +140,17 @@ p.print_callers()
 `snakeviz profile.stats -s`
 
 ### line_profiler for Line-by-Line Measurements
-1. Install line profiler : `pip install line_profiler`
+1. Install line profiler : \
+`pip install line_profiler`
 
 2. Use ***@profile*** decorator to mark the chosen function
-
-3. Execute the profler: `kernprof -l -v 03_JuliaSet.py`
+    ```python
+    @profile
+    def calc_pure_python(desired_width, max_iterations):
+    ...
+    ```
+3. Execute the profiler: \
+    `kernprof -l -v 03_JuliaSet.py`
 
 
 <details><summary> Output </summary>
@@ -203,3 +209,85 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 </details>
 
 
+## Using memory_profiler to Diagnose Memory Usage
+
+1. Install line profiler :
+`$ pip install memory_profiler`
+2. Use ***@profile*** decorator to mark the chosen function
+    ```python
+    @profile
+    def calc_pure_python(desired_width, max_iterations):
+    ...
+    ```
+3. Execute the profiler:
+`python -m memory_profiler 03_JuliaSet.py`
+
+<details><summary> Output </summary>
+
+```bash
+Length of x: 1000
+Total elements: 1000000
+calculate_z_serial_purepython took 22.655635118484497 seconds
+Filename: 03_JuliaSet.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    30   21.883 MiB   21.883 MiB           1   @profile
+    31                                         def calc_pure_python(desired_width, max_iterations):
+    32                                             """Create a list of complex coordinates (zs) and complex parameters (cs),
+    33                                             build Julia set"""
+    34   21.883 MiB    0.000 MiB           1       x_step = (x2 - x1) / desired_width
+    35   21.883 MiB    0.000 MiB           1       y_step = (y1 - y2) / desired_width
+    36   21.883 MiB    0.000 MiB           1       x = []
+    37   21.883 MiB    0.000 MiB           1       y = []
+    38   21.883 MiB    0.000 MiB           1       ycoord = y2
+    39   21.883 MiB    0.000 MiB        1001       while ycoord > y1:
+    40   21.883 MiB    0.000 MiB        1000           y.append(ycoord)
+    41   21.883 MiB    0.000 MiB        1000           ycoord += y_step
+    42   21.883 MiB    0.000 MiB           1       xcoord = x1
+    43   21.883 MiB    0.000 MiB        1001       while xcoord < x2:
+    44   21.883 MiB    0.000 MiB        1000           x.append(xcoord)
+    45   21.883 MiB    0.000 MiB        1000           xcoord += x_step
+    46                                             # build a list of coordinates and the initial condition for each cell.
+    47                                             # Note that our initial condition is a constant and could easily be removed,
+    48                                             # we use it to simulate a real-world scenario with several inputs to our
+    49                                             # function
+    50   21.883 MiB    0.000 MiB           1       zs = []
+    51   21.883 MiB    0.000 MiB           1       cs = []
+    52   98.711 MiB    0.000 MiB        1001       for ycoord in y:
+    53   98.711 MiB   45.090 MiB     1001000           for xcoord in x:
+    54   98.711 MiB    9.191 MiB     1000000               zs.append(complex(xcoord, ycoord))
+    55   98.711 MiB   22.547 MiB     1000000               cs.append(complex(c_real, c_imag))
+    56   98.711 MiB    0.000 MiB           1       print("Length of x:", len(x))
+    57   98.711 MiB    0.000 MiB           1       print("Total elements:", len(zs))
+    58   98.711 MiB    0.000 MiB           1       start_time = time.time()
+    59  109.484 MiB   10.773 MiB           1       output = calculate_z_serial_purepython(max_iterations, zs, cs)
+    60  109.484 MiB    0.000 MiB           1       end_time = time.time()
+    61  109.484 MiB    0.000 MiB           1       secs = end_time - start_time
+    62  109.484 MiB    0.000 MiB           1       print(calculate_z_serial_purepython.__name__ + " took", secs, "seconds")
+    63                                             # This sum is expected for a 1000^2 grid with 300 iterations
+    64                                             # It ensures that our code evolves exactly as we'd intended
+    65  109.484 MiB    0.000 MiB           1       assert sum(output) == 33219980
+```
+</details>
+
+### Sample memory use over time and plot it
+1. Sample memory use with: \
+`$ mprof run 03_JuliaSet.py`
+
+    ```bash
+    mprof: Sampling memory every 0.1s
+    running new process
+    running as a Python program...
+    Length of x: 1000
+    Total elements: 1000000
+    calculate_z_serial_purepython took 2.638066053390503 seconds
+    ```
+2. Plot the results
+
+    ```bash
+    $ pip install matplotlib # Install dependency packages
+    $ mprof plot             # Run
+    ```
+
+Plot shows the memory using brackets to shows where in time the profiled functions are entered.
