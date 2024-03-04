@@ -56,6 +56,7 @@ cover/
 *.prof
 *.lprof
 *.dat
+*.svg
 
 # Translations
 *.mo
