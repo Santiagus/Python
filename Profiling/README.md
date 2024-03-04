@@ -291,3 +291,16 @@ Line #    Mem usage    Increment  Occurrences   Line Contents
     ```
 
 Plot shows the memory using brackets to shows where in time the profiled functions are entered.
+
+
+### Introspecting an Existing Process with PySpy
+
+***py-spy*** is an sampling profiler than introspects an already-running Python process and reports in the console with a top-like display.
+
+1. Install :\
+`pip install py-spy`
+2. Sample recording: \
+`py-spy record python 03_JuliaSet.py`
+3. Run (specifying an output file): \
+`py-spy record -o profile.svg -- python 03_JuliaSet.py`
+4. Open the generated .svg file with a web browser
