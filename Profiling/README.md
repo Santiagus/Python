@@ -304,3 +304,111 @@ Plot shows the memory using brackets to shows where in time the profiled functio
 3. Run (specifying an output file): \
 `py-spy record -o profile.svg -- python 03_JuliaSet.py`
 4. Open the generated .svg file with a web browser
+
+### Using the dis Module to Examine CPython Bytecode
+The ***dis*** module lets us inspect the underlying bytecode that we run inside the stackbased CPython virtual machine.
+
+Run a python terminal and proceed to disassembly some functions:
+
+Run : `$ python`
+
+<details><summary>search_slow</summary>
+
+```python
+>>> import dis
+>>> import EarlyReturn
+>>> dis.dis(EarlyReturn.search_slow)
+  8           0 RESUME                   0
+
+  9           2 LOAD_CONST               1 (False)
+              4 STORE_FAST               2 (return_value)
+
+ 11           6 LOAD_FAST                0 (haystack)
+              8 GET_ITER
+        >>   10 FOR_ITER                10 (to 32)
+             12 STORE_FAST               3 (item)
+
+ 12          14 LOAD_FAST                3 (item)
+             16 LOAD_FAST                1 (needle)
+             18 COMPARE_OP               2 (==)
+             24 POP_JUMP_FORWARD_IF_FALSE     2 (to 30)
+
+ 13          26 LOAD_CONST               2 (True)
+             28 STORE_FAST               2 (return_value)
+        >>   30 JUMP_BACKWARD           11 (to 10)
+
+ 14     >>   32 LOAD_FAST                2 (return_value)
+             34 RETURN_VALUE
+```
+</details>
+
+<details><summary>search_fast</summary>
+
+```python
+>>> dis.dis(EarlyReturn.search_fast)
+  1           0 RESUME                   0
+
+  2           2 LOAD_FAST                0 (haystack)
+              4 GET_ITER
+        >>    6 FOR_ITER                11 (to 30)
+              8 STORE_FAST               2 (item)
+
+  3          10 LOAD_FAST                2 (item)
+             12 LOAD_FAST                1 (needle)
+             14 COMPARE_OP               2 (==)
+             20 POP_JUMP_FORWARD_IF_FALSE     3 (to 28)
+
+  4          22 POP_TOP
+             24 LOAD_CONST               1 (True)
+             26 RETURN_VALUE
+
+  3     >>   28 JUMP_BACKWARD           12 (to 6)
+
+  5     >>   30 LOAD_CONST               2 (False)
+             32 RETURN_VALUE
+```
+</details>
+
+
+### Built in function VS Loop
+
+This is an example that sum up values in a range with two different approaches:
+- A loop that accumulate values in a variable
+- Use of the sum build-in function
+
+<details><summary>02_BuiltSUmVSLoop.py</summary>
+
+```python
+from performance_decorators import time_measurer
+
+@time_measurer
+def fn_expressive(upper=1_000_000):
+    total = 0
+    for n in range(upper):
+        total += n
+    return total
+
+@time_measurer
+def fn_terse(upper=1_000_000):
+    return sum(range(upper))
+
+if __name__ == "__main__":
+    fn_expressive()
+    fn_terse()
+```
+</details>
+
+</br>
+
+*NOTE:* As a rule of thumb the more lines in source code the more bytecode generated that will lead to more overhead.
+
+<details><summary>iPython output </summary>
+
+```bash
+In [10]: %timeit fn_terse()
+8.34 ms ± 383 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+
+In [11]: %timeit fn_expressive()
+20.1 ms ± 578 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)
+```
+</details>
