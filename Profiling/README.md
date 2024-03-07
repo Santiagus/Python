@@ -513,3 +513,17 @@ $ kernprof -l -v 05_UnitTestSample.py
 $ python -m memory_profiler 05_UnitTestSample.py
 ```
 
+
+## Strategies to Profile Your Code Successfully
+
+Results obtained for different versions of the code should be comparable when those were run in same conditions.
+
+Than means same HW and system configuration, most actual platforms have a performance/turbo mode that modify CPU/RAM frequency temporarily. Than will affect to the results.
+
+Some condiderations to create a more stable benchmark:
+- Set a constant CPU/RAM frequency in BIOS
+- Run test always in the same power mode.
+- Disable background tools.
+- Run test multiple times and discard abnormal measurements.
+- In Unix system drop to run level 1 so that no other tasks are runnig.
+
