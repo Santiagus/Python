@@ -13,8 +13,7 @@ For measurement of the different code verions some decorator funcions are define
 
 The [timeit module](https://docs.python.org/3.7/library/timeit.html) temporarily disables the garbage collector.
 
-This might impact the speed you’ll see with real-world operations
-if the garbage collector would normally be invoked by your operations.
+This might impact the speed you’ll see with real-world operations if the garbage collector would normally be invoked by your operations.
 
 Example:
 ```
@@ -459,3 +458,58 @@ In [5]: dis.dis(fn_terse)
              56 RETURN_VALUE
 ```
 </details>
+
+
+## Unit test example
+
+***NOTE:*** @profile decorator requires to use some profiler like memory_profiler or kernprof, running the code with pytest or python without the proper module will lead to an error because the decorator is not into the local namespace.
+
+no-op decorator will made posible to run the test/code without modifying the code.
+
+<details><summary>05_UnitTestSample.py</summary>
+
+```python
+import time
+
+def test_some_fn():
+    """Check basic behaviors for our function"""
+    assert some_fn(2) == 4
+    assert some_fn(1) == 1
+    assert some_fn(-1) == 1
+
+@profile
+def some_fn(useful_input):
+    """An expensive function that we wish to both test and profile"""
+    # artificial "we're doing something clever and expensive" delay
+    time.sleep(1)
+    return useful_input**2
+
+if __name__ == "__main__":
+    print(f"Example call `some_fn(2)` == {some_fn(2)}")
+```
+</details>
+</br>
+
+Add the no-op decorator ath the start of the code.
+
+<details><summary>no-op decorator</summary>
+
+```python
+# check for line_profiler or memory_profiler in the local scope, both
+# are injected by their respective tools or they're absent
+# if these tools aren't being used (in which case we need to substitute
+# a dummy @profile decorator)
+if "line_profiler" not in dir() and "profile" not in dir():
+    def profile(func):
+        return func
+```
+</details>
+
+## Check
+
+```bash
+$ pytest 05_UnitTestSample.py
+$ kernprof -l -v 05_UnitTestSample.py
+$ python -m memory_profiler 05_UnitTestSample.py
+```
+
