@@ -412,3 +412,50 @@ In [11]: %timeit fn_expressive()
 20.1 ms ± 578 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)
 ```
 </details>
+
+### ByteCode Comparison
+
+`$ ipython`
+
+<details><summary>fn_expressive</summary>
+
+```python
+In [2]: import dis
+In [3]: from BuiltSumVSloop import fn_expressive, fn_terse
+In [4]: dis.dis(fn_expressive)
+  1           0 RESUME                   0
+  2           2 LOAD_CONST               1 (0)
+              4 STORE_FAST               1 (total)
+  3           6 LOAD_GLOBAL              1 (NULL + range)
+             18 LOAD_FAST                0 (upper)
+             20 PRECALL                  1
+             24 CALL                     1
+             34 GET_ITER
+        >>   36 FOR_ITER                 7 (to 52)
+             38 STORE_FAST               2 (n)
+  4          40 LOAD_FAST                1 (total)
+             42 LOAD_FAST                2 (n)
+             44 BINARY_OP               13 (+=)
+             48 STORE_FAST               1 (total)
+             50 JUMP_BACKWARD            8 (to 36)
+  5     >>   52 LOAD_FAST                1 (total)
+             54 RETURN_VALUE
+```
+</details>
+
+
+<details><summary>fn_terse</summary>
+
+```python
+In [5]: dis.dis(fn_terse)
+  8           0 RESUME                   0
+  9           2 LOAD_GLOBAL              1 (NULL + sum)
+             14 LOAD_GLOBAL              3 (NULL + range)
+             26 LOAD_FAST                0 (upper)
+             28 PRECALL                  1
+             32 CALL                     1
+             42 PRECALL                  1
+             46 CALL                     1
+             56 RETURN_VALUE
+```
+</details>
