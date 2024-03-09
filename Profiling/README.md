@@ -527,3 +527,7 @@ Some condiderations to create a more stable benchmark:
 - Run test multiple times and discard abnormal measurements.
 - In Unix system drop to run level 1 so that no other tasks are runnig.
 
+### Tools to visualize memory managing
+
+Memory Lead debbuger: https://pypi.org/project/Dozer/
+Memory Usage Observer: https://pypi.org/project/dowser/
