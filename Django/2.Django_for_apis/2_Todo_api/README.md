@@ -37,3 +37,30 @@ class Todo(models.Model):
     def __str__(self):
         return self.title   
 ```
+
+Migration with the new model
+`python manage.py makemigrations todos`
+
+Sync database
+
+`python manage.py migrate`
+
+
+Register Model to to interact from panel
+```python
+# todos/admin.py
+from django.contrib import admin
+from .models import Todo
+
+class TodoAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "body",
+    )
+
+admin.site.register(Todo, TodoAdmin)
+```
+
+Create superuser
+
+`python manage.py createsuperuser`
