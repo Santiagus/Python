@@ -1,5 +1,11 @@
-broker_url = 'pyamqp://guest:guest@localhost:5672//'
-result_backend = 'rpc://'
+import os
+
+
+broker_url = os.getenv(
+	"CELERY_BROKER_URL",
+	"pyamqp://guest:guest@localhost:5672//",
+)
+result_backend = os.getenv("CELERY_RESULT_BACKEND", "rpc://")
 
 task_serializer = 'json'
 result_serializer = 'json'

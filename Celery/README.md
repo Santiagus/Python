@@ -123,7 +123,59 @@ True
 
 A ready to run python script at `test_task.py`
 
-## 7. Useful Worker Commands & Debugging
+## 7. Running Tests
+
+Install the development dependencies:
+```Bash
+pip install -r requirements_dev.txt
+```
+
+### Unit tests
+
+`test/test_unit.py` tests the `add` task directly with `add.run(...)`. These
+tests verify the task's calculation for normal, negative, and fractional input
+without starting Celery, RabbitMQ, Docker, or a worker process.
+
+```Bash
+pytest -v test/test_unit.py
+```
+
+### Integration tests
+
+`test/test_integration.py` verifies that the Celery task, broker, worker, and
+result backend work together in one test process. It uses Celery's in-memory
+transport and an in-process worker, so it is fast and does not require Docker
+or an external RabbitMQ service.
+
+```Bash
+pytest -v test/test_integration.py
+```
+
+### End-to-end tests
+
+`test/test_e2e.py` verifies the production-like process boundary. It starts a
+disposable RabbitMQ container, builds the runtime broker configuration, starts
+a separate Celery worker process, waits for that worker to become ready, and
+then submits a task through RabbitMQ before checking the result.
+
+This test requires Docker and uses `testcontainers` and `pika`. The RabbitMQ
+container and worker process are cleaned up automatically after the test.
+
+```Bash
+pytest -v test/test_e2e.py
+```
+
+### Full suite
+
+Run all three test layers with:
+```Bash
+pytest -v
+```
+
+Tests are organized in `test/test_unit.py`, `test/test_integration.py`, and
+`test/test_e2e.py`.
+
+## 8. Useful Worker Commands & Debugging
 
 | Command | Purpose |
 | --- | --- |
@@ -132,7 +184,7 @@ A ready to run python script at `test_task.py`
 | `celery -A tasks purge` | Discard all pending messages from queues |
 
 
-## 8. Load config from configuration module
+## 9. Load config from configuration module
 Sample config at `celeryconfig.py`
 ```bass
 broker_url = 'pyamqp://guest:guest@localhost:5672//'

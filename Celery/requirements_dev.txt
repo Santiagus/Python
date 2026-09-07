@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8.0
+testcontainers>=4.0
+pika>=1.3
