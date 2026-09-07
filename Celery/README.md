@@ -101,7 +101,7 @@ source .venv/bin/activate
 ```
 
 
-Execute the task asynchronously:Python
+Execute the task asynchronously:
 ```python
 >>> from tasks import add
 >>> result = add.delay(4, 4)
@@ -121,6 +121,8 @@ True
 'SUCCESS'
 ```
 
+A ready to run python script at `test_task.py`
+
 ## 7. Useful Worker Commands & Debugging
 
 | Command | Purpose |
@@ -128,3 +130,23 @@ True
 | `celery -A tasks status` | Check if workers are alive |
 | `celery -A tasks inspect active` | View currently executing tasks |
 | `celery -A tasks purge` | Discard all pending messages from queues |
+
+
+## 8. Load config from configuration module
+Sample config at `celeryconfig.py`
+```bass
+broker_url = 'pyamqp://guest:guest@localhost:5672//'
+result_backend = 'rpc://'
+
+task_serializer = 'json'
+result_serializer = 'json'
+accept_content = ['json']
+timezone = 'Europe/Oslo'
+enable_utc = True
+```
+
+Config can be applied after app creation:
+```python
+app = Celery('tasks')
+app.config_from_object('celeryconfig')
+```
