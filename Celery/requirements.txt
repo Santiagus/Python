@@ -1,0 +1,8 @@
+# Core Celery
+celery>=5.4.0
+# Broker & Result Backend Drivers
+redis>=5.0.0      # Required if using Redis as broker or backend
+# amqp>=5.2.0     # Included by default with Celery for RabbitMQ
+# Broker & Result Backend Drivers
+redis>=5.0.0      # Required if using Redis as broker or backend
+# amqp>=5.2.0     # Included by default with Celery for RabbitMQ
