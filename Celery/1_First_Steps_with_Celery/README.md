@@ -6,15 +6,24 @@ This directory contains the code and environment setup for following the officia
 
 ## 1. Directory Structure
 
-Ensure your `celery/` directory is organized as follows:
+The current first-steps project is organized as follows:
 
 ```text
-celery/
-├── .venv/               # Isolated Python virtual environment with Celery dependencies
-├── README.md            # Setup instructions, configuration notes, and execution steps
-├── requirements.txt     # Python package dependencies (celery, redis, amqp drivers)
-├── docker-compose.yml   # Container definitions for local broker services (RabbitMQ / Redis)
-└── tasks.py             # Celery app initialization, broker config, and task definitions
+1_First_Steps_with_Celery/
+├── .venv/               # Local virtual environment (generated)
+├── .vscode/             # Workspace/editor settings
+├── README.md            # Setup instructions and execution steps
+├── celeryconfig.py      # Environment-based Celery configuration
+├── pytest.ini           # Pytest configuration
+├── requirements.txt     # Runtime dependencies
+├── requirements_dev.txt # Test and development dependencies
+├── tasks.py             # Celery app and task definitions
+├── test_task.py         # Manual broker/worker smoke-test script
+└── test/
+    ├── __init__.py
+    ├── test_e2e.py      # RabbitMQ container and external worker test
+    ├── test_integration.py # In-process worker test
+    └── test_unit.py     # Direct task-function tests
 ```
 
 ## 2. Broker Setup
@@ -137,7 +146,7 @@ tests verify the task's calculation for normal, negative, and fractional input
 without starting Celery, RabbitMQ, Docker, or a worker process.
 
 ```Bash
-pytest -v test/test_unit.py
+python -m pytest -v test/test_unit.py
 ```
 
 ### Integration tests
@@ -148,7 +157,7 @@ transport and an in-process worker, so it is fast and does not require Docker
 or an external RabbitMQ service.
 
 ```Bash
-pytest -v test/test_integration.py
+python -m pytest -v test/test_integration.py
 ```
 
 ### End-to-end tests
@@ -162,14 +171,14 @@ This test requires Docker and uses `testcontainers` and `pika`. The RabbitMQ
 container and worker process are cleaned up automatically after the test.
 
 ```Bash
-pytest -v test/test_e2e.py
+python -m pytest -v test/test_e2e.py
 ```
 
 ### Full suite
 
 Run all three test layers with:
 ```Bash
-pytest -v
+python -m pytest -v
 ```
 
 Tests are organized in `test/test_unit.py`, `test/test_integration.py`, and
