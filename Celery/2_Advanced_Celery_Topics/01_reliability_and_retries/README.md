@@ -68,7 +68,8 @@ GET  /transactions?account_id=...&status=...&created_after=...
 
 Responsibilities:
 
-- Validate account, amount, currency, and idempotency key.
+- Validate account, amount, idempotency key, and that the transaction currency
+  matches the account currency.
 - Create a local transaction with status `pending`.
 - Publish `sync_transaction_status(transaction_id)` after the database commit.
 - Return `202 Accepted` with the local transaction ID.
@@ -114,8 +115,15 @@ accounts
 --------
 id                 UUID primary key
 external_reference VARCHAR unique not null
+balance            NUMERIC(18, 2) not null default 0
+currency           CHAR(3) not null
 created_at         TIMESTAMP not null
 ```
+
+`balance` is a simulated account balance for this exercise; no real money is
+moved. Transaction processing must define separately whether the balance is
+checked or changed, because provider synchronization alone does not guarantee
+that a local balance update is safe.
 
 ### Transaction
 
