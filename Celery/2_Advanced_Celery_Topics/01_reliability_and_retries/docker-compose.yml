@@ -1,0 +1,95 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    environment:
+      POSTGRES_DB: transactions
+      POSTGRES_USER: celery
+      POSTGRES_PASSWORD: celery-dev-password
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U celery -d transactions"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: celery
+      RABBITMQ_DEFAULT_PASS: celery-dev-password
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  provider-api:
+    build:
+      context: .
+      dockerfile: services/provider_api/Dockerfile
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  client-api:
+    build:
+      context: .
+      dockerfile: services/client_api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://celery:celery-dev-password@postgres:5432/transactions
+      CELERY_BROKER_URL: amqp://celery:celery-dev-password@rabbitmq:5672//
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://celery:celery-dev-password@postgres:5432/transactions
+      CELERY_BROKER_URL: amqp://celery:celery-dev-password@rabbitmq:5672//
+      PROVIDER_URL: http://provider-api:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      provider-api:
+        condition: service_healthy
+
+  worker-beat:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://celery:celery-dev-password@postgres:5432/transactions
+      CELERY_BROKER_URL: amqp://celery:celery-dev-password@rabbitmq:5672//
+      PROVIDER_URL: http://provider-api:8001
+    command: ["celery", "-A", "tasks.celery_app", "beat", "--loglevel=INFO"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      provider-api:
+        condition: service_healthy

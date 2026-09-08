@@ -1,0 +1,5 @@
+# Local development and VS Code Test Explorer dependencies.
+-r requirements.txt
+pytest>=8.0,<9.0
+pytest-asyncio>=0.24,<1.0
+debugpy>=1.8,<2.0

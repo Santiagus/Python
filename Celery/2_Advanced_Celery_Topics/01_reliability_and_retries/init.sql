@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     external_reference VARCHAR(255) NOT NULL UNIQUE,
-    balance NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (balance >= 0),
+    balance BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
     currency CHAR(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -13,7 +13,7 @@ CREATE TABLE transactions (
     account_id UUID NOT NULL REFERENCES accounts(id),
     idempotency_key VARCHAR(255) NOT NULL UNIQUE,
     provider_transaction_id VARCHAR(255) UNIQUE,
-    amount NUMERIC(18, 2) NOT NULL CHECK (amount > 0),
+    amount BIGINT NOT NULL CHECK (amount > 0),
     currency CHAR(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
     status VARCHAR(32) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'syncing', 'succeeded', 'failed', 'unknown')),

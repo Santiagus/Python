@@ -1,0 +1,107 @@
+@clientUrl = http://localhost:8010
+@providerUrl = http://localhost:8011
+
+# When running the VS Code debug configurations instead of Docker, use:
+# @clientUrl = http://localhost:8010
+# @providerUrl = http://localhost:8011
+
+### Client API: health
+GET {{clientUrl}}/health
+
+### Client API: list accounts
+GET {{clientUrl}}/accounts
+
+### Client API: create account
+# Copy the returned id into @accountId before creating a transaction.
+POST {{clientUrl}}/accounts
+Content-Type: application/json
+
+{
+  "external_reference": "rest-client-account-001",
+  "balance": 100000,
+  "currency": "USD"
+}
+
+### Client API: list transactions
+GET {{clientUrl}}/transactions
+
+### Client API: list transactions for an account
+# Replace the value with an account id returned by POST /accounts.
+### transactions account 1
+GET {{clientUrl}}/transactions?account_id=c9fd7af8-e806-4c1f-97e8-682c22f32093
+
+### transactions account 2
+GET {{clientUrl}}/transactions?account_id=c5de398f-4c44-4631-8912-e6304da6534a
+
+### Client API: list transactions by status
+GET {{clientUrl}}/transactions?status=pending
+
+### Client API: create transaction account 1
+# Replace account_id with an existing account id. Reuse this idempotency key
+# to verify that repeating the request does not create a duplicate transaction.
+POST {{clientUrl}}/transactions
+Idempotency-Key: rest-client-permanent-001-tx7
+Content-Type: application/json
+
+{
+  "account_id": "c9fd7af8-e806-4c1f-97e8-682c22f32093",
+  "amount": "1200",
+  "currency": "USD"
+}
+
+### Client API: create transaction account 2
+# Replace account_id with an existing account id. Reuse this idempotency key
+# to verify that repeating the request does not create a duplicate transaction.
+POST {{clientUrl}}/transactions
+Idempotency-Key: rest-client-permanent-001-tx03
+Content-Type: application/json
+
+{
+  "account_id": "c5de398f-4c44-4631-8912-e6304da6534a",
+  "amount": "900",
+  "currency": "USD"
+}
+
+### Client API: get transaction
+# Replace the path value with a transaction id returned by POST /transactions.
+GET {{clientUrl}}/transactions/d4ef5fc8-ac94-4c96-ae40-4877db42f576
+
+### Provider API: health
+GET {{providerUrl}}/health
+
+### Provider API: create successful provider transaction
+POST {{providerUrl}}/provider/transactions
+Idempotency-Key: rest-client-provider-001
+Content-Type: application/json
+
+{
+  "amount": 2500,
+  "currency": "USD",
+  "failure_mode": "success"
+}
+
+### Provider API: create temporary failure
+POST {{providerUrl}}/provider/transactions
+Idempotency-Key: rest-client-temporary-001
+Content-Type: application/json
+
+{
+  "amount": 2500,
+  "currency": "USD",
+  "failure_mode": "temporary"
+}
+
+### Provider API: create permanent failure
+POST {{providerUrl}}/provider/transactions
+Idempotency-Key: rest-client-permanent-001
+Content-Type: application/json
+
+{
+  "amount": 2500,
+  "currency": "USD",
+  "failure_mode": "permanent"
+}
+
+### Provider API: get provider transaction
+# Replace the path value with provider_transaction_id from a successful response.
+GET {{providerUrl}}/provider/transactions/provider-00000000-0000-0000-0000-000000000000

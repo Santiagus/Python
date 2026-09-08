@@ -61,6 +61,7 @@ Endpoints:
 
 ```text
 POST /accounts
+GET  /accounts
 POST /transactions
 GET  /transactions/{transaction_id}
 GET  /transactions?account_id=...&status=...&created_after=...
@@ -115,7 +116,7 @@ accounts
 --------
 id                 UUID primary key
 external_reference VARCHAR unique not null
-balance            NUMERIC(18, 2) not null default 0
+balance            BIGINT not null default 0
 currency           CHAR(3) not null
 created_at         TIMESTAMP not null
 ```
@@ -124,6 +125,11 @@ created_at         TIMESTAMP not null
 moved. Transaction processing must define separately whether the balance is
 checked or changed, because provider synchronization alone does not guarantee
 that a local balance update is safe.
+
+Monetary values are integer minor units. For example, `100` represents USD
+`$1.00`, while `100000` represents `$1000.00`. The currency determines the
+number of display decimals; formatting belongs at the UI or presentation
+boundary and must not introduce floats into transaction processing.
 
 ### Transaction
 
@@ -134,7 +140,7 @@ id                       UUID primary key
 account_id               UUID foreign key -> accounts.id
 idempotency_key          VARCHAR unique not null
 provider_transaction_id  VARCHAR unique nullable
-amount                   NUMERIC(18, 2) not null
+amount                   BIGINT not null
 currency                 CHAR(3) not null
 status                   VARCHAR not null
 provider_status          VARCHAR nullable
@@ -242,21 +248,125 @@ retry scheduling queries.
 
 ## PostgreSQL Setup
 
-Build and start PostgreSQL from this directory:
+Start PostgreSQL and RabbitMQ from this directory:
 
 ```text
-docker build -f Dockerfile.postgres -t celery-reliability-postgres .
-docker run --name celery-reliability-postgres \
-	-e POSTGRES_DB=transactions \
-	-e POSTGRES_USER=celery \
-	-e POSTGRES_PASSWORD=celery-dev-password \
-	-p 5432:5432 \
-	-d celery-reliability-postgres
+docker compose up -d postgres rabbitmq
 ```
 
 The initialization script creates the three tables, UUID generation support,
 constraints, indexes, and the account/transaction currency check. PostgreSQL
 only runs initialization scripts when the data directory is empty.
+
+## Transaction API
+
+Start the complete API stack with Docker Compose:
+
+```text
+docker compose up --build -d
+```
+
+The API provides:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Return a lightweight liveness response. |
+| `POST` | `/accounts` | Create a simulated account. |
+| `POST` | `/transactions` | Create a pending transaction. Requires the `Idempotency-Key` header and returns `202 Accepted`. |
+| `GET` | `/transactions/{transaction_id}` | Read the current local transaction state. |
+| `GET` | `/transactions?account_id=...&status=...` | List transactions with optional filters. |
+
+The request models use Pydantic validation for positive amounts, nonnegative
+balances, three-letter currencies, and required identifiers. The service uses
+async SQLAlchemy sessions, lifespan-managed engine cleanup, request IDs,
+centralized error handling, and JSON logs. The Celery worker and provider
+simulator are connected through RabbitMQ and the worker records each provider
+attempt in `sync_attempts`.
+
+For local development, create the project virtual environment and install the
+development requirements:
+
+```text
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements_dev.txt
+```
+
+Open `.vscode/celery.code-workspace` to use the configured `.venv` interpreter
+and run the tests from the VS Code Test Explorer.
+
+To inspect the API data with the VS Code PostgreSQL extension, connect using:
+
+```text
+Host: localhost
+Port: 5433
+Database: transactions
+User: celery
+Password: celery-dev-password
+Schema: public
+```
+
+The Docker stack uses ports `8000` and `8001`. The VS Code debug configurations
+use `http://localhost:8010` for the client API and `http://localhost:8011` for
+the provider so they can run alongside the Docker services.
+
+The client commits a transaction before publishing its synchronization task.
+If RabbitMQ or Celery is unavailable, the API still returns `202 Accepted` and
+the transaction remains `pending`. Celery Beat periodically scans PostgreSQL
+and republishes pending or retryable transactions when the broker is available.
+Run the worker, worker Beat, RabbitMQ, PostgreSQL, and provider services for
+transactions to be processed.
+
+If a worker stops while a transaction is `syncing`, Celery requests message
+redelivery and the Beat reconciliation task resets `syncing` rows older than
+60 seconds to `pending`. The provider idempotency key makes the recovery safe
+even if the provider accepted the request before the worker stopped.
+
+Sample requests for every client and provider endpoint are in
+`requests/requests.rest`. Open that file with the REST Client extension and use
+the `Send Request` links above each request. The file defaults to the Docker
+ports and includes commented alternatives for the VS Code debug ports.
+
+To debug the Celery task code in VS Code, stop the Docker worker and provider
+first so they cannot consume the task or occupy the debug provider port:
+
+```text
+docker compose stop worker provider-api
+```
+
+Keep PostgreSQL and RabbitMQ running, then start the `Debug All Services`
+compound configuration from `.vscode/launch.json`. Send requests to
+`http://localhost:8010`; the VS Code worker will consume them and breakpoints
+in `services/worker/tasks.py` will be hit. The Docker worker uses
+`http://provider-api:8001`, while the VS Code worker uses the debug provider at
+`http://localhost:8011`.
+
+Run the unit tests with:
+
+```text
+pytest -q tests
+```
+
+Run the complete local stack with:
+
+```text
+docker compose up --build -d
+```
+
+When the default host ports are available, the client API is at
+`http://localhost:8000`, the provider simulator is at `http://localhost:8001`,
+PostgreSQL is exposed on host port `5433`, RabbitMQ on `5673`, and the RabbitMQ
+management UI on `15673`. The nonstandard host ports avoid conflicting with an
+already-running local PostgreSQL or RabbitMQ installation.
+
+Run the Compose smoke test against the client API:
+
+```text
+E2E_BASE_URL=http://localhost:8000 pytest -q tests/e2e
+```
+
+The VS Code workspace file at `.vscode/celery.code-workspace` opens the client
+API, provider API, worker, and shared project together. RabbitMQ management is
+available at `http://localhost:15672` with the `celery` development credentials.
 
 ## Sequence Diagrams
 
@@ -313,13 +423,6 @@ sequenceDiagram
 ```
 
 ### Duplicate delivery and idempotency
-Python 3.11 with libraries like Celery (asynchronous task management)
-FastAPI as a web framework for microservices
-Django as framework for full-stack services
-Airflow for task distribution and management
-Redis for caching
-PostgreSQL 13,14 as relational database
-Google Cloud Platform as main cloud solution
 ```mermaid
 sequenceDiagram
 		participant B as RabbitMQ
