@@ -29,22 +29,14 @@ The central rule is:
 
 ## Architecture
 
-```text
-Client
-	|
-	v
-FastAPI ------------------------------+
-	|                                    |
-	| writes and reads                   | publishes transaction IDs
-	v                                    v
-PostgreSQL                       RabbitMQ Broker
-	^                                    |
-	|                                    v
-	+------------------------------ Celery Worker
-																			 |
-																			 | HTTP status request
-																			 v
-															Unreliable Provider API
+```mermaid
+flowchart LR
+    client[Client] --> api[FastAPI]
+    api -->|writes and reads| db[(PostgreSQL)]
+    api -->|publishes transaction IDs| broker[RabbitMQ Broker]
+    broker --> worker[Celery Worker]
+    worker -->|HTTP status request| provider[Unreliable Provider API]
+    worker -->|records status and attempts| db
 ```
 
 ### Responsibilities
