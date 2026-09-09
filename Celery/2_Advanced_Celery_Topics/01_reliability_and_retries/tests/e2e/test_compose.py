@@ -1,3 +1,5 @@
+"""End-to-end smoke tests for the Docker Compose deployment health endpoints."""
+
 import os
 
 import httpx
@@ -12,6 +14,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.mark.asyncio
 async def test_compose_health_endpoints():
+    """The compose stack should expose a healthy root endpoint when configured."""
     base_url = os.environ["E2E_BASE_URL"]
     async with httpx.AsyncClient(base_url=base_url, timeout=5) as client:
         response = await client.get("/health")

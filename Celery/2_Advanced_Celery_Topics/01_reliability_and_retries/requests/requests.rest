@@ -28,9 +28,6 @@ GET {{clientUrl}}/transactions
 ### Client API: list transactions for an account
 # Replace the value with an account id returned by POST /accounts.
 ### transactions account 1
-GET {{clientUrl}}/transactions?account_id=c9fd7af8-e806-4c1f-97e8-682c22f32093
-
-### transactions account 2
 GET {{clientUrl}}/transactions?account_id=c5de398f-4c44-4631-8912-e6304da6534a
 
 ### Client API: list transactions by status
@@ -40,12 +37,12 @@ GET {{clientUrl}}/transactions?status=pending
 # Replace account_id with an existing account id. Reuse this idempotency key
 # to verify that repeating the request does not create a duplicate transaction.
 POST {{clientUrl}}/transactions
-Idempotency-Key: rest-client-permanent-001-tx7
+Idempotency-Key: rest-client-permanent-001-tx2
 Content-Type: application/json
 
 {
-  "account_id": "c9fd7af8-e806-4c1f-97e8-682c22f32093",
-  "amount": "1200",
+  "account_id": "c5de398f-4c44-4631-8912-e6304da6534a",
+  "amount": "200",
   "currency": "USD"
 }
 
@@ -53,7 +50,7 @@ Content-Type: application/json
 # Replace account_id with an existing account id. Reuse this idempotency key
 # to verify that repeating the request does not create a duplicate transaction.
 POST {{clientUrl}}/transactions
-Idempotency-Key: rest-client-permanent-001-tx03
+Idempotency-Key: rest-client-permanent-001-tx01
 Content-Type: application/json
 
 {
@@ -64,7 +61,7 @@ Content-Type: application/json
 
 ### Client API: get transaction
 # Replace the path value with a transaction id returned by POST /transactions.
-GET {{clientUrl}}/transactions/d4ef5fc8-ac94-4c96-ae40-4877db42f576
+GET {{clientUrl}}/transactions/01a5bfcf-9dab-40af-9dc9-c2df0ca0a5f5
 
 ### Provider API: health
 GET {{providerUrl}}/health

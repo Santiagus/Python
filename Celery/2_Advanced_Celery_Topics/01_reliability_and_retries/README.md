@@ -98,6 +98,7 @@ POST /provider/transactions
 GET  /provider/transactions/{provider_transaction_id}
 
 failure_mode=success
+failure_mode=sequence     # first two attempts return 503, then success
 failure_mode=temporary    # first two attempts return 503
 failure_mode=permanent    # returns 400
 failure_mode=timeout      # delays beyond the client timeout
@@ -364,6 +365,19 @@ Run the Compose smoke test against the client API:
 E2E_BASE_URL=http://localhost:8000 pytest -q tests/e2e
 ```
 
+### Failure policy
+
+Task delivery is at-least-once. A retryable provider error is persisted as
+`unknown` before Celery schedules another attempt with bounded exponential
+backoff and jitter. Once the retry limit is reached, the transaction is
+persisted as `failed`. A permanent provider `4xx` response is persisted as
+`failed` without another retry. The provider receives the same idempotency key
+on every attempt, so a repeated create request does not create a second
+provider transaction. A row lock and terminal-state check make duplicate task
+delivery safe; stale `syncing` work is reset and republished by reconciliation.
+The worker tests exercise these guarantees with Testcontainers PostgreSQL and
+the FastAPI provider fixture.
+
 The VS Code workspace file at `.vscode/celery.code-workspace` opens the client
 API, provider API, worker, and shared project together. RabbitMQ management is
 available at `http://localhost:15672` with the `celery` development credentials.
@@ -445,13 +459,21 @@ sequenceDiagram
 
 ## Completion Checklist
 
-- [ ] API creates local transactions and returns `202 Accepted`.
-- [ ] Celery receives IDs rather than ORM objects or complete request payloads.
-- [ ] Temporary failures retry with bounded exponential backoff and jitter.
-- [ ] Permanent failures do not retry indefinitely.
-- [ ] Provider creation is idempotent.
-- [ ] Duplicate task delivery is safe.
-- [ ] Database updates use commit and rollback handling.
-- [ ] Worker termination and redelivery are tested.
-- [ ] Metrics include attempts, retry count, duration, and final outcome.
-- [ ] The README documents the actual delivery and consistency guarantees.
+- [x] API creates local transactions and returns `202 Accepted`.
+- [x] Celery receives IDs rather than ORM objects or complete request payloads.
+- [x] Successful synchronization is tested.
+- [x] Temporary failures retry with bounded exponential backoff and jitter.
+- [x] Retry exhaustion is tested.
+- [x] Permanent failures do not retry indefinitely.
+- [x] Provider creation is idempotent.
+- [x] Duplicate task delivery is safe through row locking and terminal-state checks.
+- [x] Database updates use commit handling and context-managed connection cleanup; explicit rollback regression coverage is still pending.
+- [x] Worker redelivery is tested through stale-task reconciliation.
+- [x] Metrics include attempts, retry count, duration, and final outcome in structured worker logs.
+- [x] Reliability tests use a Testcontainers PostgreSQL database and a FastAPI provider fixture.
+- [x] The README documents the actual delivery and consistency guarantees.
+- [x] Docker Compose E2E coverage runs when `E2E_BASE_URL` points to a running stack.
+```bash
+docker compose up --build -d
+E2E_BASE_URL=http://localhost:8000 .venv/bin/pytest -q tests/e2e
+```

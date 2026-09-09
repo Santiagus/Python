@@ -1,3 +1,5 @@
+"""SQLAlchemy models for accounts, transactions, and retry history."""
+
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
@@ -8,10 +10,14 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
+    """Shared declarative base for all ORM models in the application."""
+
     pass
 
 
 class TransactionStatus(StrEnum):
+    """Lifecycle states for a transaction synchronization record."""
+
     PENDING = "pending"
     SYNCING = "syncing"
     SUCCEEDED = "succeeded"
@@ -20,6 +26,8 @@ class TransactionStatus(StrEnum):
 
 
 class Account(Base):
+    """Bank account record used as the parent entity for transactions."""
+
     __tablename__ = "accounts"
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -31,6 +39,8 @@ class Account(Base):
 
 
 class Transaction(Base):
+    """Local transaction record tracked by the API and worker."""
+
     __tablename__ = "transactions"
     __table_args__ = (
         CheckConstraint("amount > 0", name="transactions_amount_positive"),
@@ -55,6 +65,8 @@ class Transaction(Base):
 
 
 class SyncAttempt(Base):
+    """Audit record capturing each worker synchronization attempt."""
+
     __tablename__ = "sync_attempts"
     __table_args__ = (
         Index("sync_attempts_transaction_idx", "transaction_id"),
