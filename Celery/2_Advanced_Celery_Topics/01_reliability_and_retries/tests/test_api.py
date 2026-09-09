@@ -1,3 +1,5 @@
+"""Tests for the FastAPI transaction API and its request/validation behavior."""
+
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -12,11 +14,13 @@ from app.schemas import AccountCreate, TransactionCreate
 
 @pytest.fixture
 def client():
+    """Create a FastAPI test client for each test case."""
     with TestClient(create_app()) as test_client:
         yield test_client
 
 
 def test_health_returns_request_id(client):
+    """The health endpoint should echo the request id and return a 200 response."""
     response = client.get("/health", headers={"X-Request-ID": "test-request-1"})
 
     assert response.status_code == 200
@@ -25,6 +29,7 @@ def test_health_returns_request_id(client):
 
 
 def test_accounts_list_endpoint_is_registered(client):
+    """The OpenAPI schema should expose the account listing endpoint."""
     response = client.get("/openapi.json")
 
     assert response.status_code == 200
@@ -32,6 +37,7 @@ def test_accounts_list_endpoint_is_registered(client):
 
 
 def test_transaction_creation_stays_pending_when_enqueue_fails(monkeypatch):
+    """A failed enqueue should not make the API reject a valid transaction request."""
     account_id = uuid4()
     now = datetime.now(timezone.utc)
 
@@ -75,6 +81,7 @@ def test_transaction_creation_stays_pending_when_enqueue_fails(monkeypatch):
 
 
 def test_account_model_normalizes_currency():
+    """Account payloads should be canonicalized to uppercase currency codes."""
     account = AccountCreate(external_reference="acct-1", currency="usd")
 
     assert account.currency == "USD"
@@ -82,6 +89,7 @@ def test_account_model_normalizes_currency():
 
 
 def test_money_values_use_minor_unit_integers():
+    """Input values should remain integer minor-unit representation without conversion."""
     account = AccountCreate(external_reference="acct-2", balance=1050, currency="USD")
     transaction = TransactionCreate(
         account_id="11111111-1111-1111-1111-111111111111",
@@ -94,6 +102,7 @@ def test_money_values_use_minor_unit_integers():
 
 
 def test_transaction_model_rejects_non_positive_amount():
+    """Transaction amounts must be strictly positive to prevent invalid records."""
     with pytest.raises(ValidationError):
         TransactionCreate(
             account_id="11111111-1111-1111-1111-111111111111",
