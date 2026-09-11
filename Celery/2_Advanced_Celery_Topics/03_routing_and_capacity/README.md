@@ -6,6 +6,7 @@ Build a job service with `critical`, `default`, and `bulk` queues.
 
 - Explicit task routing and queue declarations.
 - Workers with documented pool, concurrency, prefetch, and rate-limit settings.
+- Task batching using `chunks` to control prefetch buffer consumption and broker message volume for the `bulk` queue.
 - Load tests showing queue latency and throughput under contention.
 - Time limits and graceful handling of rejected or expired work.
 

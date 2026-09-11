@@ -17,16 +17,17 @@ engineer.
 
 ### 2. Task workflows
 
-- `chain` for sequential tasks
-- `group` for parallel tasks
-- `chord` for a callback after a group completes
-- Workflow error callbacks and partial failures
+- `chain` for sequential tasks and `.s()` vs `.si()` signature discipline
+- `group` for parallel tasks (fan-out)
+- `chord` for a callback after a group completes (fan-in)
+- Workflow error callbacks (`link_error`) and partial failure policies
 
 ### 3. Queues, routing, and worker capacity
 
 - Named queues and task routing
 - Worker concurrency and pool choices
 - Prefetch settings and fair task distribution
+- Task batching with `chunks` for high-volume bulk workloads
 - Priorities, rate limits, and soft or hard time limits
 
 ### 4. Scheduling
