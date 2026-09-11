@@ -121,6 +121,60 @@ flowchart TD
 > 3. **Where Concurrency Yields True ROI:**
 >    Concurrency is intentionally reserved for the **heavy, high-latency stage** (`process_document_page`): OCR table extraction, image decoding, regex PII masking, and checksum verification. This is where parallelizing across workers reduces wall-clock execution from 45 seconds down to 6 seconds.
 
+### Project Structure
+
+```text
+02_workflows/
+├── README.md                   # Project definition, architecture, workflows, and deliverables
+├── .env.example                # Environment variables (Postgres, RabbitMQ, Redis)
+├── .gitignore                  # Git ignore rules for virtualenv, temporary files, and uploads
+├── Dockerfile.api              # FastAPI container definition
+├── Dockerfile.worker           # Celery worker container definition
+├── Dockerfile.postgres         # Custom PostgreSQL image with initial schemas
+├── docker-compose.yml          # Multi-container orchestration (API, Worker, Postgres, RabbitMQ, Redis)
+├── init.sql                    # Database DDL (applications, documents, pages, underwriting_memos)
+├── pytest.ini                  # Pytest configuration
+├── requirements.txt            # Core runtime dependencies (FastAPI, Celery, Redis, SQLAlchemy, Psycopg)
+├── requirements-api.txt        # API-specific dependencies
+├── requirements_dev.txt        # Development & test dependencies
+├── app/                        # FastAPI Ingestion & Query Service
+│   ├── __init__.py
+│   ├── config.py               # Pydantic environment settings
+│   ├── db.py                   # Async database engine & sessionmaker
+│   ├── logging_config.py       # JSON structured logging
+│   ├── main.py                 # Application factory & lifespan
+│   ├── models.py               # SQLAlchemy ORM models
+│   ├── routes.py               # API endpoints (/applications, /dossier, /timing)
+│   ├── schemas.py              # Pydantic request & response models
+│   └── tasks.py                # Celery client dispatching canvas workflows
+├── services/
+│   └── worker/                 # Celery Worker Service
+│       ├── Dockerfile          # Worker image
+│       ├── celery_app.py       # Celery configuration (RabbitMQ broker + Redis result_backend)
+│       ├── tasks.py            # Canvas tasks (validate_dossier, extract_and_partition, process_page, etc.)
+│       └── processors/         # Document domain processors
+│           ├── __init__.py
+│           ├── kyc_processor.py         # MRZ & identity verification
+│           ├── statement_processor.py   # Bank statement transaction ledger parsing
+│           └── tax_processor.py         # IRS Form 1120 / P&L parser
+├── scripts/
+│   ├── generate_fixtures.py    # Generates synthetic test PDF/PNG dossiers
+│   └── benchmark.py            # Automated sequential vs parallel timing harness
+├── fixtures/                   # Pre-generated test datasets
+│   ├── clean_4pages/           # Happy path: KYC ID + 4-page Bank Statement + Tax Filing
+│   ├── benchmark_16pages/      # Concurrency benchmark: 16-page Bank Statement
+│   ├── degraded_page2/         # Partial failure: Statement with unreadable Page 2
+│   └── corrupted/              # Fatal error: Corrupted binary to test link_error
+├── requests/
+│   └── requests.rest           # REST Client requests for manual API inspection
+└── tests/
+    ├── __init__.py
+    ├── conftest.py             # Test fixtures & database containers
+    ├── test_api.py             # API endpoint tests
+    ├── test_canvas_workflows.py # Tests for chain, group, chord, link_error
+    └── test_partial_failure.py # Tests for degraded Result Envelope
+```
+
 ---
 
 ## Mapping to Deliverables
