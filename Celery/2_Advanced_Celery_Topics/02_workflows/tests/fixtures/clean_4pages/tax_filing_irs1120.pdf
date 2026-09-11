@@ -1,0 +1,100 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2399 >>
+stream
+BT
+/F1 10 Tf
+40 750 Td
+14 TL
+(================================================================================) '
+(FORM 1120: U.S. CORPORATION INCOME TAX RETURN \(OMB No. 1545-0123\)) '
+(For calendar year 2025 or tax year beginning 01-01-2025 and ending 12-31-2025) '
+(================================================================================) '
+(Entity: APEX FINTECH DYNAMICS INC.             Employer Identification No \(EIN\): 12-3456789) '
+(Address: 450 MISSION ST, SAN FRANCISCO, CA 94105   State of Incorporation: DELAWARE) '
+(--------------------------------------------------------------------------------) '
+(INCOME ANALYSIS) '
+(1a  Gross receipts or sales ..................................... $1,450,000.00) '
+(1b  Returns and allowances ...................................... $   25,000.00) '
+(1c  Balance. Subtract line 1b from line 1a ..................... $1,425,000.00) '
+(2   Cost of goods sold \(COGS\) ................................... $  480,000.00) '
+(3   Gross profit. Subtract line 2 from line 1c .................. $  945,000.00) '
+(--------------------------------------------------------------------------------) '
+(DEDUCTIONS & OPERATING EXPENSES) '
+(12  Compensation of officers .................................... $  220,000.00) '
+(13  Salaries and wages \(less employment credits\) ................ $  340,000.00) '
+(14  Repairs and maintenance ..................................... $   18,000.00) '
+(16  Rents paid .................................................. $   48,000.00) '
+(17  Taxes and licenses .......................................... $   32,000.00) '
+(18  Interest expense ............................................ $   14,500.00) '
+(20  Depreciation and amortization ............................... $   24,000.00) '
+(26  Other deductions ............................................ $   42,500.00) '
+(27  Total deductions. Add lines 12 through 26 .................. $  739,000.00) '
+(--------------------------------------------------------------------------------) '
+(TAXABLE INCOME & SOLVENCY METRICS) '
+(28  Taxable income before NOL. Subtract line 27 from line 3 ..... $  206,000.00) '
+(    Calculated Annual EBITDA .................................... $  244,500.00) '
+(    Debt Service Coverage Ratio \(DSCR Baseline\) ................. 3.25x) '
+(================================================================================) '
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 1532 >>
+stream
+BT
+/F1 10 Tf
+40 750 Td
+14 TL
+(================================================================================) '
+(FORM 1120: SCHEDULE L - BALANCE SHEETS PER BOOKS) '
+(================================================================================) '
+(ASSETS                                              BEGINNING OF YEAR   END OF YEAR) '
+(1   Cash and cash equivalents ..................... $  120,000.00      $  245,000.00) '
+(2a  Trade notes and accounts receivable ........... $   85,000.00      $  110,000.00) '
+(3   Inventories ................................... $   45,000.00      $   38,000.00) '
+(10a Buildings and other depreciable assets ........ $  180,000.00      $  210,000.00) '
+(15  Total assets .................................. $  430,000.00      $  603,000.00) '
+(--------------------------------------------------------------------------------) '
+(LIABILITIES AND SHAREHOLDERS' EQUITY) '
+(16  Accounts payable .............................. $   52,000.00      $   64,000.00) '
+(17  Mortgages, notes, bonds payable in < 1 year ... $   28,000.00      $   30,000.00) '
+(20  Mortgages, notes, bonds payable in >= 1 year .. $   85,000.00      $   75,000.00) '
+(22  Capital stock ................................. $   50,000.00      $   50,000.00) '
+(25  Retained earnings ............................. $  215,000.00      $  384,000.00) '
+(26  Total liabilities and shareholders' equity .... $  430,000.00      $  603,000.00) '
+(================================================================================) '
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000000323 00000 n 
+0000002774 00000 n 
+0000002900 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+4484
+%%EOF

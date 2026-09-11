@@ -1,0 +1,119 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 1428 >>
+stream
+BT
+/F1 10 Tf
+40 750 Td
+14 TL
+(================================================================================) '
+(SILICON VALLEY COMMERCIAL BANK - MONTHLY ACCOUNT STATEMENT) '
+(================================================================================) '
+(Account: 1048-5928-8821       Routing: 121000358       Period: 2026-08-01 to 2026-08-31) '
+(Entity: APEX FINTECH DYNAMICS INC.                      Page 1 of 3) '
+(--------------------------------------------------------------------------------) '
+(Starting Balance:                  $50,000.00) '
+(Statement Currency:                USD) '
+(Account Type:                      Commercial Operating Account) '
+(--------------------------------------------------------------------------------) '
+(TRANSACTION ACTIVITY LEDGER) '
+(DATE       DESCRIPTION                                CREDIT       DEBIT        BALANCE) '
+(--------------------------------------------------------------------------------) '
+(2026-08-02 STRIPE PAYOUT - MERCHANT DEPOSIT         $ 14,500.00             $ 64,500.00) '
+(2026-08-04 AWS CLOUD HOSTING - RECURRING DEBIT                  $  1,850.50 $ 62,649.50) '
+(2026-08-07 GUSTO PAYROLL SERVICES - SALARIES                    $ 12,400.00 $ 50,249.50) '
+(2026-08-10 CUSTOMER WIRE TRANSFER INFLOW            $ 22,000.00             $ 72,249.50) '
+(2026-08-12 COMMERCIAL REALTY CORP - OFFICE LEASE                $  4,200.00 $ 68,049.50) '
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 1155 >>
+stream
+BT
+/F1 10 Tf
+40 750 Td
+14 TL
+(================================================================================) '
+(SILICON VALLEY COMMERCIAL BANK - MONTHLY ACCOUNT STATEMENT) '
+(================================================================================) '
+(Account: 1048-5928-8821       Routing: 121000358       Period: 2026-08-01 to 2026-08-31) '
+(Entity: APEX FINTECH DYNAMICS INC.                      Page 2 of 3) '
+(--------------------------------------------------------------------------------) '
+(TRANSACTION ACTIVITY LEDGER) '
+(DATE       DESCRIPTION                                CREDIT       DEBIT        BALANCE) '
+(--------------------------------------------------------------------------------) '
+(!@#$%^&*\(\) CORRUPTED SCAN LINE TORN SCANNER FEED JAMMED [OCR_ERROR: LOW_CONTRAST]) '
+(~~##??!!   UNKNOWN ARTIFACT DETECTED - CONFIDENCE_SCORE: 32% \(THRESHOLD: 70%\)) '
+(2026-08-?? UNREADABLE SMUDGE [UNRECOGNIZED_GLYPH]       ???.??       ???.??       ???.??) '
+(--------------------------------------------------------------------------------) '
+(WARNING: OPTICAL CHARACTER RECOGNITION CONFIDENCE FAILED ON THIS PAGE SECTION.) '
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 1553 >>
+stream
+BT
+/F1 10 Tf
+40 750 Td
+14 TL
+(================================================================================) '
+(SILICON VALLEY COMMERCIAL BANK - MONTHLY ACCOUNT STATEMENT) '
+(================================================================================) '
+(Account: 1048-5928-8821       Routing: 121000358       Period: 2026-08-01 to 2026-08-31) '
+(Entity: APEX FINTECH DYNAMICS INC.                      Page 3 of 3) '
+(--------------------------------------------------------------------------------) '
+(TRANSACTION ACTIVITY LEDGER) '
+(DATE       DESCRIPTION                                CREDIT       DEBIT        BALANCE) '
+(--------------------------------------------------------------------------------) '
+(2026-08-28 STATE TAX BOARD - ESTIMATED TAXES                    $  5,000.00 $ 63,049.50) '
+(2026-08-30 MERCHANT ACCOUNT PROCESSING FEES                     $    420.00 $ 62,629.50) '
+(2026-08-02 STRIPE PAYOUT - MERCHANT DEPOSIT         $ 14,500.00             $ 77,129.50) '
+(2026-08-04 AWS CLOUD HOSTING - RECURRING DEBIT                  $  1,850.50 $ 75,279.00) '
+(2026-08-07 GUSTO PAYROLL SERVICES - SALARIES                    $ 12,400.00 $ 62,879.00) '
+(--------------------------------------------------------------------------------) '
+(Closing Statement Balance:         $62,879.00) '
+(Total Monthly Deposits:            $64,200.00) '
+(Total Monthly Withdrawals:         $31,650.50) '
+(Net Cash Flow Change:              +$32,549.50) '
+(================================================================================) '
+ET
+endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000133 00000 n 
+0000000203 00000 n 
+0000000329 00000 n 
+0000001809 00000 n 
+0000001935 00000 n 
+0000003142 00000 n 
+0000003268 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+4873
+%%EOF
