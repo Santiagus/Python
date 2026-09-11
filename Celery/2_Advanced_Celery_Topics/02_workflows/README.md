@@ -158,13 +158,8 @@ flowchart TD
 │           ├── statement_processor.py   # Bank statement transaction ledger parsing
 │           └── tax_processor.py         # IRS Form 1120 / P&L parser
 ├── scripts/
-│   ├── generate_fixtures.py    # Generates synthetic test PDF/PNG dossiers
+│   ├── generate_fixtures.py    # Generates synthetic test PDF/JPG dossiers
 │   └── benchmark.py            # Automated sequential vs parallel timing harness
-├── fixtures/                   # Pre-generated test datasets
-│   ├── clean_4pages/           # Happy path: KYC ID + 4-page Bank Statement + Tax Filing
-│   ├── benchmark_16pages/      # Concurrency benchmark: 16-page Bank Statement
-│   ├── degraded_page2/         # Partial failure: Statement with unreadable Page 2
-│   └── corrupted/              # Fatal error: Corrupted binary to test link_error
 ├── requests/
 │   └── requests.rest           # REST Client requests for manual API inspection
 └── tests/
@@ -172,7 +167,14 @@ flowchart TD
     ├── conftest.py             # Test fixtures & database containers
     ├── test_api.py             # API endpoint tests
     ├── test_canvas_workflows.py # Tests for chain, group, chord, link_error
-    └── test_partial_failure.py # Tests for degraded Result Envelope
+    ├── test_partial_failure.py # Tests for degraded Result Envelope
+    └── fixtures/               # Test datasets & assets
+        ├── assets/
+        │   └── kyc_specimen_jane_doe.jpg # High-resolution photographic specimen template
+        ├── clean_4pages/       # Happy path: KYC ID + 4-page Bank Statement + Tax Filing
+        ├── benchmark_16pages/  # Concurrency benchmark: 16-page Bank Statement
+        ├── degraded_page2/     # Partial failure: Statement with unreadable Page 2
+        └── corrupted/          # Fatal error: Corrupted binary to test link_error
 ```
 
 ---
