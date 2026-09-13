@@ -8,9 +8,20 @@
             "module": "uvicorn",
             "args": [
                 "app.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8010",
                 "--reload"
             ],
-            "jinja": true
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@localhost:5433/underwriting_db",
+                "ENVIRONMENT": "development",
+                "LOG_LEVEL": "INFO",
+                "LOG_FORMAT": "pretty"
+            },
+            "justMyCode": true
         }
     ]
 }

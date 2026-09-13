@@ -1,0 +1,116 @@
+
+@clientUrl = http://localhost:8010
+@baseUrl = {{clientUrl}}
+@apiPrefix = /api/v1
+
+# Port 8010 matches the VS Code debug configuration from project 01.
+# If running via docker-compose with a different port (e.g. 8001), toggle:
+# @clientUrl = http://localhost:8001
+
+@applicationId = 00000000-0000-0000-0000-000000000000
+
+###
+# 1. Health Check
+GET {{baseUrl}}/health
+
+
+###
+# 2. Create Commercial Credit Application (Happy Path)
+# @name createApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Apex Fintech Dynamics Inc.",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 250000.00
+}
+
+
+###
+# 3. Create Another Credit Application (Second Specimen)
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "BlueStar Logistics LLC",
+  "applicant_name": "ROBERT SMITH",
+  "requested_facility": 500000.00
+}
+
+
+###
+# 4. Submit Clean Dossier Manifest (4-Page Clean Specimen)
+# You can use the dynamic ID from step 2 ({{createApplication.response.body.application_id}})
+# or paste an ID into @applicationId above.
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/clean_4pages/bank_statement_4pages.pdf",
+    "kyc_id": "tests/fixtures/clean_4pages/kyc_executive_id.jpg",
+    "tax_filing": "tests/fixtures/clean_4pages/tax_filing_irs1120.pdf"
+  }
+}
+
+
+###
+# 5. Submit Degraded Dossier Manifest (Page 2 OCR Noise)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/degraded_page2/bank_statement_degraded.pdf",
+    "kyc_id": "tests/fixtures/clean_4pages/kyc_executive_id.jpg",
+    "tax_filing": "tests/fixtures/clean_4pages/tax_filing_irs1120.pdf"
+  }
+}
+
+
+###
+# 6. Submit Benchmark Dossier Manifest (16-Page High Load)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/benchmark_16pages/bank_statement_16pages.pdf",
+    "kyc_id": "tests/fixtures/clean_4pages/kyc_executive_id.jpg",
+    "tax_filing": "tests/fixtures/clean_4pages/tax_filing_irs1120.pdf"
+  }
+}
+
+
+###
+# 7. Poll Application Status & Underwriting Memo
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}
+
+
+###
+# 8. Retrieve Stage-by-Stage Latency Telemetry
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/timing
+
+
+###
+# 9. Negative Test: Validation Error on Application Creation (Negative Facility)
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Invalid Negative Corp",
+  "applicant_name": "JOHN DOE",
+  "requested_facility": -50000.00
+}
+
+
+###
+# 10. Negative Test: Non-existent Application 404
+GET {{baseUrl}}{{apiPrefix}}/applications/00000000-0000-0000-0000-000000000000
+
+
+###
+# 11. Negative Test: Malformed UUID 404
+GET {{baseUrl}}{{apiPrefix}}/applications/not-a-valid-uuid
+

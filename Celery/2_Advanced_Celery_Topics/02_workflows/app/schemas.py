@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID, uuid4
-from pydantic import BaseModel, Field
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ApplicationCreate(BaseModel):
@@ -37,16 +38,20 @@ class DossierSubmitResponse(BaseModel):
 class UnderwritingDecisionSummary(BaseModel):
     """Summary of compiled underwriting memo."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     decision: str = Field(..., description="'approved', 'declined', or 'manual_review'")
     calculated_dscr: float | None = None
     net_cashflow: float | None = None
     total_revenue: float | None = None
-    audit_flags: list[str] = Field(default_factory=list)
+    audit_flags: list[Any] = Field(default_factory=list)
     summary: str
 
 
 class ApplicationResponse(BaseModel):
     """Full application state response for client polling."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     application_id: str
     company_name: str
