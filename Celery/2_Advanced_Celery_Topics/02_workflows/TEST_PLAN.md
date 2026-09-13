@@ -2,6 +2,10 @@
 
 This document establishes the test architecture, test cases, invariants, and Test-Driven Development (TDD) matrix for **Module 02: Advanced Celery Workflows** (`chain`, `group`, `chord`, `.s()` vs `.si()`, `link_error`, and Result Envelopes).
 
+> [!NOTE]
+> **Implementation Note on Document Processors & OCR Simulation:**
+> To ensure the test suite is lightweight, deterministic, and runnable offline without external C-binaries (e.g. Tesseract OCR, Poppler, or cloud Document AI APIs), document processing is implemented via Python standard library regex stream extraction and synthetic OCR degradation markers (`CONFIDENCE_SCORE: 32%`, `[OCR_ERROR: LOW_CONTRAST]`). In production, these processors would delegate to optical engines (e.g. Tesseract, AWS Textract, or PDF417 barcode scanners).
+
 ---
 
 ## 1. Test Architecture & Pytest Hierarchy
@@ -10,6 +14,7 @@ This document establishes the test architecture, test cases, invariants, and Tes
 flowchart TD
     subgraph L1["Layer 1: Unit & Domain Processors (No Broker)"]
         T1["test_processors.py<br/>• KYC MRZ parsing & expiration<br/>• Statement ledger debit/credit<br/>• Tax 1120 EBITDA / DSCR math"]
+        T1["test_processors.py<br/>• KYC ID parsing & anti-fraud check<br/>• Statement ledger debit/credit<br/>• Tax 1120 EBITDA / DSCR math"]
     end
 
     subgraph L2["Layer 2: Celery Canvas Primitives (Eager / Mocked Backend)"]

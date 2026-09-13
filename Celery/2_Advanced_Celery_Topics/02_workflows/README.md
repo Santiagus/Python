@@ -121,6 +121,10 @@ flowchart TD
 > 3. **Where Concurrency Yields True ROI:**
 >    Concurrency is intentionally reserved for the **heavy, high-latency stage** (`process_document_page`): OCR table extraction, image decoding, regex PII masking, and checksum verification. This is where parallelizing across workers reduces wall-clock execution from 45 seconds down to 6 seconds.
 
+> [!NOTE]
+> **Implementation Note on Document Processors & OCR Simulation:**
+> To ensure the project is lightweight, deterministic, and 100% runnable offline without external C-binaries (e.g. Tesseract OCR, Poppler, or cloud Document AI APIs), document processing is implemented via Python standard library regex stream extraction and simulated OCR degradation markers (`CONFIDENCE_SCORE: 32%`, `[OCR_ERROR: LOW_CONTRAST]`). In production, these processors would delegate to optical engines (e.g. Tesseract, AWS Textract, or PDF417 barcode scanners).
+
 ### Project Structure
 
 ```text
@@ -155,6 +159,7 @@ flowchart TD
 │       └── processors/         # Document domain processors
 │           ├── __init__.py
 │           ├── kyc_processor.py         # MRZ & identity verification
+│           ├── kyc_processor.py         # KYC identity extraction & anti-fraud verification
 │           ├── statement_processor.py   # Bank statement transaction ledger parsing
 │           └── tax_processor.py         # IRS Form 1120 / P&L parser
 ├── scripts/
