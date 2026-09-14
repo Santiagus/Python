@@ -15,7 +15,12 @@ class ApplicationCreate(BaseModel):
 
     company_name: str = Field(..., description="Legal commercial entity name", examples=["Apex Fintech Dynamics Inc."])
     applicant_name: str = Field(..., description="Authorized executive full name", examples=["JANE DOE"])
-    requested_facility: Decimal = Field(..., gt=0, description="Requested facility principal amount in USD", examples=[Decimal("250000.00")])
+    requested_facility: Decimal = Field(
+        ...,
+        gt=0,
+        description="Requested commercial facility amount in USD",
+        examples=[Decimal("250000.00")],
+    )
     manifest: dict[str, str] | None = Field(
         default=None,
         description="Optional document manifest. If provided, the underwriting workflow is dispatched immediately.",
@@ -46,9 +51,21 @@ class UnderwritingDecisionSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     decision: str = Field(..., description="'approved', 'declined', or 'manual_review'")
-    calculated_dscr: Decimal | None = None
-    net_cashflow: Decimal | None = None
-    total_revenue: Decimal | None = None
+    calculated_dscr: Decimal | None = Field(
+        default=None,
+        description="Debt Service Coverage Ratio (DSCR)",
+        examples=[Decimal("1.850")],
+    )
+    net_cashflow: Decimal | None = Field(
+        default=None,
+        description="Calculated net operating cash flow in USD",
+        examples=[Decimal("32549.50")],
+    )
+    total_revenue: Decimal | None = Field(
+        default=None,
+        description="Total annual commercial revenue in USD",
+        examples=[Decimal("1450000.00")],
+    )
     audit_flags: list[Any] = Field(default_factory=list)
     summary: str
 
@@ -61,7 +78,11 @@ class ApplicationResponse(BaseModel):
     application_id: str
     company_name: str
     applicant_name: str
-    requested_facility: Decimal
+    requested_facility: Decimal = Field(
+        ...,
+        description="Requested commercial facility amount in USD",
+        examples=[Decimal("250000.00")],
+    )
     status: str
     workflow_id: str | None = None
     error_message: str | None = None
