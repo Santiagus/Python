@@ -53,6 +53,15 @@ def validate_dossier(
 ) -> dict[str, Any]:
     """Validate document presence and partition statement pages."""
     t0 = time.perf_counter()
+    logger.debug(
+        "canvas_task_executing",
+        extra={
+            "primitive": ".s()",
+            "task": "validate_dossier",
+            "application_id": application_id,
+            "role": "sequential_gatekeeper",
+        },
+    )
     logger.info("Validating dossier for application %s", application_id)
     logger.info("validating_dossier", extra={"application_id": application_id, "manifest_keys": list(manifest.keys())})
     statement_path = manifest.get("bank_statement")
@@ -93,6 +102,15 @@ def process_kyc_document(
 ) -> dict[str, Any]:
     """Process KYC ID document and perform anti-fraud matching."""
     t0 = time.perf_counter()
+    logger.debug(
+        "canvas_task_executing",
+        extra={
+            "primitive": "group",
+            "task": "process_kyc_document",
+            "application_id": application_id,
+            "role": "chord_header_group_member",
+        },
+    )
     logger.info("processing_kyc_document", extra={"application_id": application_id, "applicant_name": applicant_name})
     processor = KYCProcessor()
     result = processor.process(file_path, expected_applicant=applicant_name)
@@ -108,6 +126,15 @@ def process_kyc_document(
 def process_tax_return(application_id: str, file_path: str) -> dict[str, Any]:
     """Process IRS Form 1120 corporate income tax return."""
     t0 = time.perf_counter()
+    logger.debug(
+        "canvas_task_executing",
+        extra={
+            "primitive": "group",
+            "task": "process_tax_return",
+            "application_id": application_id,
+            "role": "chord_header_group_member",
+        },
+    )
     logger.info("processing_tax_return", extra={"application_id": application_id, "file_path": file_path})
     processor = TaxProcessor()
     result = processor.process(file_path)
@@ -128,6 +155,16 @@ def process_bank_statement_page(
 ) -> dict[str, Any]:
     """Extract and analyze a single bank statement page text stream."""
     t0 = time.perf_counter()
+    logger.debug(
+        "canvas_task_executing",
+        extra={
+            "primitive": "group",
+            "task": "process_bank_statement_page",
+            "application_id": application_id,
+            "page_number": page_number,
+            "role": "chord_header_group_member",
+        },
+    )
     logger.info("processing_bank_statement_page", extra={"application_id": application_id, "page_number": page_number})
     stmt_processor = StatementProcessor()
     partition = stmt_processor.partition_pages(file_path)
@@ -256,6 +293,17 @@ def aggregate_underwriting_decision(
 ) -> dict[str, Any]:
     """Fan-in chord callback synthesizing all document envelopes into a final decision."""
     t3_start = time.perf_counter()
+    logger.debug(
+        "canvas_task_executing",
+        extra={
+            "primitive": "chord",
+            "task": "aggregate_underwriting_decision",
+            "application_id": application_id,
+            "role": "chord_fanin_callback",
+            "received_header_results_count": len(page_results),
+            "note": "Chord synchronization barrier passed; executing fan-in callback",
+        },
+    )
     logger.info("aggregating_underwriting_decision", extra={"application_id": application_id, "page_count": len(page_results)})
 
     # Resolve real Stage 1 validation latency
@@ -406,6 +454,17 @@ def aggregate_underwriting_decision(
 @celery_app.task(name="services.worker.tasks.handle_workflow_failure")
 def handle_workflow_failure(request: Any, exc: Any, traceback: Any, application_id: str) -> None:
     """Compensating link_error errback invoked when upstream chain fails."""
+    logger.debug(
+        "canvas_task_executing",
+        extra={
+            "primitive": "link_error",
+            "task": "handle_workflow_failure",
+            "application_id": application_id,
+            "role": "compensating_errback",
+            "error": str(exc),
+            "note": "Compensating errback executed via link_error / .on_error()",
+        },
+    )
     logger.error("Workflow failed for application %s: %s", application_id, exc)
     logger.error("workflow_failed", extra={"application_id": application_id, "error": str(exc)})
     error_msg = str(exc)
@@ -424,6 +483,17 @@ def handle_workflow_failure(request: Any, exc: Any, traceback: Any, application_
 @celery_app.task(name="services.worker.tasks.audit_notification_task")
 def audit_notification_task(application_id: str, event_type: str) -> dict[str, str]:
     """Side-effect notification task (invoked via immutable .si() signatures)."""
+    logger.debug(
+        "canvas_task_executing",
+        extra={
+            "primitive": ".si()",
+            "task": "audit_notification_task",
+            "application_id": application_id,
+            "event_type": event_type,
+            "role": "immutable_side_effect",
+            "note": "Decoupled side-effect task executed via immutable signature (.si())",
+        },
+    )
     logger.info("Audit notification [%s] sent for application %s", event_type, application_id)
     return {
         "status": "delivered",

@@ -7,6 +7,11 @@ from uuid import uuid4
 import pytest
 
 from app.tasks import build_underwriting_chord, dispatch_underwriting_workflow
+from app.tasks import (
+    build_underwriting_chain,
+    build_underwriting_chord,
+    dispatch_underwriting_workflow,
+)
 from services.worker.tasks import (
     _get_db_connection_string,
     _persist_underwriting_memo,
@@ -189,3 +194,22 @@ def test_audit_notification_and_error_handling_tasks() -> None:
         traceback=None,
         application_id=app_id,
     )
+
+
+def test_build_underwriting_chain(clean_dossier_manifest: dict[str, str]) -> None:
+    """Verify build_underwriting_chain constructs sequential chain with .s() and .si()."""
+    app_id = str(uuid4())
+    workflow_chain = build_underwriting_chain(
+        application_id=app_id,
+        manifest=clean_dossier_manifest,
+        applicant_name="JANE DOE",
+        requested_facility=250000.00,
+    )
+    assert workflow_chain is not None
+    # Verify chain execution in eager mode
+    res = workflow_chain.apply()
+    assert res.successful()
+    result = res.get()
+    assert result["status"] == "delivered"
+    assert result["application_id"] == app_id
+    assert result["event"] == "chain_validation_completed"

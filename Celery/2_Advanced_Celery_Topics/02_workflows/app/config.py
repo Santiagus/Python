@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6380/0"
     rabbitmq_url: str = "amqp://guest:guest@localhost:5673//"
     log_level: str = "INFO"
+    log_level: str = "DEBUG"
     log_format: str | None = None
 
     @property

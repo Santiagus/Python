@@ -46,21 +46,33 @@ Content-Type: application/json
 
 
 ###
-# 3. Create Another Credit Application (Second Specimen)
+# 3. Create Application for Degraded Dossier Test
+# @name createDegradedApplication
 POST {{baseUrl}}{{apiPrefix}}/applications
 Content-Type: application/json
 
 {
   "company_name": "BlueStar Logistics LLC",
-  "applicant_name": "ROBERT SMITH",
-  "requested_facility": 500000.00
+  "applicant_name": "JANE DOE",
+  "requested_facility": 250000.00
 }
 
 
 ###
-# 4. Submit Clean Dossier Manifest (4-Page Clean Specimen)
-# You can use the dynamic ID from step 2 ({{createApplication.response.body.application_id}})
-# or paste an ID into @applicationId above.
+# 3B. Create Application for 16-Page Benchmark Dossier Test
+# @name createBenchmarkApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Titan Heavy Industries Inc.",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 750000.00
+}
+
+
+###
+# 4. Submit Clean Dossier Manifest (4-Page Clean Specimen -> Expected: approved)
 POST {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/dossier
 Content-Type: application/json
 
@@ -74,8 +86,9 @@ Content-Type: application/json
 
 
 ###
-# 5. Submit Degraded Dossier Manifest (Page 2 OCR Noise)
-POST {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/dossier
+# 5. Submit Degraded Dossier Manifest (Page 2 OCR Noise -> Expected: manual_review)
+# Submits to the dedicated application created in Step 3
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createDegradedApplication.response.body.application_id}}/dossier
 Content-Type: application/json
 
 {
@@ -88,8 +101,9 @@ Content-Type: application/json
 
 
 ###
-# 6. Submit Benchmark Dossier Manifest (16-Page High Load)
-POST {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/dossier
+# 6. Submit Benchmark Dossier Manifest (16-Page High Load -> Expected: approved)
+# Submits to the dedicated application created in Step 3B
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createBenchmarkApplication.response.body.application_id}}/dossier
 Content-Type: application/json
 
 {
@@ -102,8 +116,18 @@ Content-Type: application/json
 
 
 ###
-# 7. Poll Application Status & Underwriting Memo
+# 7A. Poll Clean Application Status & Underwriting Memo (Expect: status "approved")
 GET {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}
+
+
+###
+# 7B. Poll Degraded Application Status & Underwriting Memo (Expect: status "manual_review")
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createDegradedApplication.response.body.application_id}}
+
+
+###
+# 7C. Poll Benchmark Application Status & Underwriting Memo (Expect: status "approved")
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createBenchmarkApplication.response.body.application_id}}
 
 
 ###

@@ -51,6 +51,7 @@ class TestCanvasWorkflows:
         assert len(page_ids) == 4
 
         # Stage 2: Fan-out parallel chord header
+        # Stage 2: Fan-out parallel chord header using group() and .s()
         header = [
             process_kyc_document.s(app_id, clean_dossier_manifest["kyc_id"], applicant_name),
             process_tax_return.s(app_id, clean_dossier_manifest["tax_filing"]),
@@ -59,9 +60,12 @@ class TestCanvasWorkflows:
                 for pnum, pid in enumerate(page_ids, start=1)
             ],
         ]
+        header_group = group(header)
 
         # Stage 3: Fan-in aggregation callback
         workflow = chord(header)(aggregate_underwriting_decision.s(app_id, requested_facility))
+        # Stage 3: Fan-in aggregation callback using chord()
+        workflow = chord(header_group)(aggregate_underwriting_decision.s(app_id, requested_facility))
         final_decision = workflow.get()
 
         assert final_decision["status"] == "success"
@@ -113,4 +117,29 @@ class TestCanvasWorkflows:
 
         assert res_immutable["event"] == "AUDIT_EVENT_TRIGGERED"
         assert res_immutable["application_id"] == app_id
+
+    def test_build_underwriting_chain_and_chord_helpers(
+        self, clean_dossier_manifest: dict[str, str]
+    ) -> None:
+        """TC-06: Verify workflow builders construct valid chain, group, chord, .s(), and .si() graphs."""
+        from app.tasks import build_underwriting_chain, build_underwriting_chord
+
+        app_id = str(uuid4())
+        # 1. Chain builder test (.s() + .si() + chain)
+        wf_chain = build_underwriting_chain(app_id, clean_dossier_manifest, "JANE DOE", 250000.00)
+        res_chain = wf_chain.apply()
+        assert res_chain.successful()
+        chain_res = res_chain.get()
+        assert chain_res["status"] == "delivered"
+        assert chain_res["event"] == "chain_validation_completed"
+
+        # 2. Chord builder test (.s() + group + chord)
+        wf_chord = build_underwriting_chord(
+            application_id=app_id,
+            manifest=clean_dossier_manifest,
+            applicant_name="JANE DOE",
+            requested_facility=250000.00,
+            page_ids=["p1", "p2", "p3", "p4"],
+        )
+        assert wf_chord is not None
 

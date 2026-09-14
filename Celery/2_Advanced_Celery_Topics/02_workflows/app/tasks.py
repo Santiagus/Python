@@ -14,13 +14,14 @@ import time
 from typing import Any
 from uuid import uuid4
 
-from celery import chord
+from celery import chain, chord, group
 from celery.result import AsyncResult
 
 from services.worker.celery_app import celery_app
 from services.worker.tasks import (
     _update_application_status,
     aggregate_underwriting_decision,
+    audit_notification_task,
     handle_workflow_failure,
     process_bank_statement_page,
     process_kyc_document,
@@ -55,6 +56,16 @@ def build_underwriting_chord(
         Celery chord signature ready for execution.
     """
     statement_path = manifest.get("bank_statement", "")
+    logger.debug(
+        "canvas_signature_s_created",
+        extra={
+            "primitive": ".s()",
+            "application_id": application_id,
+            "tasks": ["process_kyc_document", "process_tax_return"]
+            + [f"process_bank_statement_page(p={pnum})" for pnum in range(1, len(page_ids) + 1)],
+            "note": "Created mutable signatures (.s()) for chord header tasks",
+        },
+    )
     header = [
         process_kyc_document.s(application_id, manifest.get("kyc_id", ""), applicant_name),
         process_tax_return.s(application_id, manifest.get("tax_filing", "")),
@@ -64,13 +75,45 @@ def build_underwriting_chord(
         ],
     ]
 
+    header_group = group(header)
+    logger.debug(
+        "canvas_group_created",
+        extra={
+            "primitive": "group",
+            "application_id": application_id,
+            "group_size": len(header),
+            "note": "Assembled header tasks into parallel execution group",
+        },
+    )
+
     callback = aggregate_underwriting_decision.s(
         application_id,
         requested_facility,
         stage_1_validation_ms,
         chord_dispatched_at,
     )
-    return chord(header, callback)
+    logger.debug(
+        "canvas_signature_s_created",
+        extra={
+            "primitive": ".s()",
+            "application_id": application_id,
+            "task": "aggregate_underwriting_decision",
+            "note": "Created mutable signature (.s()) for fan-in synthesis callback",
+        },
+    )
+
+    workflow_chord = chord(header_group, callback)
+    logger.debug(
+        "canvas_chord_created",
+        extra={
+            "primitive": "chord",
+            "application_id": application_id,
+            "header_group_size": len(header),
+            "callback_task": "aggregate_underwriting_decision",
+            "note": "Assembled chord synchronization barrier across header group to callback",
+        },
+    )
+    return workflow_chord
 
 
 def dispatch_underwriting_workflow(
@@ -97,6 +140,25 @@ def dispatch_underwriting_workflow(
     facility_dec = Decimal(str(requested_facility)) if not isinstance(requested_facility, Decimal) else requested_facility
 
     # Stage 1: Validate dossier with link_error errback attached
+    logger.debug(
+        "canvas_signature_s_created",
+        extra={
+            "primitive": ".s()",
+            "application_id": application_id,
+            "task": "validate_dossier",
+            "role": "gatekeeper",
+            "note": "Created mutable signature (.s()) for Stage 1 validation gatekeeper",
+        },
+    )
+    logger.debug(
+        "canvas_link_error_attached",
+        extra={
+            "primitive": "link_error",
+            "application_id": application_id,
+            "errback_task": "handle_workflow_failure",
+            "note": "Attached on_error errback to validate_dossier signature",
+        },
+    )
     t1_start = time.perf_counter()
     validation_sig = validate_dossier.s(
         application_id, manifest, applicant_name, facility_dec
@@ -129,3 +191,65 @@ def dispatch_underwriting_workflow(
 
     _update_application_status(application_id, "processing")
     return workflow_chord.apply_async()
+
+
+def build_underwriting_chain(
+    application_id: str,
+    manifest: dict[str, str],
+    applicant_name: str,
+    requested_facility: Decimal | int | float | str,
+) -> Any:
+    """Construct a sequential workflow chain demonstrating .s() and .si() composition.
+
+    Executes Stage 1 validation via mutable signature .s(), followed by
+    an immutable audit notification signature .si() that completes the chain
+    without being affected by the validation return value.
+
+    Args:
+        application_id: Credit application UUID string.
+        manifest: Mapping of document types to file paths.
+        applicant_name: Name of applicant.
+        requested_facility: Amount requested.
+
+    Returns:
+        Celery chain signature ready for execution.
+    """
+    facility_dec = Decimal(str(requested_facility)) if not isinstance(requested_facility, Decimal) else requested_facility
+
+    logger.debug(
+        "canvas_signature_s_created",
+        extra={
+            "primitive": ".s()",
+            "application_id": application_id,
+            "task": "validate_dossier",
+            "role": "chain_step_1",
+            "note": "Created mutable signature (.s()) for initial validation step",
+        },
+    )
+    step1 = validate_dossier.s(
+        application_id, manifest, applicant_name, facility_dec
+    )
+
+    logger.debug(
+        "canvas_signature_si_created",
+        extra={
+            "primitive": ".si()",
+            "application_id": application_id,
+            "task": "audit_notification_task",
+            "role": "chain_step_2_immutable",
+            "note": "Created immutable signature (.si()) for audit notification step in chain",
+        },
+    )
+    step2 = audit_notification_task.si(application_id, "chain_validation_completed")
+
+    workflow_chain = chain(step1, step2)
+    logger.debug(
+        "canvas_chain_created",
+        extra={
+            "primitive": "chain",
+            "application_id": application_id,
+            "steps": ["validate_dossier.s()", "audit_notification_task.si()"],
+            "note": "Assembled sequential chain combining mutable .s() and immutable .si() signatures",
+        },
+    )
+    return workflow_chain
