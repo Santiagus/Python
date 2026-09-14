@@ -50,6 +50,11 @@ class TaxProcessor:
             }
 
         data = path.read_bytes()
+        # NOTE (SIMULATED / FAKED BEHAVIOR):
+        # Stream extraction uses regex over uncompressed ASCII PDF streams (specimens generated in tests/fixtures).
+        # In real-world production, IRS Form 1120 tax returns are either scanned raster PDFs, FlateDecode-compressed
+        # documents, or electronic XML/MeF filings, requiring specialized PDF extraction tools (e.g. pdfplumber,
+        # PyPDF, or Document AI Tax Processors) rather than raw ASCII regex.
         streams = re.findall(b"stream\r?\n(.*?)\r?\nendstream", data, re.DOTALL)
         all_lines: list[str] = []
         for s in streams:

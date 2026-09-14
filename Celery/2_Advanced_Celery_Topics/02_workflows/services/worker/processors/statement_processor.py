@@ -53,9 +53,18 @@ class StatementProcessor:
         if not data.startswith(b"%PDF-"):
             raise CorruptedDocumentError(f"Invalid PDF header in {path.name}")
 
+        # NOTE (SIMULATED / FAKED BEHAVIOR):
+        # b"%%FATAL_TRUNCATION_ERROR%%" is a synthetic sentinel token used by unit/E2E test
+        # fixtures to simulate truncated/corrupted PDF binaries deterministically without corrupting
+        # real files on disk. Real PDF corruption checks inspect xref tables, trailer dictionaries,
+        # and startxref offsets using PDF parsers like PyPDF or pdfminer.
         if b"%%FATAL_TRUNCATION_ERROR%%" in data or b"%%EOF" not in data:
             raise CorruptedDocumentError(f"Corrupted or truncated PDF structure in {path.name}")
 
+        # NOTE (SIMULATED / FAKED BEHAVIOR):
+        # Stream extraction uses regex over uncompressed ASCII PDF streams (specimens generated in tests/fixtures).
+        # In production, PDFs usually use FlateDecode (zlib compression), object streams, or font CMaps,
+        # requiring robust PDF parser libraries (e.g. pypdf, pdfplumber, or PyMuPDF/fitz).
         streams = re.findall(b"stream\r?\n(.*?)\r?\nendstream", data, re.DOTALL)
         if not streams:
             raise CorruptedDocumentError(f"No content streams found in PDF: {path.name}")
@@ -99,6 +108,12 @@ class StatementProcessor:
         errors: list[str] = []
         confidence = 0.98
 
+        # NOTE (SIMULATED / FAKED BEHAVIOR):
+        # In production, OCR confidence scores (0.00-1.00) are emitted directly by optical engines
+        # (e.g. AWS Textract Block Confidence, Google Cloud Document AI, or Tesseract HOCR word confidences).
+        # Here, OCR confidence and errors are simulated via synthetic text markers
+        # (e.g. "CONFIDENCE_SCORE: 65%", "OCR_ERROR", "UNRECOGNIZED_GLYPH") to test downstream
+        # Celery Canvas error escalation and manual review workflows deterministically.
         # OCR degradation detection
         conf_match = re.search(r"CONFIDENCE_SCORE:\s*(\d+)%", text)
         if conf_match:

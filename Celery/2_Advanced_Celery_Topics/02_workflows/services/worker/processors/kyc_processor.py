@@ -60,8 +60,21 @@ class KYCProcessor:
                 "errors": ["Corrupted or unsupported KYC image format"],
             }
 
+        # NOTE (SIMULATED / FAKED BEHAVIOR):
+        # In real production, JPEG/PNG images are compressed raster pixel data (DCT/DEFLATE)
+        # and do NOT contain plain ASCII text strings like b"EXPIRED". Real KYC systems determine
+        # expiration by either:
+        #   1. Decoding the PDF417 2D barcode on the back of driver's licenses (AAMVA field DBA), or
+        #   2. Using an OCR / Document AI engine (e.g. AWS Textract, Google Cloud Document AI)
+        #      to extract expiration date strings and evaluate (expiration_date < date.today()).
+        # Here, `b"EXPIRED"` is a synthetic sentinel token injected by test fixtures
+        # (e.g. `test_kyc_expired_document_flagged`) to exercise rejection branches without
+        # requiring a heavy multi-gigabyte OCR dependency.
         is_expired = b"EXPIRED" in content
-        # Extracted identity attributes from California Driver's License specimen
+
+        # NOTE (SIMULATED / FAKED BEHAVIOR):
+        # Specimen attributes are hardcoded to match the test fixture specimen (California Driver's License).
+        # In production, these fields would be populated dynamically via OCR/MRZ/barcode extraction models.
         extracted_data: dict[str, Any] = {
             "full_name": "JANE DOE",
             "document_number": "DL-9843210-CA",

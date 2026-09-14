@@ -30,6 +30,11 @@ from services.worker.processors import (
 logger = logging.getLogger(__name__)
 
 # In-memory application registry for quick state lookups
+# NOTE (SIMULATED / FAKED BEHAVIOR):
+# _APP_STATE_REGISTRY is an in-memory dictionary cache used by local unit tests and benchmarks
+# to inspect task outputs synchronously without querying external stores. In a real distributed
+# multi-process/multi-node Celery deployment, state is tracked via Redis result backend
+# and persistent PostgreSQL database tables.
 _APP_STATE_REGISTRY: dict[str, dict[str, Any]] = {}
 
 
@@ -411,6 +416,11 @@ def handle_workflow_failure(request: Any, exc: Any, traceback: Any, application_
     _persist_workflow_failure(application_id, error_msg)
 
 
+# NOTE (SIMULATED / FAKED BEHAVIOR):
+# This task demonstrates idempotent side-effects executed via immutable Celery signatures (.si()).
+# In this lab codebase, notification delivery is simulated via local structured logs. In production,
+# this task would invoke an external notification service (e.g. AWS SNS/SES, SendGrid, PagerDuty,
+# Slack webhook, or Apache Kafka audit log stream).
 @celery_app.task(name="services.worker.tasks.audit_notification_task")
 def audit_notification_task(application_id: str, event_type: str) -> dict[str, str]:
     """Side-effect notification task (invoked via immutable .si() signatures)."""
