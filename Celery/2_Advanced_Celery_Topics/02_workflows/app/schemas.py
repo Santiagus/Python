@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -15,6 +16,7 @@ class ApplicationCreate(BaseModel):
     company_name: str = Field(..., description="Legal commercial entity name", examples=["Apex Fintech Dynamics Inc."])
     applicant_name: str = Field(..., description="Authorized executive full name", examples=["JANE DOE"])
     requested_facility: float = Field(..., gt=0, description="Requested facility principal amount in USD", examples=[250000.00])
+    requested_facility: Decimal = Field(..., gt=0, description="Requested facility principal amount in USD", examples=[Decimal("250000.00")])
     manifest: dict[str, str] | None = Field(
         default=None,
         description="Optional document manifest. If provided, the underwriting workflow is dispatched immediately.",
@@ -48,6 +50,11 @@ class UnderwritingDecisionSummary(BaseModel):
     calculated_dscr: float | None = None
     net_cashflow: float | None = None
     total_revenue: float | None = None
+    calculated_dscr: Decimal | None = None
+    net_cashflow: Decimal | None = None
+    total_revenue: Decimal | None = None
+    net_cashflow_cents: int | None = None
+    total_revenue_cents: int | None = None
     audit_flags: list[Any] = Field(default_factory=list)
     summary: str
 
@@ -61,6 +68,8 @@ class ApplicationResponse(BaseModel):
     company_name: str
     applicant_name: str
     requested_facility: float
+    requested_facility: Decimal
+    requested_facility_cents: int | None = None
     status: str
     workflow_id: str | None = None
     error_message: str | None = None

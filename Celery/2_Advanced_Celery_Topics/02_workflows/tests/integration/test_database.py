@@ -162,6 +162,11 @@ class TestDatabaseIntegration:
         assert loaded_app.underwriting_memo is not None
         assert loaded_app.underwriting_memo.decision == "approved"
         assert loaded_app.underwriting_memo.calculated_dscr == Decimal("2.150")
+        assert loaded_app.underwriting_memo.net_cashflow == Decimal("85000.00")
+        assert loaded_app.underwriting_memo.net_cashflow_cents == 8500000
+        assert loaded_app.underwriting_memo.total_revenue == Decimal("2500000.00")
+        assert loaded_app.underwriting_memo.total_revenue_cents == 250000000
+        assert loaded_app.requested_facility_cents == 75000000
         assert loaded_app.underwriting_memo.audit_flags == ["identity_verified", "dscr_satisfied"]
         assert loaded_app.underwriting_memo.stage_timings["total_pipeline_ms"] == 335.6
 

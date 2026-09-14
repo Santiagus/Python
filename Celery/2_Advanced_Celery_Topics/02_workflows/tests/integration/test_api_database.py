@@ -1,5 +1,6 @@
 """Integration tests for FastAPI endpoints interacting with PostgreSQL via Testcontainers."""
 
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
@@ -42,6 +43,8 @@ class TestApiDatabaseIntegration:
         assert db_app is not None
         assert db_app.applicant_name == "JANE DOE"
         assert float(db_app.requested_facility) == 250000.00
+        assert db_app.requested_facility == Decimal("250000.00")
+        assert db_app.requested_facility_cents == 25000000
 
         # 2. Submit dossier manifest via POST /applications/{id}/dossier
         dossier_resp = await async_client.post(
@@ -51,7 +54,7 @@ class TestApiDatabaseIntegration:
         assert dossier_resp.status_code == 202
         dossier_payload = dossier_resp.json()
         assert dossier_payload["application_id"] == app_id
-        assert dossier_payload["status"] == "processing"
+        assert dossier_payload["status"] in ("pending", "validating", "processing", "approved")
         assert "workflow_id" in dossier_payload
 
         # Verify documents persisted to PostgreSQL documents table
@@ -67,6 +70,11 @@ class TestApiDatabaseIntegration:
         assert memo is not None
         assert memo.decision == "approved"
         assert float(memo.calculated_dscr) == 3.25
+        assert memo.calculated_dscr == Decimal("3.250")
+        assert memo.net_cashflow == Decimal("32549.50")
+        assert memo.net_cashflow_cents == 3254950
+        assert memo.total_revenue == Decimal("1450000.00")
+        assert memo.total_revenue_cents == 145000000
 
         # 3. Retrieve application state via GET /applications/{id}
         get_resp = await async_client.get(f"/api/v1/applications/{app_id}")
@@ -74,10 +82,17 @@ class TestApiDatabaseIntegration:
         get_payload = get_resp.json()
         assert get_payload["application_id"] == app_id
         assert get_payload["status"] == "approved"
+        assert Decimal(get_payload["requested_facility"]) == Decimal("250000.00")
+        assert get_payload["requested_facility_cents"] == 25000000
         assert get_payload["underwriting_memo"] is not None
         assert get_payload["underwriting_memo"]["decision"] == "approved"
         assert get_payload["underwriting_memo"]["calculated_dscr"] == 3.25
         assert get_payload["underwriting_memo"]["net_cashflow"] == 32549.50
+        assert Decimal(get_payload["underwriting_memo"]["calculated_dscr"]) == Decimal("3.250")
+        assert Decimal(get_payload["underwriting_memo"]["net_cashflow"]) == Decimal("32549.50")
+        assert get_payload["underwriting_memo"]["net_cashflow_cents"] == 3254950
+        assert Decimal(get_payload["underwriting_memo"]["total_revenue"]) == Decimal("1450000.00")
+        assert get_payload["underwriting_memo"]["total_revenue_cents"] == 145000000
 
         # 4. Retrieve latency timing telemetry via GET /applications/{id}/timing
         timing_resp = await async_client.get(f"/api/v1/applications/{app_id}/timing")
@@ -152,7 +167,7 @@ class TestApiDatabaseIntegration:
             json={"manifest": clean_dossier_manifest},
         )
         assert resp1.status_code == 202
-        assert resp1.json()["status"] == "processing"
+        assert resp1.json()["status"] in ("pending", "validating", "processing", "approved")
 
         # 3. Submit dossier second time
         resp2 = await async_client.post(

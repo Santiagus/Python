@@ -239,6 +239,8 @@ def generate_tax_filing_pages() -> list[list[str]]:
         "28  Taxable income before NOL. Subtract line 27 from line 3 ..... $  206,000.00",
         "    Calculated Annual EBITDA .................................... $  244,500.00",
         "    Debt Service Coverage Ratio (DSCR Baseline) ................. 3.25x",
+        "--------------------------------------------------------------------------------",
+        "Sign Here: Officer: JANE DOE, PRESIDENT / CEO",
         "================================================================================",
     ]
 

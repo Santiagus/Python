@@ -8,6 +8,7 @@ Constructs and dispatches the multi-stage Celery Canvas graph:
 
 from __future__ import annotations
 
+from decimal import Decimal
 import logging
 import time
 from typing import Any
@@ -18,6 +19,7 @@ from celery.result import AsyncResult
 
 from services.worker.celery_app import celery_app
 from services.worker.tasks import (
+    _update_application_status,
     aggregate_underwriting_decision,
     handle_workflow_failure,
     process_bank_statement_page,
@@ -34,6 +36,7 @@ def build_underwriting_chord(
     manifest: dict[str, str],
     applicant_name: str,
     requested_facility: float,
+    requested_facility: Decimal | int | float | str,
     page_ids: list[str],
     stage_1_validation_ms: float = 0.0,
     chord_dispatched_at: float | None = None,
@@ -76,6 +79,7 @@ def dispatch_underwriting_workflow(
     manifest: dict[str, str],
     applicant_name: str,
     requested_facility: float,
+    requested_facility: Decimal | int | float | str,
 ) -> AsyncResult:
     """Execute Stage 1 gatekeeper validation and dispatch Stage 2 & 3 parallel chord.
 
@@ -92,11 +96,13 @@ def dispatch_underwriting_workflow(
         AsyncResult tracking the dispatched workflow.
     """
     logger.info("Dispatching underwriting workflow for application %s", application_id)
+    facility_dec = Decimal(str(requested_facility)) if not isinstance(requested_facility, Decimal) else requested_facility
 
     # Stage 1: Validate dossier with link_error errback attached
     t1_start = time.perf_counter()
     validation_sig = validate_dossier.s(
         application_id, manifest, applicant_name, requested_facility
+        application_id, manifest, applicant_name, facility_dec
     ).on_error(handle_workflow_failure.s(application_id))
 
     validation_res = validation_sig.apply()
@@ -119,9 +125,11 @@ def dispatch_underwriting_workflow(
         manifest=manifest,
         applicant_name=applicant_name,
         requested_facility=requested_facility,
+        requested_facility=facility_dec,
         page_ids=page_ids,
         stage_1_validation_ms=stage_1_ms,
         chord_dispatched_at=chord_start_time,
     )
 
+    _update_application_status(application_id, "processing")
     return workflow_chord.apply_async()

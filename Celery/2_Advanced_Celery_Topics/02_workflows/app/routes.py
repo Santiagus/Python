@@ -73,7 +73,6 @@ async def create_application(
             session.add(doc)
 
         workflow_id = f"wf-{uuid4()}"
-        application.status = ApplicationStatus.PROCESSING
         application.workflow_id = workflow_id
         await session.commit()
         await session.refresh(application)
@@ -84,14 +83,15 @@ async def create_application(
                 application_id=str(application.id),
                 manifest=payload.manifest,
                 applicant_name=application.applicant_name,
-                requested_facility=float(application.requested_facility),
+                requested_facility=application.requested_facility,
             )
             if async_res.id and async_res.id != workflow_id:
                 application.workflow_id = async_res.id
                 await session.commit()
-                await session.refresh(application)
         except Exception as exc:
             logger.warning("Workflow dispatch deferred: %s", exc)
+
+        await session.refresh(application)
 
         logger.info(
             "application_persisted_and_dispatched",
@@ -176,8 +176,8 @@ async def submit_dossier(
         session.add(doc)
 
     workflow_id = f"wf-{uuid4()}"
-    application.status = ApplicationStatus.PROCESSING
     application.workflow_id = workflow_id
+    current_status = str(application.status)
 
     try:
         await session.commit()
@@ -190,7 +190,7 @@ async def submit_dossier(
         return DossierSubmitResponse(
             application_id=application_id,
             workflow_id=workflow_id or "already-registered",
-            status=ApplicationStatus.PROCESSING,
+            status=current_status,
             message=f"Application {application_id} has already been registered.",
         )
 
@@ -201,7 +201,7 @@ async def submit_dossier(
             application_id=str(application.id),
             manifest=payload.manifest,
             applicant_name=application.applicant_name,
-            requested_facility=float(application.requested_facility),
+            requested_facility=application.requested_facility,
         )
         if async_res.id and async_res.id != workflow_id:
             application.workflow_id = async_res.id
@@ -209,17 +209,19 @@ async def submit_dossier(
     except Exception as exc:
         logger.warning("Workflow dispatch deferred: %s", exc)
 
+    await session.refresh(application)
+
     logger.info(
         "dossier_dispatched",
         extra={
             "application_id": application_id,
-            "workflow_id": workflow_id,
+            "workflow_id": application.workflow_id or workflow_id,
             "status": application.status,
         },
     )
     return DossierSubmitResponse(
         application_id=str(application.id),
-        workflow_id=workflow_id,
+        workflow_id=application.workflow_id or workflow_id,
         status=application.status,
         message="Dossier ingested; Celery canvas workflow dispatched.",
     )

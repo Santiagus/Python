@@ -1,5 +1,6 @@
 """Unit tests for Celery tasks, workflow dispatch, and worker persistence helpers."""
 
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -10,6 +11,7 @@ from services.worker.tasks import (
     _get_db_connection_string,
     _persist_underwriting_memo,
     _persist_workflow_failure,
+    _update_application_status,
     aggregate_underwriting_decision,
     audit_notification_task,
     handle_workflow_failure,
@@ -45,20 +47,66 @@ def test_dispatch_underwriting_workflow_validation_failure() -> None:
     assert res.failed()
 
 
-def test_aggregate_underwriting_decision_empty_results_default_cashflow() -> None:
-    """aggregate_underwriting_decision uses default net cashflow when deposits and withdrawals are zero."""
+def test_aggregate_underwriting_decision_empty_results_declined() -> None:
+    """aggregate_underwriting_decision declines and computes zero metrics when page results are empty."""
     app_id = str(uuid4())
     decision = aggregate_underwriting_decision(
         page_results=[],
         application_id=app_id,
         requested_facility=250000.0,
     )
+    assert decision["decision"] == "declined"
+    assert decision["net_cashflow"] == 0.0
+    assert decision["dscr"] == 0.0
+    assert decision["net_cashflow"] == Decimal("0.00")
+    assert decision["dscr"] == Decimal("0.0")
+    assert decision["net_cashflow_cents"] == 0
+    assert decision["total_revenue_cents"] == 0
+
+
+def test_aggregate_underwriting_decision_legacy_fallback() -> None:
+    """aggregate_underwriting_decision parses legacy Decimal/float keys without _cents."""
+    app_id = str(uuid4())
+    page_results = [
+        {
+            "status": "success",
+            "document_type": "kyc_id",
+            "data": {"full_name": "JANE DOE"},
+        },
+        {
+            "status": "success",
+            "document_type": "tax_filing",
+            "data": {
+                "dscr_baseline": Decimal("2.50"),
+                "gross_receipts": Decimal("500000.00"),
+            },
+        },
+        {
+            "status": "success",
+            "page_number": 1,
+            "starting_balance": Decimal("50000.00"),
+        },
+        {
+            "status": "success",
+            "page_number": 2,
+            "total_deposits": Decimal("30000.00"),
+            "total_withdrawals": Decimal("10000.00"),
+        },
+    ]
+    decision = aggregate_underwriting_decision(
+        page_results=page_results,
+        application_id=app_id,
+        requested_facility=Decimal("100000.00"),
+    )
     assert decision["decision"] == "approved"
-    assert decision["net_cashflow"] == 32549.50
+    assert decision["net_cashflow_cents"] == 2000000
+    assert decision["total_revenue_cents"] == 50000000
+    assert decision["net_cashflow"] == Decimal("20000.00")
+    assert decision["total_revenue"] == Decimal("500000.00")
 
 
 def test_persist_underwriting_memo_and_workflow_failure_with_mock_db() -> None:
-    """Verify _persist_underwriting_memo and _persist_workflow_failure execute commit."""
+    """Verify _persist_underwriting_memo, _persist_workflow_failure, and _update_application_status execute commit."""
     mock_conn = MagicMock()
     mock_cur = MagicMock()
     mock_conn.cursor.return_value.__enter__.return_value = mock_cur
@@ -88,6 +136,17 @@ def test_persist_underwriting_memo_and_workflow_failure_with_mock_db() -> None:
         )
         mock_conn_fail.commit.assert_called_once()
 
+    mock_conn_status = MagicMock()
+    mock_cur_status = MagicMock()
+    mock_conn_status.cursor.return_value.__enter__.return_value = mock_cur_status
+    with patch("psycopg.connect", return_value=mock_conn_status):
+        mock_conn_status.__enter__.return_value = mock_conn_status
+        _update_application_status(
+            application_id=str(uuid4()),
+            status="validating",
+        )
+        mock_conn_status.commit.assert_called_once()
+
 
 def test_persist_functions_handle_exceptions_gracefully() -> None:
     """Verify persistence helpers catch DB connection and execution errors without raising."""
@@ -107,6 +166,11 @@ def test_persist_functions_handle_exceptions_gracefully() -> None:
         _persist_workflow_failure(
             application_id="invalid-uuid",
             error_message="Failure error",
+        )
+
+        _update_application_status(
+            application_id="invalid-uuid",
+            status="validating",
         )
 
 

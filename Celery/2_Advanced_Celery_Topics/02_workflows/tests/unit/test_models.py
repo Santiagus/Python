@@ -42,6 +42,7 @@ class TestModelDefinitions:
         assert app.company_name == "Apex Fintech Dynamics Inc."
         assert app.applicant_name == "JANE DOE"
         assert app.requested_facility == Decimal("250000.00")
+        assert app.requested_facility_cents == 25000000
         assert app.workflow_id is None
         assert app.error_message is None
 
@@ -95,6 +96,9 @@ class TestModelDefinitions:
         assert memo.decision == "approved"
         assert memo.calculated_dscr == Decimal("1.850")
         assert memo.net_cashflow == Decimal("32549.50")
+        assert memo.total_revenue == Decimal("1450000.00")
+        assert memo.net_cashflow_cents == 3254950
+        assert memo.total_revenue_cents == 145000000
         assert len(memo.audit_flags) == 2
         assert memo.stage_timings["total_pipeline_ms"] == 395.7
 
@@ -154,6 +158,7 @@ class TestSchemaSerialization:
             requested_facility=50000.0,
         )
         assert valid.requested_facility == 50000.0
+        assert valid.requested_facility == Decimal("50000.0")
 
     def test_application_response_from_orm(self) -> None:
         """ApplicationResponse must serialize an Application ORM model with nested memo."""
@@ -163,6 +168,7 @@ class TestSchemaSerialization:
             application_id=app_id,
             decision="approved",
             calculated_dscr=Decimal("1.85"),
+            calculated_dscr=Decimal("1.850"),
             net_cashflow=Decimal("32549.50"),
             total_revenue=Decimal("1450000.00"),
             audit_flags=["clean_record"],
@@ -182,6 +188,8 @@ class TestSchemaSerialization:
         assert response_schema.application_id == str(app_id)
         assert response_schema.company_name == "Apex Corp"
         assert response_schema.requested_facility == 250000.00
+        assert response_schema.requested_facility == Decimal("250000.00")
+        assert response_schema.requested_facility_cents == 25000000
         assert response_schema.status == "approved"
         assert response_schema.workflow_id == "wf-12345"
         assert response_schema.underwriting_memo is not None
@@ -189,7 +197,23 @@ class TestSchemaSerialization:
         assert response_schema.underwriting_memo.calculated_dscr == 1.85
         assert response_schema.underwriting_memo.net_cashflow == 32549.50
         assert response_schema.underwriting_memo.total_revenue == 1450000.00
+        assert response_schema.underwriting_memo.calculated_dscr == Decimal("1.850")
+        assert response_schema.underwriting_memo.net_cashflow == Decimal("32549.50")
+        assert response_schema.underwriting_memo.net_cashflow_cents == 3254950
+        assert response_schema.underwriting_memo.total_revenue == Decimal("1450000.00")
+        assert response_schema.underwriting_memo.total_revenue_cents == 145000000
         assert response_schema.underwriting_memo.audit_flags == ["clean_record"]
+
+        # Also test None cases for memo properties
+        empty_memo = UnderwritingMemo(
+            decision="declined",
+            summary="Declined",
+            calculated_dscr=None,
+            net_cashflow=None,
+            total_revenue=None,
+        )
+        assert empty_memo.net_cashflow_cents is None
+        assert empty_memo.total_revenue_cents is None
 
     def test_dossier_submit_request_validation(self) -> None:
         """DossierSubmitRequest must validate manifest structure."""

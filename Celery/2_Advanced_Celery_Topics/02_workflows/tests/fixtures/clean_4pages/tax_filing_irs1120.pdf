@@ -13,7 +13,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
 endobj
 5 0 obj
-<< /Length 2399 >>
+<< /Length 2534 >>
 stream
 BT
 /F1 10 Tf
@@ -48,6 +48,8 @@ BT
 (28  Taxable income before NOL. Subtract line 27 from line 3 ..... $  206,000.00) '
 (    Calculated Annual EBITDA .................................... $  244,500.00) '
 (    Debt Service Coverage Ratio \(DSCR Baseline\) ................. 3.25x) '
+(--------------------------------------------------------------------------------) '
+(Sign Here: Officer: JANE DOE, PRESIDENT / CEO) '
 (================================================================================) '
 ET
 endstream
@@ -91,10 +93,10 @@ xref
 0000000127 00000 n 
 0000000197 00000 n 
 0000000323 00000 n 
-0000002774 00000 n 
-0000002900 00000 n 
+0000002909 00000 n 
+0000003035 00000 n 
 trailer
 << /Size 8 /Root 1 0 R >>
 startxref
-4484
+4619
 %%EOF

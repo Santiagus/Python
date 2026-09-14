@@ -12,11 +12,13 @@ Implements canvas tasks orchestrated across chain, group, and chord:
 
 from __future__ import annotations
 
+from decimal import Decimal
 import logging
 import time
 from typing import Any
 from uuid import uuid4
 
+from app.currency import cents_to_decimal, decimal_to_cents
 from services.worker.celery_app import celery_app
 from services.worker.processors import (
     CorruptedDocumentError,
@@ -43,6 +45,7 @@ def validate_dossier(
     manifest: dict[str, str],
     applicant_name: str,
     requested_facility: float,
+    requested_facility: Decimal | int | float | str,
 ) -> dict[str, Any]:
     """Validate document presence and partition statement pages."""
     t0 = time.perf_counter()
@@ -67,6 +70,7 @@ def validate_dossier(
         "manifest": manifest,
         "validation_duration_ms": validation_duration_ms,
     }
+    _update_application_status(application_id, "validating")
 
     return {
         "status": "success",
@@ -151,6 +155,9 @@ def _persist_underwriting_memo(
     dscr: float,
     net_cashflow: float,
     total_revenue: float,
+    dscr: Decimal | float,
+    net_cashflow: Decimal | float,
+    total_revenue: Decimal | float,
     audit_flags: list[str],
     stage_timings: dict[str, float],
     summary: str,
@@ -160,6 +167,9 @@ def _persist_underwriting_memo(
         import json
         import psycopg
         conn_str = _get_db_connection_string()
+        dscr_dec = Decimal(str(dscr)) if not isinstance(dscr, Decimal) else dscr
+        net_cashflow_dec = Decimal(str(net_cashflow)) if not isinstance(net_cashflow, Decimal) else net_cashflow
+        total_revenue_dec = Decimal(str(total_revenue)) if not isinstance(total_revenue, Decimal) else total_revenue
         with psycopg.connect(conn_str) as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -187,6 +197,9 @@ def _persist_underwriting_memo(
                         dscr,
                         net_cashflow,
                         total_revenue,
+                        dscr_dec,
+                        net_cashflow_dec,
+                        total_revenue_dec,
                         json.dumps(audit_flags),
                         summary,
                         json.dumps(stage_timings),
@@ -198,8 +211,28 @@ def _persist_underwriting_memo(
         logger.debug("Database write skipped in isolated/test worker: %s", exc)
 
 
+def _update_application_status(application_id: str, status: str) -> None:
+    """Update application processing status in PostgreSQL and in-memory registry."""
+    _APP_STATE_REGISTRY.setdefault(application_id, {})["status"] = status
+    try:
+        import psycopg
+        conn_str = _get_db_connection_string()
+        with psycopg.connect(conn_str) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE applications SET status = %s WHERE id = %s",
+                    (status, application_id),
+                )
+            conn.commit()
+            logger.info("application_status_updated", extra={"application_id": application_id, "status": status})
+    except Exception as exc:
+        logger.debug("Database status write skipped in isolated/test worker: %s", exc)
+
+
 def _persist_workflow_failure(application_id: str, error_message: str) -> None:
     """Update application record to failed with error message."""
+    _APP_STATE_REGISTRY.setdefault(application_id, {})["status"] = "failed"
+    _APP_STATE_REGISTRY[application_id]["error_message"] = error_message
     try:
         import psycopg
         conn_str = _get_db_connection_string()
@@ -220,6 +253,7 @@ def aggregate_underwriting_decision(
     page_results: list[dict[str, Any]],
     application_id: str,
     requested_facility: float,
+    requested_facility: Decimal | int | float | str,
     stage_1_validation_ms: float = 0.0,
     chord_dispatched_at: float | None = None,
 ) -> dict[str, Any]:
@@ -251,10 +285,16 @@ def aggregate_underwriting_decision(
 
     total_deposits = 0.0
     total_withdrawals = 0.0
-    starting_balance = 50000.00
-    ebitda = 244500.00
-    dscr = 3.25
-    total_revenue = 1450000.00
+    starting_balance = 0.0
+    ebitda = 0.0
+    dscr = 0.0
+    total_revenue = 0.0
+    total_deposits_cents = 0
+    total_withdrawals_cents = 0
+    starting_balance_cents = 0
+    ebitda_cents = 0
+    dscr = Decimal("0.0")
+    total_revenue_cents = 0
 
     for r in page_results:
         doc_type = r.get("document_type")
@@ -270,9 +310,17 @@ def aggregate_underwriting_decision(
 
         if doc_type == "tax_filing":
             tax_data = r.get("data", {})
-            dscr = tax_data.get("dscr_baseline", 3.25)
-            ebitda = tax_data.get("ebitda", 244500.00)
-            total_revenue = tax_data.get("gross_receipts", 1450000.00)
+            dscr = tax_data.get("dscr_baseline", 0.0)
+            ebitda = tax_data.get("ebitda", 0.0)
+            total_revenue = tax_data.get("gross_receipts", 0.0)
+            dscr_val = tax_data.get("dscr_baseline", Decimal("0.0"))
+            dscr = Decimal(str(dscr_val)) if dscr_val is not None else Decimal("0.0")
+            ebitda_cents = tax_data.get("ebitda_cents") or decimal_to_cents(tax_data.get("ebitda", 0)) or 0
+            total_revenue_cents = (
+                tax_data.get("gross_receipts_cents")
+                or decimal_to_cents(tax_data.get("gross_receipts", 0))
+                or 0
+            )
 
         if r.get("total_deposits") is not None:
             total_deposits = r["total_deposits"]
@@ -280,16 +328,41 @@ def aggregate_underwriting_decision(
             total_withdrawals = r["total_withdrawals"]
         if r.get("starting_balance") is not None:
             starting_balance = r["starting_balance"]
+        if r.get("total_deposits_cents") is not None:
+            total_deposits_cents = r["total_deposits_cents"]
+        elif r.get("total_deposits") is not None:
+            c = decimal_to_cents(r["total_deposits"])
+            if c is not None:
+                total_deposits_cents = c
 
     net_cashflow = round(total_deposits - total_withdrawals, 2)
-    if net_cashflow == 0.0 and not has_degradation:
-        net_cashflow = 32549.50
+        if r.get("total_withdrawals_cents") is not None:
+            total_withdrawals_cents = r["total_withdrawals_cents"]
+        elif r.get("total_withdrawals") is not None:
+            c = decimal_to_cents(r["total_withdrawals"])
+            if c is not None:
+                total_withdrawals_cents = c
+
+        if r.get("starting_balance_cents") is not None:
+            starting_balance_cents = r["starting_balance_cents"]
+        elif r.get("starting_balance") is not None:
+            c = decimal_to_cents(r["starting_balance"])
+            if c is not None:
+                starting_balance_cents = c
+
+    # Exact minor unit calculus (integer cents)
+    net_cashflow_cents = total_deposits_cents - total_withdrawals_cents
+    net_cashflow = cents_to_decimal(net_cashflow_cents) or Decimal("0.00")
+    total_revenue = cents_to_decimal(total_revenue_cents) or Decimal("0.00")
 
     # Decision logic
     if has_kyc_failure:
         decision = "declined"
     elif has_degradation:
         decision = "manual_review"
+    elif dscr < 1.25:
+    elif dscr < Decimal("1.25"):
+        decision = "declined"
     else:
         decision = "approved"
 
@@ -316,6 +389,9 @@ def aggregate_underwriting_decision(
             "decision": decision,
             "dscr": dscr,
             "net_cashflow": net_cashflow,
+            "dscr": str(dscr),
+            "net_cashflow": str(net_cashflow),
+            "net_cashflow_cents": net_cashflow_cents,
         },
     )
 
@@ -326,6 +402,8 @@ def aggregate_underwriting_decision(
         "dscr": dscr,
         "net_cashflow": net_cashflow,
         "total_revenue": total_revenue,
+        "net_cashflow_cents": net_cashflow_cents,
+        "total_revenue_cents": total_revenue_cents,
         "audit_flags": audit_flags,
         "stage_timings": stage_timings,
         "summary": summary,

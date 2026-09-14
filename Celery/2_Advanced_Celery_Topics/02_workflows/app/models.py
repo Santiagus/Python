@@ -133,6 +133,11 @@ class Application(Base):
         """String representation of the application UUID for API schemas."""
         return str(self.id)
 
+    @property
+    def requested_facility_cents(self) -> int:
+        """Requested facility amount in minor units (integer cents)."""
+        return int((self.requested_facility * Decimal(100)).to_integral_exact())
+
 
 class Document(Base):
     """Ingested dossier document (e.g. KYC ID, Bank Statement, Tax Return)."""
@@ -273,3 +278,17 @@ class UnderwritingMemo(Base):
         kwargs.setdefault("created_at", now)
         kwargs.setdefault("updated_at", now)
         super().__init__(**kwargs)
+
+    @property
+    def net_cashflow_cents(self) -> int | None:
+        """Net cashflow in minor units (integer cents)."""
+        if self.net_cashflow is None:
+            return None
+        return int((self.net_cashflow * Decimal(100)).to_integral_exact())
+
+    @property
+    def total_revenue_cents(self) -> int | None:
+        """Total revenue in minor units (integer cents)."""
+        if self.total_revenue is None:
+            return None
+        return int((self.total_revenue * Decimal(100)).to_integral_exact())

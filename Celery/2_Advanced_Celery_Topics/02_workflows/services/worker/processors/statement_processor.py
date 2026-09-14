@@ -6,10 +6,13 @@ flags degradation for Result Envelopes, and computes consolidated cashflow metri
 
 from __future__ import annotations
 
+from decimal import Decimal
 import logging
-import re
 from pathlib import Path
+import re
 from typing import Any
+
+from app.currency import cents_to_decimal, decimal_to_cents, parse_currency_to_cents
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +25,13 @@ class StatementProcessor:
     """Processes commercial bank statements with OCR scoring and ledger aggregation."""
 
     @staticmethod
-    def _parse_currency(val_str: str | None) -> float | None:
-        if not val_str:
-            return None
-        clean = val_str.replace("$", "").replace(",", "").strip().replace("+", "")
-        try:
-            return float(clean)
-        except ValueError:
-            return None
+    def _parse_currency(val_str: str | None) -> Decimal | None:
+        cents = parse_currency_to_cents(val_str)
+        return cents_to_decimal(cents)
+
+    @staticmethod
+    def _parse_currency_cents(val_str: str | None) -> int | None:
+        return parse_currency_to_cents(val_str)
 
     def partition_pages(self, file_path: str | Path) -> dict[str, Any]:
         """Partition a multi-page PDF bank statement into individual page text streams.
@@ -113,27 +115,37 @@ class StatementProcessor:
         else:
             status = "success"
 
-        # Metric extractions
+        # Metric extractions in minor units (integer cents) to avoid floating-point drift
         start_m = re.search(r"Starting Balance:\s*([\$0-9,\.\+\-]+)", text)
-        starting_balance = self._parse_currency(start_m.group(1)) if start_m else None
+        starting_balance_cents = parse_currency_to_cents(start_m.group(1)) if start_m else None
+        starting_balance = cents_to_decimal(starting_balance_cents)
 
         close_m = re.search(r"Closing Statement Balance:\s*([\$0-9,\.\+\-]+)", text)
-        closing_balance = self._parse_currency(close_m.group(1)) if close_m else None
+        closing_balance_cents = parse_currency_to_cents(close_m.group(1)) if close_m else None
+        closing_balance = cents_to_decimal(closing_balance_cents)
 
         dep_m = re.search(r"Total Monthly Deposits:\s*([\$0-9,\.\+\-]+)", text)
-        total_deposits = self._parse_currency(dep_m.group(1)) if dep_m else None
+        total_deposits_cents = parse_currency_to_cents(dep_m.group(1)) if dep_m else None
+        total_deposits = cents_to_decimal(total_deposits_cents)
 
         with_m = re.search(r"Total Monthly Withdrawals:\s*([\$0-9,\.\+\-]+)", text)
-        total_withdrawals = self._parse_currency(with_m.group(1)) if with_m else None
+        total_withdrawals_cents = parse_currency_to_cents(with_m.group(1)) if with_m else None
+        total_withdrawals = cents_to_decimal(total_withdrawals_cents)
 
         net_m = re.search(r"Net Cash Flow Change:\s*([\$0-9,\.\+\-]+)", text)
-        net_cashflow = self._parse_currency(net_m.group(1)) if net_m else None
+        net_cashflow_cents = parse_currency_to_cents(net_m.group(1)) if net_m else None
+        net_cashflow = cents_to_decimal(net_cashflow_cents)
 
         return {
             "page_number": page_number,
             "status": status,
             "confidence": confidence,
             "errors": errors,
+            "starting_balance_cents": starting_balance_cents,
+            "closing_balance_cents": closing_balance_cents,
+            "total_deposits_cents": total_deposits_cents,
+            "total_withdrawals_cents": total_withdrawals_cents,
+            "net_cashflow_cents": net_cashflow_cents,
             "starting_balance": starting_balance,
             "closing_balance": closing_balance,
             "total_deposits": total_deposits,
@@ -141,36 +153,58 @@ class StatementProcessor:
             "net_cashflow": net_cashflow,
         }
 
-    def aggregate_pages(self, page_results: list[dict[str, Any]]) -> dict[str, float]:
+    def aggregate_pages(self, page_results: list[dict[str, Any]]) -> dict[str, Any]:
         """Consolidate individual page extraction envelopes into full document ledger metrics.
+
+        Operates entirely in minor units (integer cents) to ensure zero floating-point
+        precision loss when calculating net cashflow and closing balance.
 
         Args:
             page_results: List of page-level result dictionaries.
 
         Returns:
-            Consolidated dictionary with starting_balance, closing_balance, net_cashflow,
-            total_deposits, and total_withdrawals.
+            Consolidated dictionary with minor unit integer cents and Decimal metrics.
         """
-        starting_balance = 50000.00
-        total_deposits = 64200.00
-        total_withdrawals = 31650.50
+        starting_balance_cents = 0
+        total_deposits_cents = 0
+        total_withdrawals_cents = 0
 
         for pr in page_results:
-            if pr.get("starting_balance") is not None:
-                starting_balance = pr["starting_balance"]
-            if pr.get("total_deposits") is not None:
-                total_deposits = pr["total_deposits"]
-            if pr.get("total_withdrawals") is not None:
-                total_withdrawals = pr["total_withdrawals"]
+            if pr.get("starting_balance_cents") is not None:
+                starting_balance_cents = pr["starting_balance_cents"]
+            elif pr.get("starting_balance") is not None:
+                c = decimal_to_cents(pr["starting_balance"])
+                if c is not None:
+                    starting_balance_cents = c
 
-        net_cashflow = round(total_deposits - total_withdrawals, 2)
-        closing_balance = round(starting_balance + net_cashflow, 2)
+            if pr.get("total_deposits_cents") is not None:
+                total_deposits_cents = pr["total_deposits_cents"]
+            elif pr.get("total_deposits") is not None:
+                c = decimal_to_cents(pr["total_deposits"])
+                if c is not None:
+                    total_deposits_cents = c
+
+            if pr.get("total_withdrawals_cents") is not None:
+                total_withdrawals_cents = pr["total_withdrawals_cents"]
+            elif pr.get("total_withdrawals") is not None:
+                c = decimal_to_cents(pr["total_withdrawals"])
+                if c is not None:
+                    total_withdrawals_cents = c
+
+        # Exact integer calculus in minor units (cents)
+        net_cashflow_cents = total_deposits_cents - total_withdrawals_cents
+        closing_balance_cents = starting_balance_cents + net_cashflow_cents
 
         return {
-            "starting_balance": round(starting_balance, 2),
-            "closing_balance": round(closing_balance, 2),
-            "net_cashflow": round(net_cashflow, 2),
-            "total_deposits": round(total_deposits, 2),
-            "total_withdrawals": round(total_withdrawals, 2),
+            "starting_balance_cents": starting_balance_cents,
+            "closing_balance_cents": closing_balance_cents,
+            "net_cashflow_cents": net_cashflow_cents,
+            "total_deposits_cents": total_deposits_cents,
+            "total_withdrawals_cents": total_withdrawals_cents,
+            "starting_balance": cents_to_decimal(starting_balance_cents),
+            "closing_balance": cents_to_decimal(closing_balance_cents),
+            "net_cashflow": cents_to_decimal(net_cashflow_cents),
+            "total_deposits": cents_to_decimal(total_deposits_cents),
+            "total_withdrawals": cents_to_decimal(total_withdrawals_cents),
         }
 
