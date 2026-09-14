@@ -109,8 +109,6 @@ async def test_database_url(postgres_container: PostgresContainer | None) -> str
         if "already exists" not in str(exc):
             raise
     async with engine.begin() as conn:
-        raw_conn = await conn.get_raw_connection()
-        await raw_conn.driver_connection.execute(ddl)
         await conn.execute(
             text("TRUNCATE TABLE underwriting_memos, document_pages, documents, applications CASCADE;")
         )

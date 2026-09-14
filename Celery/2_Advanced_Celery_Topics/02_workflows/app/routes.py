@@ -72,8 +72,13 @@ async def create_application(
             )
             session.add(doc)
 
-        from app.tasks import dispatch_underwriting_workflow
+        workflow_id = f"wf-{uuid4()}"
+        application.status = ApplicationStatus.PROCESSING
+        application.workflow_id = workflow_id
+        await session.commit()
+        await session.refresh(application)
 
+        from app.tasks import dispatch_underwriting_workflow
         try:
             async_res = dispatch_underwriting_workflow(
                 application_id=str(application.id),
@@ -81,15 +86,13 @@ async def create_application(
                 applicant_name=application.applicant_name,
                 requested_facility=float(application.requested_facility),
             )
-            workflow_id = async_res.id or f"wf-{uuid4()}"
+            if async_res.id and async_res.id != workflow_id:
+                application.workflow_id = async_res.id
+                await session.commit()
+                await session.refresh(application)
         except Exception as exc:
             logger.warning("Workflow dispatch deferred: %s", exc)
-            workflow_id = f"wf-{uuid4()}"
 
-        application.status = ApplicationStatus.PROCESSING
-        application.workflow_id = workflow_id
-        await session.commit()
-        await session.refresh(application)
         logger.info(
             "application_persisted_and_dispatched",
             extra={
@@ -172,39 +175,7 @@ async def submit_dossier(
         )
         session.add(doc)
 
-    # Initialize underwriting decision memo and timing telemetry in DB
-    stage_timings = {
-        "stage_1_validation_ms": 42.5,
-        "stage_2_fanout_chord_ms": 315.0,
-        "stage_3_fanin_aggregation_ms": 38.2,
-        "total_pipeline_ms": 395.7,
-    }
-    memo = UnderwritingMemo(
-        application_id=application.id,
-        decision="approved",
-        calculated_dscr=1.85,
-        net_cashflow=32549.50,
-        total_revenue=1450000.00,
-        audit_flags=[],
-        summary="Automated underwriting decision compiled via Celery chord aggregation.",
-        stage_timings=stage_timings,
-    )
-    session.add(memo)
-
-    # Dispatch Celery Canvas workflow (Stage 1 chain -> Stage 2/3 chord)
-    from app.tasks import dispatch_underwriting_workflow
-    try:
-        async_res = dispatch_underwriting_workflow(
-            application_id=str(application.id),
-            manifest=payload.manifest,
-            applicant_name=application.applicant_name,
-            requested_facility=float(application.requested_facility),
-        )
-        workflow_id = async_res.id or f"wf-{uuid4()}"
-    except Exception as exc:
-        logger.warning("Workflow dispatch deferred: %s", exc)
-        workflow_id = f"wf-{uuid4()}"
-
+    workflow_id = f"wf-{uuid4()}"
     application.status = ApplicationStatus.PROCESSING
     application.workflow_id = workflow_id
 
@@ -222,6 +193,21 @@ async def submit_dossier(
             status=ApplicationStatus.PROCESSING,
             message=f"Application {application_id} has already been registered.",
         )
+
+    # Dispatch Celery Canvas workflow (Stage 1 chain -> Stage 2/3 chord)
+    from app.tasks import dispatch_underwriting_workflow
+    try:
+        async_res = dispatch_underwriting_workflow(
+            application_id=str(application.id),
+            manifest=payload.manifest,
+            applicant_name=application.applicant_name,
+            requested_facility=float(application.requested_facility),
+        )
+        if async_res.id and async_res.id != workflow_id:
+            application.workflow_id = async_res.id
+            await session.commit()
+    except Exception as exc:
+        logger.warning("Workflow dispatch deferred: %s", exc)
 
     logger.info(
         "dossier_dispatched",

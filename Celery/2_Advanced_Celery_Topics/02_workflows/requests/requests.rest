@@ -15,7 +15,7 @@ GET {{baseUrl}}/health
 
 
 ###
-# 2. Create Commercial Credit Application (Happy Path)
+# 2. Create Commercial Credit Application (Two-Step: Pending state, awaiting dossier)
 # @name createApplication
 POST {{baseUrl}}{{apiPrefix}}/applications
 Content-Type: application/json
@@ -24,6 +24,24 @@ Content-Type: application/json
   "company_name": "Apex Fintech Dynamics Inc.",
   "applicant_name": "JANE DOE",
   "requested_facility": 250000.00
+}
+
+
+###
+# 2A. Create Application & Immediately Dispatch Workflow (Single-Step Fast Track)
+# @name createAndDispatchApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Fast Track Lending LLC",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 300000.00,
+  "manifest": {
+    "bank_statement": "tests/fixtures/clean_4pages/bank_statement_4pages.pdf",
+    "kyc_id": "tests/fixtures/clean_4pages/kyc_executive_id.jpg",
+    "tax_filing": "tests/fixtures/clean_4pages/tax_filing_irs1120.pdf"
+  }
 }
 
 
@@ -89,8 +107,14 @@ GET {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.appl
 
 
 ###
-# 8. Retrieve Stage-by-Stage Latency Telemetry
+# 8. Retrieve Stage-by-Stage Latency Telemetry (Real Wall-Clock Metrics)
+# Returns 404 while workflow is processing; returns real float timings once completed
 GET {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/timing
+
+
+###
+# 8A. Retrieve Stage-by-Stage Latency Telemetry (for Single-Step 2A Fast Track)
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createAndDispatchApplication.response.body.application_id}}/timing
 
 
 ###

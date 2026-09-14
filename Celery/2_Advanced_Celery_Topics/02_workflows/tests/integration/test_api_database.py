@@ -66,17 +66,17 @@ class TestApiDatabaseIntegration:
         memo = (await db_session.execute(memo_stmt)).scalar_one_or_none()
         assert memo is not None
         assert memo.decision == "approved"
-        assert float(memo.calculated_dscr) == 1.85
+        assert float(memo.calculated_dscr) == 3.25
 
         # 3. Retrieve application state via GET /applications/{id}
         get_resp = await async_client.get(f"/api/v1/applications/{app_id}")
         assert get_resp.status_code == 200
         get_payload = get_resp.json()
         assert get_payload["application_id"] == app_id
-        assert get_payload["status"] == "processing"
+        assert get_payload["status"] == "approved"
         assert get_payload["underwriting_memo"] is not None
         assert get_payload["underwriting_memo"]["decision"] == "approved"
-        assert get_payload["underwriting_memo"]["calculated_dscr"] == 1.85
+        assert get_payload["underwriting_memo"]["calculated_dscr"] == 3.25
         assert get_payload["underwriting_memo"]["net_cashflow"] == 32549.50
 
         # 4. Retrieve latency timing telemetry via GET /applications/{id}/timing
@@ -84,10 +84,13 @@ class TestApiDatabaseIntegration:
         assert timing_resp.status_code == 200
         timing_payload = timing_resp.json()
         assert timing_payload["application_id"] == app_id
-        assert timing_payload["stage_1_validation_ms"] == 42.5
-        assert timing_payload["stage_2_fanout_chord_ms"] == 315.0
-        assert timing_payload["stage_3_fanin_aggregation_ms"] == 38.2
-        assert timing_payload["total_pipeline_ms"] == 395.7
+        assert timing_payload["stage_1_validation_ms"] > 0
+        assert timing_payload["stage_2_fanout_chord_ms"] > 0
+        assert timing_payload["stage_3_fanin_aggregation_ms"] > 0
+        assert timing_payload["total_pipeline_ms"] > 0
+        assert timing_payload["total_pipeline_ms"] >= (
+            timing_payload["stage_1_validation_ms"] + timing_payload["stage_3_fanin_aggregation_ms"]
+        )
 
     async def test_get_nonexistent_application_returns_404(self, async_client: AsyncClient) -> None:
         """Non-existent or malformed application UUID must return 404."""
@@ -207,6 +210,32 @@ class TestApiDatabaseIntegration:
         payload = resp.json()
         assert payload["workflow_id"].startswith("wf-")
 
+    async def test_create_application_dispatch_error_fallback(
+        self,
+        async_client: AsyncClient,
+        clean_dossier_manifest: dict[str, str],
+        monkeypatch,
+    ) -> None:
+        """Single-step application creation falls back to synthetic workflow_id if broker is unavailable."""
+        def mock_dispatch_fail(*args, **kwargs):
+            raise ConnectionError("RabbitMQ broker connection refused")
+
+        import app.tasks
+        monkeypatch.setattr(app.tasks, "dispatch_underwriting_workflow", mock_dispatch_fail)
+
+        resp = await async_client.post(
+            "/api/v1/applications",
+            json={
+                "company_name": "Create Error Inc.",
+                "applicant_name": "JANE DOE",
+                "requested_facility": 120000.00,
+                "manifest": clean_dossier_manifest,
+            },
+        )
+        assert resp.status_code == 201
+        payload = resp.json()
+        assert payload["workflow_id"].startswith("wf-")
+
     async def test_submit_dossier_integrity_error_rollback(
         self,
         async_client: AsyncClient,
@@ -268,3 +297,41 @@ class TestApiDatabaseIntegration:
         app_id = create_resp.json()["application_id"]
         no_memo_resp = await async_client.get(f"/api/v1/applications/{app_id}/timing")
         assert no_memo_resp.status_code == 404
+
+    async def test_single_step_application_creation_with_manifest(
+        self,
+        async_client: AsyncClient,
+        clean_dossier_manifest: dict[str, str],
+    ) -> None:
+        """Verify single-step application creation with embedded manifest dispatches workflow and persists timing."""
+        create_resp = await async_client.post(
+            "/api/v1/applications",
+            json={
+                "company_name": "Fast Track Lending LLC",
+                "applicant_name": "JANE DOE",
+                "requested_facility": 300000.00,
+                "manifest": clean_dossier_manifest,
+            },
+        )
+        assert create_resp.status_code == 201
+        created_payload = create_resp.json()
+        app_id = created_payload["application_id"]
+        assert created_payload["company_name"] == "Fast Track Lending LLC"
+
+        # Polling status returns memo
+        get_resp = await async_client.get(f"/api/v1/applications/{app_id}")
+        assert get_resp.status_code == 200
+        get_payload = get_resp.json()
+        assert get_payload["underwriting_memo"] is not None
+        assert get_payload["underwriting_memo"]["decision"] == "approved"
+
+        # Telemetry returns real timings > 0
+        timing_resp = await async_client.get(f"/api/v1/applications/{app_id}/timing")
+        assert timing_resp.status_code == 200
+        timing_payload = timing_resp.json()
+        assert timing_payload["application_id"] == app_id
+        assert timing_payload["stage_1_validation_ms"] > 0
+        assert timing_payload["stage_2_fanout_chord_ms"] > 0
+        assert timing_payload["stage_3_fanin_aggregation_ms"] > 0
+        assert timing_payload["total_pipeline_ms"] > 0
+

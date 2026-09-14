@@ -20,6 +20,14 @@ def test_configure_logging_pretty() -> None:
     assert isinstance(root.handlers[0].formatter, logging.Formatter)
 
 
+def test_configure_celery_logging() -> None:
+    """Verify configure_celery_logging signal hook configures logging."""
+    from services.worker.celery_app import configure_celery_logging
+    configure_celery_logging()
+    root = logging.getLogger()
+    assert len(root.handlers) == 1
+
+
 def test_configure_logging_json() -> None:
     """Verify configure_logging configures structured JSON formatting."""
     configure_logging(level="INFO", log_format="json")

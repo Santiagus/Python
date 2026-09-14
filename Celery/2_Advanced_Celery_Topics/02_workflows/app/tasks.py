@@ -9,6 +9,7 @@ Constructs and dispatches the multi-stage Celery Canvas graph:
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 from uuid import uuid4
 
@@ -34,6 +35,8 @@ def build_underwriting_chord(
     applicant_name: str,
     requested_facility: float,
     page_ids: list[str],
+    stage_1_validation_ms: float = 0.0,
+    chord_dispatched_at: float | None = None,
 ) -> Any:
     """Construct the parallel chord canvas stage for an underwriting dossier.
 
@@ -43,6 +46,8 @@ def build_underwriting_chord(
         applicant_name: Legal applicant name from application manifest.
         requested_facility: Dollar facility amount requested.
         page_ids: List of partitioned bank statement page UUID strings.
+        stage_1_validation_ms: Real Stage 1 gatekeeper validation latency in ms.
+        chord_dispatched_at: Timestamp when chord was dispatched for Stage 2 telemetry.
 
     Returns:
         Celery chord signature ready for execution.
@@ -57,7 +62,12 @@ def build_underwriting_chord(
         ],
     ]
 
-    callback = aggregate_underwriting_decision.s(application_id, requested_facility)
+    callback = aggregate_underwriting_decision.s(
+        application_id,
+        requested_facility,
+        stage_1_validation_ms,
+        chord_dispatched_at,
+    )
     return chord(header, callback)
 
 
@@ -84,17 +94,24 @@ def dispatch_underwriting_workflow(
     logger.info("Dispatching underwriting workflow for application %s", application_id)
 
     # Stage 1: Validate dossier with link_error errback attached
+    t1_start = time.perf_counter()
     validation_sig = validate_dossier.s(
         application_id, manifest, applicant_name, requested_facility
     ).on_error(handle_workflow_failure.s(application_id))
 
     validation_res = validation_sig.apply()
+    t1_end = time.perf_counter()
     if validation_res.failed():
         logger.warning("Dossier validation failed for %s", application_id)
         return validation_res
 
     validation_result = validation_res.get()
     page_ids = validation_result.get("page_ids", [])
+    stage_1_ms = validation_result.get("validation_duration_ms") or max(
+        round((t1_end - t1_start) * 1000, 2), 0.1
+    )
+
+    chord_start_time = time.time()
 
     # Stages 2 & 3: Parallel chord fan-out and fan-in aggregation
     workflow_chord = build_underwriting_chord(
@@ -103,6 +120,8 @@ def dispatch_underwriting_workflow(
         applicant_name=applicant_name,
         requested_facility=requested_facility,
         page_ids=page_ids,
+        stage_1_validation_ms=stage_1_ms,
+        chord_dispatched_at=chord_start_time,
     )
 
     return workflow_chord.apply_async()

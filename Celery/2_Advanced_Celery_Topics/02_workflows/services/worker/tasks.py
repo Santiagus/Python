@@ -13,6 +13,7 @@ Implements canvas tasks orchestrated across chain, group, and chord:
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 from uuid import uuid4
 
@@ -44,6 +45,7 @@ def validate_dossier(
     requested_facility: float,
 ) -> dict[str, Any]:
     """Validate document presence and partition statement pages."""
+    t0 = time.perf_counter()
     logger.info("Validating dossier for application %s", application_id)
     logger.info("validating_dossier", extra={"application_id": application_id, "manifest_keys": list(manifest.keys())})
     statement_path = manifest.get("bank_statement")
@@ -57,10 +59,13 @@ def validate_dossier(
     # Generate synthetic page IDs for the partitioned pages
     page_ids = [str(uuid4()) for _ in partition["pages"]]
 
+    validation_duration_ms = max(round((time.perf_counter() - t0) * 1000, 2), 0.1)
+
     _APP_STATE_REGISTRY[application_id] = {
         "status": "validating",
         "page_ids": page_ids,
         "manifest": manifest,
+        "validation_duration_ms": validation_duration_ms,
     }
 
     return {
@@ -68,6 +73,7 @@ def validate_dossier(
         "application_id": application_id,
         "page_ids": page_ids,
         "total_pages": partition["total_pages"],
+        "validation_duration_ms": validation_duration_ms,
     }
 
 
@@ -78,11 +84,14 @@ def process_kyc_document(
     applicant_name: str,
 ) -> dict[str, Any]:
     """Process KYC ID document and perform anti-fraud matching."""
+    t0 = time.perf_counter()
     logger.info("processing_kyc_document", extra={"application_id": application_id, "applicant_name": applicant_name})
     processor = KYCProcessor()
     result = processor.process(file_path, expected_applicant=applicant_name)
+    duration_ms = max(round((time.perf_counter() - t0) * 1000, 2), 0.1)
     return {
         "application_id": application_id,
+        "execution_duration_ms": duration_ms,
         **result,
     }
 
@@ -90,11 +99,14 @@ def process_kyc_document(
 @celery_app.task(name="services.worker.tasks.process_tax_return")
 def process_tax_return(application_id: str, file_path: str) -> dict[str, Any]:
     """Process IRS Form 1120 corporate income tax return."""
+    t0 = time.perf_counter()
     logger.info("processing_tax_return", extra={"application_id": application_id, "file_path": file_path})
     processor = TaxProcessor()
     result = processor.process(file_path)
+    duration_ms = max(round((time.perf_counter() - t0) * 1000, 2), 0.1)
     return {
         "application_id": application_id,
+        "execution_duration_ms": duration_ms,
         **result,
     }
 
@@ -107,6 +119,7 @@ def process_bank_statement_page(
     file_path: str,
 ) -> dict[str, Any]:
     """Extract and analyze a single bank statement page text stream."""
+    t0 = time.perf_counter()
     logger.info("processing_bank_statement_page", extra={"application_id": application_id, "page_number": page_number})
     stmt_processor = StatementProcessor()
     partition = stmt_processor.partition_pages(file_path)
@@ -114,9 +127,11 @@ def process_bank_statement_page(
     matching = next((p for p in partition["pages"] if p["page_number"] == page_number), None)
     text = matching["text"] if matching else ""
     res = stmt_processor.process_page_content(page_number, text)
+    duration_ms = max(round((time.perf_counter() - t0) * 1000, 2), 0.1)
     return {
         "application_id": application_id,
         "page_id": page_id,
+        "execution_duration_ms": duration_ms,
         **res,
     }
 
@@ -205,9 +220,31 @@ def aggregate_underwriting_decision(
     page_results: list[dict[str, Any]],
     application_id: str,
     requested_facility: float,
+    stage_1_validation_ms: float = 0.0,
+    chord_dispatched_at: float | None = None,
 ) -> dict[str, Any]:
     """Fan-in chord callback synthesizing all document envelopes into a final decision."""
+    t3_start = time.perf_counter()
     logger.info("aggregating_underwriting_decision", extra={"application_id": application_id, "page_count": len(page_results)})
+
+    # Resolve real Stage 1 validation latency
+    if stage_1_validation_ms <= 0.0:
+        reg_state = _APP_STATE_REGISTRY.get(application_id, {})
+        stage_1_validation_ms = reg_state.get("validation_duration_ms", 1.0)
+    stage_1_validation_ms = max(round(stage_1_validation_ms, 2), 0.1)
+
+    # Resolve real Stage 2 fanout chord latency
+    now = time.time()
+    header_durations = [
+        r.get("execution_duration_ms", 0.0)
+        for r in page_results
+        if isinstance(r, dict)
+    ]
+    if chord_dispatched_at and 0 < (now - chord_dispatched_at) < 86400:
+        stage_2_fanout_chord_ms = max(round((now - chord_dispatched_at) * 1000, 2), 0.1)
+    else:
+        stage_2_fanout_chord_ms = max(round(sum(header_durations) if header_durations else 1.0, 2), 0.1)
+
     audit_flags: list[str] = []
     has_kyc_failure = False
     has_degradation = False
@@ -256,11 +293,15 @@ def aggregate_underwriting_decision(
     else:
         decision = "approved"
 
+    t3_end = time.perf_counter()
+    stage_3_fanin_aggregation_ms = max(round((t3_end - t3_start) * 1000, 2), 0.1)
+    total_pipeline_ms = round(stage_1_validation_ms + stage_2_fanout_chord_ms + stage_3_fanin_aggregation_ms, 2)
+
     stage_timings = {
-        "stage_1_validation_ms": 42.5,
-        "stage_2_fanout_chord_ms": 315.0,
-        "stage_3_fanin_aggregation_ms": 38.2,
-        "total_pipeline_ms": 395.7,
+        "stage_1_validation_ms": stage_1_validation_ms,
+        "stage_2_fanout_chord_ms": stage_2_fanout_chord_ms,
+        "stage_3_fanin_aggregation_ms": stage_3_fanin_aggregation_ms,
+        "total_pipeline_ms": total_pipeline_ms,
     }
 
     summary = (
