@@ -362,8 +362,6 @@ def aggregate_underwriting_decision(
         extra={
             "application_id": application_id,
             "decision": decision,
-            "dscr": dscr,
-            "net_cashflow": net_cashflow,
             "dscr": str(dscr),
             "net_cashflow": str(net_cashflow),
             "net_cashflow_cents": net_cashflow_cents,
