@@ -42,10 +42,12 @@ def live_celery_worker(
     orig_broker = celery_app.conf.broker_url
     orig_backend = celery_app.conf.result_backend
 
-    celery_app.conf.task_always_eager = False
-    celery_app.conf.task_eager_propagates = False
-    celery_app.conf.broker_url = rabbitmq_service_url
-    celery_app.conf.result_backend = redis_service_url
+    celery_app.conf.update(
+        task_always_eager=False,
+        task_eager_propagates=False,
+        broker_url=rabbitmq_service_url,
+        result_backend=redis_service_url,
+    )
 
     worker_env = {
         **os.environ,
@@ -81,10 +83,12 @@ def live_celery_worker(
             worker_proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             worker_proc.kill()
-        celery_app.conf.task_always_eager = orig_eager
-        celery_app.conf.task_eager_propagates = orig_prop
-        celery_app.conf.broker_url = orig_broker
-        celery_app.conf.result_backend = orig_backend
+        celery_app.conf.update(
+            task_always_eager=orig_eager,
+            task_eager_propagates=orig_prop,
+            broker_url=orig_broker,
+            result_backend=orig_backend,
+        )
 
 
 @pytest.mark.asyncio
