@@ -131,6 +131,70 @@ async def db_session(test_database_url: str) -> AsyncIterator[AsyncSession]:
     await engine.dispose()
 
 
+def _check_tcp_port(host: str, port: int, timeout: float = 0.5) -> bool:
+    """Check if a TCP port is open and accepting connections."""
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+@pytest.fixture(scope="session")
+def redis_service_url() -> Generator[str, None, None]:
+    """Provide Redis service URL via existing environment, local port, or dynamic Testcontainer."""
+    if os.getenv("REDIS_URL"):
+        yield os.environ["REDIS_URL"]
+        return
+    if _check_tcp_port("localhost", 6380):
+        yield "redis://localhost:6380/0"
+        return
+
+    from testcontainers.core.container import DockerContainer
+    try:
+        with DockerContainer("redis:7-alpine").with_exposed_ports(6379) as redis_cnt:
+            port = redis_cnt.get_exposed_port(6379)
+            yield f"redis://localhost:{port}/0"
+    except Exception as exc:
+        pytest.skip(f"Redis not available locally and Testcontainer failed: {exc}")
+
+
+@pytest.fixture(scope="session")
+def rabbitmq_service_url() -> Generator[str, None, None]:
+    """Provide RabbitMQ broker URL via existing environment, local port, or dynamic Testcontainer."""
+    if os.getenv("RABBITMQ_URL"):
+        yield os.environ["RABBITMQ_URL"]
+        return
+    if _check_tcp_port("localhost", 5673):
+        yield "amqp://guest:guest@localhost:5673//"
+        return
+
+    from testcontainers.core.container import DockerContainer
+    import amqp
+    import time
+
+    try:
+        with DockerContainer("rabbitmq:3.13-management-alpine").with_exposed_ports(5672) as rmq_cnt:
+            port = rmq_cnt.get_exposed_port(5672)
+            # Wait for broker socket readiness
+            ready = False
+            for _ in range(30):
+                try:
+                    conn = amqp.Connection(host=f"localhost:{port}", userid="guest", password="guest", timeout=1)
+                    conn.connect()
+                    conn.close()
+                    ready = True
+                    break
+                except Exception:
+                    time.sleep(1)
+            if not ready:
+                pytest.skip("RabbitMQ Testcontainer timed out waiting for AMQP readiness")
+            yield f"amqp://guest:guest@localhost:{port}//"
+    except Exception as exc:
+        pytest.skip(f"RabbitMQ not available locally and Testcontainer failed: {exc}")
+
+
 @pytest.fixture(autouse=True)
 def configure_celery_for_tests():
     """Ensure Celery runs in eager mode during test executions."""

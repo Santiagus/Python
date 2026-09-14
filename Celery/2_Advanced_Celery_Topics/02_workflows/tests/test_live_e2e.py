@@ -30,30 +30,29 @@ from app.models import Application, UnderwritingMemo
 from services.worker.celery_app import celery_app
 
 
-def _is_infrastructure_ready() -> bool:
-    """Verify RabbitMQ and Redis live network ports are reachable."""
-    try:
-        r = redis.Redis(host="localhost", port=6380, socket_timeout=2)
-        if not r.ping():
-            return False
-        conn = amqp.Connection(host="localhost:5673", userid="guest", password="guest", timeout=2)
-        conn.connect()
-        conn.close()
-        return True
-    except Exception:
-        return False
-
-
 @pytest.fixture(scope="module")
-def live_celery_worker() -> Generator[subprocess.Popen[bytes], None, None]:
-    """Launch a real, isolated Celery worker daemon process for live E2E testing."""
-    if not _is_infrastructure_ready():
-        pytest.skip("Live RabbitMQ (5673) or Redis (6380) infrastructure is not reachable")
-
+def live_celery_worker(
+    test_database_url: str,
+    rabbitmq_service_url: str,
+    redis_service_url: str,
+) -> Generator[subprocess.Popen[bytes], None, None]:
+    """Launch an isolated Celery worker daemon process for live E2E testing."""
     orig_eager = celery_app.conf.task_always_eager
     orig_prop = celery_app.conf.task_eager_propagates
+    orig_broker = celery_app.conf.broker_url
+    orig_backend = celery_app.conf.result_backend
+
     celery_app.conf.task_always_eager = False
     celery_app.conf.task_eager_propagates = False
+    celery_app.conf.broker_url = rabbitmq_service_url
+    celery_app.conf.result_backend = redis_service_url
+
+    worker_env = {
+        **os.environ,
+        "DATABASE_URL": test_database_url,
+        "RABBITMQ_URL": rabbitmq_service_url,
+        "REDIS_URL": redis_service_url,
+    }
 
     worker_proc = subprocess.Popen(
         [
@@ -67,11 +66,11 @@ def live_celery_worker() -> Generator[subprocess.Popen[bytes], None, None]:
             "2",
             "--loglevel=WARNING",
         ],
+        env=worker_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
 
-    # Allow worker initialization and broker registration
     time.sleep(2.5)
 
     try:
@@ -84,6 +83,8 @@ def live_celery_worker() -> Generator[subprocess.Popen[bytes], None, None]:
             worker_proc.kill()
         celery_app.conf.task_always_eager = orig_eager
         celery_app.conf.task_eager_propagates = orig_prop
+        celery_app.conf.broker_url = orig_broker
+        celery_app.conf.result_backend = orig_backend
 
 
 @pytest.mark.asyncio
