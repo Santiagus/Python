@@ -35,7 +35,6 @@ def build_underwriting_chord(
     application_id: str,
     manifest: dict[str, str],
     applicant_name: str,
-    requested_facility: float,
     requested_facility: Decimal | int | float | str,
     page_ids: list[str],
     stage_1_validation_ms: float = 0.0,
@@ -78,7 +77,6 @@ def dispatch_underwriting_workflow(
     application_id: str,
     manifest: dict[str, str],
     applicant_name: str,
-    requested_facility: float,
     requested_facility: Decimal | int | float | str,
 ) -> AsyncResult:
     """Execute Stage 1 gatekeeper validation and dispatch Stage 2 & 3 parallel chord.
@@ -101,7 +99,6 @@ def dispatch_underwriting_workflow(
     # Stage 1: Validate dossier with link_error errback attached
     t1_start = time.perf_counter()
     validation_sig = validate_dossier.s(
-        application_id, manifest, applicant_name, requested_facility
         application_id, manifest, applicant_name, facility_dec
     ).on_error(handle_workflow_failure.s(application_id))
 
@@ -124,7 +121,6 @@ def dispatch_underwriting_workflow(
         application_id=application_id,
         manifest=manifest,
         applicant_name=applicant_name,
-        requested_facility=requested_facility,
         requested_facility=facility_dec,
         page_ids=page_ids,
         stage_1_validation_ms=stage_1_ms,

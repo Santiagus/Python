@@ -1,0 +1,22 @@
+[
+  {
+    "dossier": "4_pages_clean",
+    "pages": 4,
+    "parallel_tasks": 6,
+    "iterations": 3,
+    "sequential_ms": 42.14,
+    "parallel_ms": 2.86,
+    "speedup_ratio": 14.73,
+    "decision": "approved"
+  },
+  {
+    "dossier": "16_pages_benchmark",
+    "pages": 16,
+    "parallel_tasks": 18,
+    "iterations": 3,
+    "sequential_ms": 9.37,
+    "parallel_ms": 10.01,
+    "speedup_ratio": 0.94,
+    "decision": "approved"
+  }
+]

@@ -69,7 +69,6 @@ class TestApiDatabaseIntegration:
         memo = (await db_session.execute(memo_stmt)).scalar_one_or_none()
         assert memo is not None
         assert memo.decision == "approved"
-        assert float(memo.calculated_dscr) == 3.25
         assert memo.calculated_dscr == Decimal("3.250")
         assert memo.net_cashflow == Decimal("32549.50")
         assert memo.net_cashflow_cents == 3254950
@@ -86,8 +85,6 @@ class TestApiDatabaseIntegration:
         assert get_payload["requested_facility_cents"] == 25000000
         assert get_payload["underwriting_memo"] is not None
         assert get_payload["underwriting_memo"]["decision"] == "approved"
-        assert get_payload["underwriting_memo"]["calculated_dscr"] == 3.25
-        assert get_payload["underwriting_memo"]["net_cashflow"] == 32549.50
         assert Decimal(get_payload["underwriting_memo"]["calculated_dscr"]) == Decimal("3.250")
         assert Decimal(get_payload["underwriting_memo"]["net_cashflow"]) == Decimal("32549.50")
         assert get_payload["underwriting_memo"]["net_cashflow_cents"] == 3254950

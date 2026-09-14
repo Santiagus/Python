@@ -44,7 +44,6 @@ def validate_dossier(
     application_id: str,
     manifest: dict[str, str],
     applicant_name: str,
-    requested_facility: float,
     requested_facility: Decimal | int | float | str,
 ) -> dict[str, Any]:
     """Validate document presence and partition statement pages."""
@@ -152,9 +151,6 @@ def _get_db_connection_string() -> str:
 def _persist_underwriting_memo(
     application_id: str,
     decision: str,
-    dscr: float,
-    net_cashflow: float,
-    total_revenue: float,
     dscr: Decimal | float,
     net_cashflow: Decimal | float,
     total_revenue: Decimal | float,
@@ -194,9 +190,6 @@ def _persist_underwriting_memo(
                     (
                         application_id,
                         decision,
-                        dscr,
-                        net_cashflow,
-                        total_revenue,
                         dscr_dec,
                         net_cashflow_dec,
                         total_revenue_dec,
@@ -252,7 +245,6 @@ def _persist_workflow_failure(application_id: str, error_message: str) -> None:
 def aggregate_underwriting_decision(
     page_results: list[dict[str, Any]],
     application_id: str,
-    requested_facility: float,
     requested_facility: Decimal | int | float | str,
     stage_1_validation_ms: float = 0.0,
     chord_dispatched_at: float | None = None,
@@ -283,12 +275,6 @@ def aggregate_underwriting_decision(
     has_kyc_failure = False
     has_degradation = False
 
-    total_deposits = 0.0
-    total_withdrawals = 0.0
-    starting_balance = 0.0
-    ebitda = 0.0
-    dscr = 0.0
-    total_revenue = 0.0
     total_deposits_cents = 0
     total_withdrawals_cents = 0
     starting_balance_cents = 0
@@ -310,9 +296,6 @@ def aggregate_underwriting_decision(
 
         if doc_type == "tax_filing":
             tax_data = r.get("data", {})
-            dscr = tax_data.get("dscr_baseline", 0.0)
-            ebitda = tax_data.get("ebitda", 0.0)
-            total_revenue = tax_data.get("gross_receipts", 0.0)
             dscr_val = tax_data.get("dscr_baseline", Decimal("0.0"))
             dscr = Decimal(str(dscr_val)) if dscr_val is not None else Decimal("0.0")
             ebitda_cents = tax_data.get("ebitda_cents") or decimal_to_cents(tax_data.get("ebitda", 0)) or 0
@@ -322,12 +305,6 @@ def aggregate_underwriting_decision(
                 or 0
             )
 
-        if r.get("total_deposits") is not None:
-            total_deposits = r["total_deposits"]
-        if r.get("total_withdrawals") is not None:
-            total_withdrawals = r["total_withdrawals"]
-        if r.get("starting_balance") is not None:
-            starting_balance = r["starting_balance"]
         if r.get("total_deposits_cents") is not None:
             total_deposits_cents = r["total_deposits_cents"]
         elif r.get("total_deposits") is not None:
@@ -335,7 +312,6 @@ def aggregate_underwriting_decision(
             if c is not None:
                 total_deposits_cents = c
 
-    net_cashflow = round(total_deposits - total_withdrawals, 2)
         if r.get("total_withdrawals_cents") is not None:
             total_withdrawals_cents = r["total_withdrawals_cents"]
         elif r.get("total_withdrawals") is not None:
@@ -360,7 +336,6 @@ def aggregate_underwriting_decision(
         decision = "declined"
     elif has_degradation:
         decision = "manual_review"
-    elif dscr < 1.25:
     elif dscr < Decimal("1.25"):
         decision = "declined"
     else:

@@ -157,7 +157,6 @@ class TestSchemaSerialization:
             applicant_name="John Doe",
             requested_facility=50000.0,
         )
-        assert valid.requested_facility == 50000.0
         assert valid.requested_facility == Decimal("50000.0")
 
     def test_application_response_from_orm(self) -> None:
@@ -167,7 +166,6 @@ class TestSchemaSerialization:
             id=uuid4(),
             application_id=app_id,
             decision="approved",
-            calculated_dscr=Decimal("1.85"),
             calculated_dscr=Decimal("1.850"),
             net_cashflow=Decimal("32549.50"),
             total_revenue=Decimal("1450000.00"),
@@ -187,16 +185,12 @@ class TestSchemaSerialization:
         response_schema = ApplicationResponse.model_validate(app)
         assert response_schema.application_id == str(app_id)
         assert response_schema.company_name == "Apex Corp"
-        assert response_schema.requested_facility == 250000.00
         assert response_schema.requested_facility == Decimal("250000.00")
         assert response_schema.requested_facility_cents == 25000000
         assert response_schema.status == "approved"
         assert response_schema.workflow_id == "wf-12345"
         assert response_schema.underwriting_memo is not None
         assert response_schema.underwriting_memo.decision == "approved"
-        assert response_schema.underwriting_memo.calculated_dscr == 1.85
-        assert response_schema.underwriting_memo.net_cashflow == 32549.50
-        assert response_schema.underwriting_memo.total_revenue == 1450000.00
         assert response_schema.underwriting_memo.calculated_dscr == Decimal("1.850")
         assert response_schema.underwriting_memo.net_cashflow == Decimal("32549.50")
         assert response_schema.underwriting_memo.net_cashflow_cents == 3254950

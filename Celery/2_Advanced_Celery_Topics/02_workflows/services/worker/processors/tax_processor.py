@@ -22,14 +22,6 @@ class TaxProcessor:
     """Parses corporate tax filings (IRS Form 1120) and computes financial ratios."""
 
     @staticmethod
-    def _parse_currency(val_str: str | None) -> float:
-        if not val_str:
-            return 0.0
-        clean = val_str.replace("$", "").replace(",", "").strip().replace("+", "")
-        try:
-            return float(clean)
-        except ValueError:
-            return 0.0
     def _parse_currency(val_str: str | None) -> Decimal:
         cents = parse_currency_to_cents(val_str)
         return cents_to_decimal(cents) if cents is not None else Decimal("0.00")
@@ -92,13 +84,6 @@ class TaxProcessor:
         officer_name = officer_m.group(1).strip() if officer_m else ""
 
         parsed_data = {
-            "gross_receipts": self._parse_currency(gross_m.group(1)) if gross_m else 0.0,
-            "cogs": self._parse_currency(cogs_m.group(1)) if cogs_m else 0.0,
-            "total_deductions": self._parse_currency(deductions_m.group(1)) if deductions_m else 0.0,
-            "taxable_income": self._parse_currency(taxable_m.group(1)) if taxable_m else 0.0,
-            "ebitda": self._parse_currency(ebitda_m.group(1)) if ebitda_m else 0.0,
-            "dscr_baseline": float(dscr_m.group(1)) if dscr_m else 0.0,
-            "officer_name": officer_m.group(1).strip() if officer_m else "",
             "gross_receipts_cents": gross_receipts_cents or 0,
             "cogs_cents": cogs_cents or 0,
             "total_deductions_cents": total_deductions_cents or 0,

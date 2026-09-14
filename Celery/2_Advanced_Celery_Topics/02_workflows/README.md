@@ -499,14 +499,14 @@ The harness records execution logs and produces:
 
 ## Completion Checklist
 
-- [ ] FastAPI creates applications, stores files in shared storage, and returns `202 Accepted`.
-- [ ] Celery messages pass only JSON-safe UUIDs and storage keys; no raw files or ORM models.
-- [ ] Sequential pre-processing (`chain`) correctly enforces task ordering (`validate` $\to$ `partition`).
-- [ ] Task argument isolation is maintained using `.s()` for piped inputs and `.si()` for fixed calls.
-- [ ] Parallel fan-out (`group`) processes pages concurrently across multiple worker processes.
-- [ ] Redis result backend coordinates the fan-in barrier (`chord`) and triggers the decision callback.
-- [ ] Result envelope pattern allows graceful partial degradation when non-critical pages fail.
-- [ ] `link_error` errback reliably captures fatal exceptions, updates DB status, and prevents zombie tasks.
-- [ ] Unit and integration tests verify ordering, fan-out, barrier synchronization, and error handling.
-- [ ] Benchmark test generates timing comparison demonstrating parallel vs. sequential speedup.
-- [ ] Docker Compose stack runs FastAPI, PostgreSQL, RabbitMQ, Redis, and Celery Workers with health checks.
+- [x] FastAPI creates applications, stores files in shared storage, and returns `202 Accepted`.
+- [x] Celery messages pass only JSON-safe UUIDs and storage keys; no raw files or ORM models.
+- [x] Sequential pre-processing (`chain`) correctly enforces task ordering (`validate` $\to$ `partition`).
+- [x] Task argument isolation is maintained using `.s()` for piped inputs and `.si()` for fixed calls.
+- [x] Parallel fan-out (`group`) processes pages concurrently across multiple worker processes.
+- [x] Redis result backend coordinates the fan-in barrier (`chord`) and triggers the decision callback.
+- [x] Result envelope pattern allows graceful partial degradation when non-critical pages fail.
+- [x] `link_error` errback reliably captures fatal exceptions, updates DB status, and prevents zombie tasks.
+- [x] Unit and integration tests verify ordering, fan-out, barrier synchronization, and error handling.
+- [x] Benchmark test generates timing comparison demonstrating parallel vs. sequential speedup.
+- [x] Docker Compose stack runs FastAPI, PostgreSQL, RabbitMQ, Redis, and Celery Workers with health checks.
