@@ -73,6 +73,56 @@ def benchmark_dossier_manifest(fixtures_dir: Path) -> dict[str, str]:
     }
 
 
+@pytest.fixture
+def expired_kyc_manifest(fixtures_dir: Path) -> dict[str, str]:
+    """Return manifest with expired KYC document."""
+    return {
+        "bank_statement": str(fixtures_dir / "clean_4pages" / "bank_statement_4pages.pdf"),
+        "kyc_id": str(fixtures_dir / "invalid_docs" / "kyc_id_expired.jpg"),
+        "tax_filing": str(fixtures_dir / "clean_4pages" / "tax_filing_irs1120.pdf"),
+    }
+
+
+@pytest.fixture
+def failed_tax_manifest(fixtures_dir: Path) -> dict[str, str]:
+    """Return manifest with tax filing failing DSCR solvency control."""
+    return {
+        "bank_statement": str(fixtures_dir / "clean_4pages" / "bank_statement_4pages.pdf"),
+        "kyc_id": str(fixtures_dir / "clean_4pages" / "kyc_executive_id.jpg"),
+        "tax_filing": str(fixtures_dir / "invalid_docs" / "tax_filing_failed_control.pdf"),
+    }
+
+
+@pytest.fixture
+def insolvent_statement_manifest(fixtures_dir: Path) -> dict[str, str]:
+    """Return manifest with insolvent bank statement where expenses exceed income."""
+    return {
+        "bank_statement": str(fixtures_dir / "invalid_docs" / "bank_statement_insolvent.pdf"),
+        "kyc_id": str(fixtures_dir / "clean_4pages" / "kyc_executive_id.jpg"),
+        "tax_filing": str(fixtures_dir / "clean_4pages" / "tax_filing_irs1120.pdf"),
+    }
+
+
+@pytest.fixture
+def multi_failure_manifest(fixtures_dir: Path) -> dict[str, str]:
+    """Return manifest combining expired KYC and failed tax control."""
+    return {
+        "bank_statement": str(fixtures_dir / "clean_4pages" / "bank_statement_4pages.pdf"),
+        "kyc_id": str(fixtures_dir / "invalid_docs" / "kyc_id_expired.jpg"),
+        "tax_filing": str(fixtures_dir / "invalid_docs" / "tax_filing_failed_control.pdf"),
+    }
+
+
+@pytest.fixture
+def triple_failure_manifest(fixtures_dir: Path) -> dict[str, str]:
+    """Return manifest combining expired KYC, failed tax, and insolvent bank statement."""
+    return {
+        "bank_statement": str(fixtures_dir / "invalid_docs" / "bank_statement_insolvent.pdf"),
+        "kyc_id": str(fixtures_dir / "invalid_docs" / "kyc_id_expired.jpg"),
+        "tax_filing": str(fixtures_dir / "invalid_docs" / "tax_filing_failed_control.pdf"),
+    }
+
+
 @pytest.fixture(scope="session")
 def postgres_container() -> Generator[PostgresContainer | None, None, None]:
     """Launch a PostgreSQL 16 testcontainer for the test session if available."""

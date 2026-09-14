@@ -121,10 +121,11 @@ class MinimalPDFBuilder:
 def generate_bank_statement_pages(
     page_count: int = 4,
     degrade_page: int | None = None,
+    insolvent: bool = False,
 ) -> list[list[str]]:
-    """Builds multi-page transaction ledger pages for a commercial checking account."""
+    """Builds an n-page plain text bank statement ledger stream."""
     pages: list[list[str]] = []
-    running_balance = 50000.00  # Initial balance: $50,000.00
+    running_balance = 50000.00 if not insolvent else 10000.00  # Initial balance: $50,000.00 or $10,000.00
 
     transactions_library = [
         ("2026-08-02", "STRIPE PAYOUT - MERCHANT DEPOSIT", 14500.00, 0.0),
@@ -189,14 +190,25 @@ def generate_bank_statement_pages(
                     lines.append(f"{date} {desc:<40}             ${debit:>10,.2f} ${running_balance:>10,.2f}")
 
         if p == page_count:
-            lines.extend([
-                "--------------------------------------------------------------------------------",
-                f"Closing Statement Balance:         ${running_balance:,.2f}",
-                "Total Monthly Deposits:            $64,200.00",
-                "Total Monthly Withdrawals:         $31,650.50",
-                "Net Cash Flow Change:              +$32,549.50",
-                "================================================================================",
-            ])
+            if insolvent:
+                lines.extend([
+                    "--------------------------------------------------------------------------------",
+                    "Closing Statement Balance:         -$3,000.00",
+                    "Total Monthly Deposits:            $15,000.00",
+                    "Total Monthly Withdrawals:         $28,000.00",
+                    "Net Cash Flow Change:              -$13,000.00",
+                    "CASHFLOW_DEFICIT: EXPENSES EXCEED INCOME",
+                    "================================================================================",
+                ])
+            else:
+                lines.extend([
+                    "--------------------------------------------------------------------------------",
+                    f"Closing Statement Balance:         ${running_balance:,.2f}",
+                    "Total Monthly Deposits:            $64,200.00",
+                    "Total Monthly Withdrawals:         $31,650.50",
+                    "Net Cash Flow Change:              +$32,549.50",
+                    "================================================================================",
+                ])
 
         pages.append(lines)
 
@@ -207,7 +219,10 @@ def generate_bank_statement_pages(
 # Corporate Tax Filing Generator (IRS Form 1120 / P&L)
 # ==============================================================================
 
-def generate_tax_filing_pages() -> list[list[str]]:
+def generate_tax_filing_pages(
+    dscr_baseline: float = 3.25,
+    failed_control: bool = False,
+) -> list[list[str]]:
     """Builds a 2-page Corporate Income Tax Return (IRS Form 1120)."""
     p1 = [
         "================================================================================",
@@ -238,11 +253,20 @@ def generate_tax_filing_pages() -> list[list[str]]:
         "TAXABLE INCOME & SOLVENCY METRICS",
         "28  Taxable income before NOL. Subtract line 27 from line 3 ..... $  206,000.00",
         "    Calculated Annual EBITDA .................................... $  244,500.00",
-        "    Debt Service Coverage Ratio (DSCR Baseline) ................. 3.25x",
+        f"    Debt Service Coverage Ratio (DSCR Baseline) ................. {dscr_baseline:.2f}x",
+    ]
+
+    if failed_control:
+        p1.extend([
+            "    Audit Control Status: TAX_CONTROL_FAILED",
+            "    Policy Threshold: DSCR Baseline must be >= 1.25x for credit approval",
+        ])
+
+    p1.extend([
         "--------------------------------------------------------------------------------",
         "Sign Here: Officer: JANE DOE, PRESIDENT / CEO",
         "================================================================================",
-    ]
+    ])
 
     p2 = [
         "================================================================================",
@@ -272,12 +296,13 @@ def generate_tax_filing_pages() -> list[list[str]]:
 # ==============================================================================
 
 def generate_all_fixtures(target_root: Path) -> dict[str, list[str]]:
-    """Generates all 4 standard test dossiers under the specified target directory."""
+    """Generates all standard test dossiers under the specified target directory."""
     created_files: dict[str, list[str]] = {
         "clean_4pages": [],
         "benchmark_16pages": [],
         "degraded_page2": [],
         "corrupted": [],
+        "invalid_docs": [],
     }
 
     # 1. Clean Dossier (Happy Path)
@@ -335,6 +360,33 @@ def generate_all_fixtures(target_root: Path) -> dict[str, list[str]]:
     # Write invalid PDF header and truncated garbage byte stream
     p_corrupt.write_bytes(b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\n%%FATAL_TRUNCATION_ERROR%%")
     created_files["corrupted"].append(str(p_corrupt))
+
+    # 5. Invalid Documents (To test per-processor rejections & multi-error responses)
+    dir_invalid = target_root / "invalid_docs"
+    dir_invalid.mkdir(parents=True, exist_ok=True)
+
+    # 5a. Expired KYC ID
+    p_kyc_expired = dir_invalid / "kyc_id_expired.jpg"
+    if asset_template.exists():
+        content = asset_template.read_bytes()
+        p_kyc_expired.write_bytes(content + b"\nEXPIRED_CREDENTIAL_SENTINEL\n")
+        created_files["invalid_docs"].append(str(p_kyc_expired))
+
+    # 5b. Tax Filing Failed Control (DSCR 0.85x < 1.25x)
+    tax_bad_builder = MinimalPDFBuilder()
+    for page in generate_tax_filing_pages(dscr_baseline=0.85, failed_control=True):
+        tax_bad_builder.add_page(page)
+    p_tax_bad = dir_invalid / "tax_filing_failed_control.pdf"
+    p_tax_bad.write_bytes(tax_bad_builder.build_bytes())
+    created_files["invalid_docs"].append(str(p_tax_bad))
+
+    # 5c. Bank Statement Insolvent (Expenses exceed income)
+    stmt_bad_builder = MinimalPDFBuilder()
+    for page in generate_bank_statement_pages(page_count=3, insolvent=True):
+        stmt_bad_builder.add_page(page)
+    p_stmt_bad = dir_invalid / "bank_statement_insolvent.pdf"
+    p_stmt_bad.write_bytes(stmt_bad_builder.build_bytes())
+    created_files["invalid_docs"].append(str(p_stmt_bad))
 
     return created_files
 

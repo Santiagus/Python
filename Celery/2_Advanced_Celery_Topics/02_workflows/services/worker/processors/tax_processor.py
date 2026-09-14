@@ -24,7 +24,10 @@ class TaxProcessor:
     @staticmethod
     def _parse_currency(val_str: str | None) -> Decimal:
         cents = parse_currency_to_cents(val_str)
-        return cents_to_decimal(cents) if cents is not None else Decimal("0.00")
+        if cents is None:
+            return Decimal("0.00")
+        value = cents_to_decimal(cents)
+        return value if value is not None else Decimal("0.00")
 
     @staticmethod
     def _parse_currency_cents(val_str: str | None) -> int:
@@ -49,13 +52,38 @@ class TaxProcessor:
                 "errors": [f"Tax filing file not found: {path}"],
             }
 
-        data = path.read_bytes()
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            return {
+                "status": "failed",
+                "document_type": "tax_filing",
+                "data": {},
+                "errors": [f"Cannot read tax filing file: {exc}"],
+            }
+
+        if not data.startswith(b"%PDF-"):
+            return {
+                "status": "failed",
+                "document_type": "tax_filing",
+                "data": {},
+                "errors": ["Corrupted or invalid PDF tax filing format"],
+            }
+
         # NOTE (SIMULATED / FAKED BEHAVIOR):
         # Stream extraction uses regex over uncompressed ASCII PDF streams (specimens generated in tests/fixtures).
         # In real-world production, IRS Form 1120 tax returns are either scanned raster PDFs, FlateDecode-compressed
         # documents, or electronic XML/MeF filings, requiring specialized PDF extraction tools (e.g. pdfplumber,
         # PyPDF, or Document AI Tax Processors) rather than raw ASCII regex.
         streams = re.findall(b"stream\r?\n(.*?)\r?\nendstream", data, re.DOTALL)
+        if not streams:
+            return {
+                "status": "failed",
+                "document_type": "tax_filing",
+                "data": {},
+                "errors": ["No content streams found in tax filing PDF"],
+            }
+
         all_lines: list[str] = []
         for s in streams:
             text_content = s.decode("latin1", errors="replace")
@@ -103,20 +131,33 @@ class TaxProcessor:
             "officer_name": officer_name,
         }
 
+        errors: list[str] = []
+        if not gross_m or gross_receipts_cents <= 0:
+            errors.append("Tax filing missing required gross receipts disclosure")
+
+        if dscr_baseline < Decimal("1.25"):
+            errors.append(f"Tax filing DSCR baseline below minimum threshold ({dscr_baseline:.2f} < 1.25)")
+
+        if b"TAX_CONTROL_FAILED" in data:
+            errors.append("Corporate tax filing failed audit control validation")
+
+        status = "success" if not errors else "failed"
+
         logger.debug(
             "tax_filing_processed",
             extra={
                 "file_path": str(path),
-                "gross_receipts": parsed_data["gross_receipts"],
-                "ebitda": parsed_data["ebitda"],
-                "dscr_baseline": parsed_data["dscr_baseline"],
+                "status": status,
+                "gross_receipts": str(parsed_data["gross_receipts"]),
+                "ebitda": str(parsed_data["ebitda"]),
+                "dscr_baseline": str(parsed_data["dscr_baseline"]),
             },
         )
 
         return {
-            "status": "success",
+            "status": status,
             "document_type": "tax_filing",
             "data": parsed_data,
-            "errors": [],
+            "errors": errors,
         }
 

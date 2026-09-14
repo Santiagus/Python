@@ -120,16 +120,6 @@ class StatementProcessor:
             confidence = round(int(conf_match.group(1)) / 100.0, 2)
 
         has_ocr_error = "OCR_ERROR" in text or "UNRECOGNIZED_GLYPH" in text or confidence < 0.70
-        if has_ocr_error:
-            status = "degraded"
-            if confidence < 0.70:
-                errors.append(f"Low OCR confidence ({confidence * 100:.0f}%) on page {page_number}")
-                errors.append(f"Degraded OCR confidence ({confidence * 100:.0f}%) on page {page_number}")
-            if "OCR_ERROR" in text:
-                errors.append("OCR optical sensor contrast error detected")
-        else:
-            status = "success"
-
         # Metric extractions in minor units (integer cents) to avoid floating-point drift
         start_m = re.search(r"Starting Balance:\s*([\$0-9,\.\+\-]+)", text)
         starting_balance_cents = parse_currency_to_cents(start_m.group(1)) if start_m else None
@@ -150,6 +140,36 @@ class StatementProcessor:
         net_m = re.search(r"Net Cash Flow Change:\s*([\$0-9,\.\+\-]+)", text)
         net_cashflow_cents = parse_currency_to_cents(net_m.group(1)) if net_m else None
         net_cashflow = cents_to_decimal(net_cashflow_cents)
+
+        # Cashflow policy check: banking standard requires expenses not to exceed income
+        has_cashflow_deficit = (
+            (net_cashflow_cents is not None and net_cashflow_cents < 0)
+            or (
+                total_deposits_cents is not None
+                and total_withdrawals_cents is not None
+                and total_withdrawals_cents > total_deposits_cents
+            )
+            or "CASHFLOW_DEFICIT" in text
+        )
+
+        if has_cashflow_deficit:
+            status = "failed"
+            dep_disp = total_deposits if total_deposits is not None else Decimal("0.00")
+            with_disp = total_withdrawals if total_withdrawals is not None else Decimal("0.00")
+            net_disp = net_cashflow if net_cashflow is not None else (dep_disp - with_disp)
+            errors.append(
+                f"Bank statement page {page_number} cashflow deficit: expenses exceed income "
+                f"(withdrawals ${with_disp:,.2f} > deposits ${dep_disp:,.2f}, net cashflow ${net_disp:,.2f})"
+            )
+        elif has_ocr_error:
+            status = "degraded"
+            if confidence < 0.70:
+                errors.append(f"Low OCR confidence ({confidence * 100:.0f}%) on page {page_number}")
+                errors.append(f"Degraded OCR confidence ({confidence * 100:.0f}%) on page {page_number}")
+            if "OCR_ERROR" in text:
+                errors.append("OCR optical sensor contrast error detected")
+        else:
+            status = "success"
 
         return {
             "page_number": page_number,
@@ -221,5 +241,6 @@ class StatementProcessor:
             "net_cashflow": cents_to_decimal(net_cashflow_cents),
             "total_deposits": cents_to_decimal(total_deposits_cents),
             "total_withdrawals": cents_to_decimal(total_withdrawals_cents),
+            "is_insolvent": net_cashflow_cents < 0,
         }
 

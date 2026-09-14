@@ -326,6 +326,8 @@ def aggregate_underwriting_decision(
 
     audit_flags: list[str] = []
     has_kyc_failure = False
+    has_tax_failure = False
+    has_cashflow_failure = False
     has_degradation = False
 
     total_deposits_cents = 0
@@ -348,6 +350,9 @@ def aggregate_underwriting_decision(
             audit_flags.extend(r.get("errors", ["Degraded OCR on statement page"]))
 
         if doc_type == "tax_filing":
+            if status == "failed":
+                has_tax_failure = True
+                audit_flags.extend(r.get("errors", ["Tax filing verification failed"]))
             tax_data = r.get("data", {})
             dscr_val = tax_data.get("dscr_baseline", Decimal("0.0"))
             dscr = Decimal(str(dscr_val)) if dscr_val is not None else Decimal("0.0")
@@ -357,6 +362,10 @@ def aggregate_underwriting_decision(
                 or decimal_to_cents(tax_data.get("gross_receipts", 0))
                 or 0
             )
+
+        if doc_type is None and status == "failed":
+            has_cashflow_failure = True
+            audit_flags.extend(r.get("errors", ["Bank statement page processing failed"]))
 
         if r.get("total_deposits_cents") is not None:
             total_deposits_cents = r["total_deposits_cents"]
@@ -384,13 +393,30 @@ def aggregate_underwriting_decision(
     net_cashflow = cents_to_decimal(net_cashflow_cents) or Decimal("0.00")
     total_revenue = cents_to_decimal(total_revenue_cents) or Decimal("0.00")
 
+    # Bank statement cashflow policy: expenses exceed income
+    if net_cashflow_cents < 0:
+        has_cashflow_failure = True
+        dep_d = cents_to_decimal(total_deposits_cents) or Decimal("0.00")
+        with_d = cents_to_decimal(total_withdrawals_cents) or Decimal("0.00")
+        flag = (
+            f"Bank statement cashflow failure: expenses exceed income "
+            f"(withdrawals ${with_d:,.2f} > deposits ${dep_d:,.2f}, net cashflow ${net_cashflow:,.2f})"
+        )
+        if flag not in audit_flags:
+            audit_flags.append(flag)
+
+    # Tax policy control: minimum DSCR baseline threshold
+    if dscr < Decimal("1.25"):
+        has_tax_failure = True
+        flag = f"Tax filing DSCR baseline below minimum threshold ({dscr:.2f} < 1.25)"
+        if flag not in audit_flags:
+            audit_flags.append(flag)
+
     # Decision logic
-    if has_kyc_failure:
+    if has_kyc_failure or has_tax_failure or has_cashflow_failure:
         decision = "declined"
     elif has_degradation:
         decision = "manual_review"
-    elif dscr < Decimal("1.25"):
-        decision = "declined"
     else:
         decision = "approved"
 
@@ -405,10 +431,18 @@ def aggregate_underwriting_decision(
         "total_pipeline_ms": total_pipeline_ms,
     }
 
-    summary = (
-        f"Automated underwriting decision: {decision}. "
-        f"DSCR={dscr:.2f}, Net Cashflow=${net_cashflow:,.2f}, Revenue=${total_revenue:,.2f}."
-    )
+    if audit_flags:
+        flags_summary = "; ".join(audit_flags)
+        summary = (
+            f"Automated underwriting decision: {decision}. "
+            f"Issues detected: [{flags_summary}]. "
+            f"DSCR={dscr:.2f}, Net Cashflow=${net_cashflow:,.2f}, Revenue=${total_revenue:,.2f}."
+        )
+    else:
+        summary = (
+            f"Automated underwriting decision: {decision}. "
+            f"DSCR={dscr:.2f}, Net Cashflow=${net_cashflow:,.2f}, Revenue=${total_revenue:,.2f}."
+        )
 
     logger.info(
         "underwriting_decision_compiled",

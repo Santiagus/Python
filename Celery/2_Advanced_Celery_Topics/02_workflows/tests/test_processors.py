@@ -6,6 +6,7 @@ and Result Envelope structures without requiring an external broker or Celery wo
 
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 import pytest
 
 from services.worker.processors.kyc_processor import KYCProcessor
@@ -258,4 +259,73 @@ class TestTaxProcessor:
         assert data["ebitda"] == Decimal("244500.00")
         assert data["dscr_baseline"] == Decimal("3.25")
         assert data["officer_name"] == "JANE DOE"
+
+    def test_tax_read_os_error(self, clean_dossier_manifest: dict[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify handling when tax file read raises OSError."""
+        processor = TaxProcessor()
+        file_path = clean_dossier_manifest["tax_filing"]
+
+        def mock_read_bytes(self: Any) -> bytes:
+            raise OSError("Disk I/O error reading tax file")
+
+        monkeypatch.setattr(Path, "read_bytes", mock_read_bytes)
+        result = processor.process(file_path)
+        assert result["status"] == "failed"
+        assert any("cannot read" in err.lower() for err in result["errors"])
+
+    def test_tax_invalid_pdf_header(self, tmp_path: Path) -> None:
+        """Verify handling when file does not start with %PDF- header."""
+        bad_file = tmp_path / "corrupted_tax.pdf"
+        bad_file.write_bytes(b"NOT_A_VALID_PDF_HEADER_DATA")
+        processor = TaxProcessor()
+        result = processor.process(str(bad_file))
+        assert result["status"] == "failed"
+        assert any("corrupted or invalid pdf" in err.lower() for err in result["errors"])
+
+    def test_tax_no_content_streams(self, tmp_path: Path) -> None:
+        """Verify handling when PDF contains no content streams."""
+        bad_file = tmp_path / "empty_stream_tax.pdf"
+        bad_file.write_bytes(b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF")
+        processor = TaxProcessor()
+        result = processor.process(str(bad_file))
+        assert result["status"] == "failed"
+        assert any("no content streams" in err.lower() for err in result["errors"])
+
+    def test_tax_missing_gross_receipts(self, tmp_path: Path) -> None:
+        """Verify handling when tax return is missing gross receipts disclosure."""
+        stream_content = b"stream\n(Taxable income before NOL: $ 10,000.00) '\n(Debt Service Coverage Ratio (DSCR Baseline): 2.0x) '\nendstream"
+        bad_file = tmp_path / "missing_gross_tax.pdf"
+        bad_file.write_bytes(b"%PDF-1.4\n" + stream_content + b"\n%%EOF")
+        processor = TaxProcessor()
+        result = processor.process(str(bad_file))
+        assert result["status"] == "failed"
+        assert any("missing required gross receipts" in err.lower() for err in result["errors"])
+
+    def test_tax_filing_failed_dscr_control(self, failed_tax_manifest: dict[str, str]) -> None:
+        """Verify tax return with DSCR < 1.25 is flagged as failed control."""
+        processor = TaxProcessor()
+        result = processor.process(failed_tax_manifest["tax_filing"])
+        assert result["status"] == "failed"
+        assert any("dscr baseline below minimum" in err.lower() for err in result["errors"])
+        assert any("failed audit control validation" in err.lower() for err in result["errors"])
+
+    def test_statement_cashflow_deficit_detection(self, insolvent_statement_manifest: dict[str, str]) -> None:
+        """Verify statement processor flags pages and ledger where expenses exceed income."""
+        processor = StatementProcessor()
+        partition = processor.partition_pages(insolvent_statement_manifest["bank_statement"])
+        assert partition["total_pages"] == 3
+
+        # Page 3 contains the deficit
+        p3 = processor.process_page_content(3, partition["pages"][2]["text"])
+        assert p3["status"] == "failed"
+        assert any("cashflow deficit" in err.lower() for err in p3["errors"])
+
+        # Full aggregation reflects insolvency
+        page_results = [
+            processor.process_page_content(p["page_number"], p["text"])
+            for p in partition["pages"]
+        ]
+        summary = processor.aggregate_pages(page_results)
+        assert summary["net_cashflow_cents"] < 0
+        assert summary["is_insolvent"] is True
 

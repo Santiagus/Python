@@ -15,7 +15,7 @@ GET {{baseUrl}}/health
 
 
 ###
-# 2. Create Commercial Credit Application (Two-Step: Pending state, awaiting dossier)
+# 2. Create Application: Clean Dossier Specimen
 # @name createApplication
 POST {{baseUrl}}{{apiPrefix}}/applications
 Content-Type: application/json
@@ -46,7 +46,7 @@ Content-Type: application/json
 
 
 ###
-# 3. Create Application for Degraded Dossier Test
+# 3. Create Application for Degraded Dossier Test (OCR Noise on Page 2)
 # @name createDegradedApplication
 POST {{baseUrl}}{{apiPrefix}}/applications
 Content-Type: application/json
@@ -72,6 +72,88 @@ Content-Type: application/json
 
 
 ###
+# 3C. Create Application for Expired KYC ID Test
+# @name createExpiredKycApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Frontier Payments LLC",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 180000.00
+}
+
+
+###
+# 3D. Create Application for Failed Tax Control Test (DSCR 0.85 < 1.25)
+# @name createTaxControlFailedApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Solvent Deficit Corp",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 220000.00
+}
+
+
+###
+# 3E. Create Application for Insolvent Statement Test (Expenses Exceed Income)
+# @name createInsolventStatementApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "High Burn Rate Ventures",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 150000.00
+}
+
+
+###
+# 3F. Create Application for Corrupted Statement Test (Truncated PDF)
+# @name createCorruptedStatementApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Broken Data Systems Inc.",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 100000.00
+}
+
+
+###
+# 3G. Create Application for Multi-Failure Test (Expired KYC + Failed Tax Control)
+# @name createMultiFailureApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Multi Risk Enterprise LLC",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 350000.00
+}
+
+
+###
+# 3H. Create Application for Triple Failure Test (Expired KYC + Failed Tax + Insolvent Statement)
+# @name createTripleFailureApplication
+POST {{baseUrl}}{{apiPrefix}}/applications
+Content-Type: application/json
+
+{
+  "company_name": "Critical Failure Holdings",
+  "applicant_name": "JANE DOE",
+  "requested_facility": 500000.00
+}
+
+
+# ==============================================================================
+# Dossier Submissions (Stage 1 Gatekeeper -> Stage 2 Parallel Chord Fan-Out)
+# ==============================================================================
+
+###
 # 4. Submit Clean Dossier Manifest (4-Page Clean Specimen -> Expected: approved)
 POST {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/dossier
 Content-Type: application/json
@@ -87,7 +169,6 @@ Content-Type: application/json
 
 ###
 # 5. Submit Degraded Dossier Manifest (Page 2 OCR Noise -> Expected: manual_review)
-# Submits to the dedicated application created in Step 3
 POST {{baseUrl}}{{apiPrefix}}/applications/{{createDegradedApplication.response.body.application_id}}/dossier
 Content-Type: application/json
 
@@ -102,7 +183,6 @@ Content-Type: application/json
 
 ###
 # 6. Submit Benchmark Dossier Manifest (16-Page High Load -> Expected: approved)
-# Submits to the dedicated application created in Step 3B
 POST {{baseUrl}}{{apiPrefix}}/applications/{{createBenchmarkApplication.response.body.application_id}}/dossier
 Content-Type: application/json
 
@@ -116,23 +196,144 @@ Content-Type: application/json
 
 
 ###
-# 7A. Poll Clean Application Status & Underwriting Memo (Expect: status "approved")
+# 6A. Submit Expired KYC Dossier Manifest (Expected: declined, summary flags expired ID)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createExpiredKycApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/clean_4pages/bank_statement_4pages.pdf",
+    "kyc_id": "tests/fixtures/invalid_docs/kyc_id_expired.jpg",
+    "tax_filing": "tests/fixtures/clean_4pages/tax_filing_irs1120.pdf"
+  }
+}
+
+
+###
+# 6B. Submit Failed Tax Control Dossier Manifest (Expected: declined, summary flags DSCR < 1.25)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createTaxControlFailedApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/clean_4pages/bank_statement_4pages.pdf",
+    "kyc_id": "tests/fixtures/clean_4pages/kyc_executive_id.jpg",
+    "tax_filing": "tests/fixtures/invalid_docs/tax_filing_failed_control.pdf"
+  }
+}
+
+
+###
+# 6C. Submit Insolvent Bank Statement Dossier Manifest (Expected: declined, summary flags cashflow deficit)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createInsolventStatementApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/invalid_docs/bank_statement_insolvent.pdf",
+    "kyc_id": "tests/fixtures/clean_4pages/kyc_executive_id.jpg",
+    "tax_filing": "tests/fixtures/clean_4pages/tax_filing_irs1120.pdf"
+  }
+}
+
+
+###
+# 6D. Submit Corrupted Statement Dossier Manifest (Expected: failed via link_error at Stage 1 gatekeeper)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createCorruptedStatementApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/corrupted/corrupted_statement.pdf",
+    "kyc_id": "tests/fixtures/clean_4pages/kyc_executive_id.jpg",
+    "tax_filing": "tests/fixtures/clean_4pages/tax_filing_irs1120.pdf"
+  }
+}
+
+
+###
+# 6E. Submit Multi-Failure Dossier (Expired KYC + Failed Tax Control -> Expected: declined, summary reports BOTH)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createMultiFailureApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/clean_4pages/bank_statement_4pages.pdf",
+    "kyc_id": "tests/fixtures/invalid_docs/kyc_id_expired.jpg",
+    "tax_filing": "tests/fixtures/invalid_docs/tax_filing_failed_control.pdf"
+  }
+}
+
+
+###
+# 6F. Submit Triple Failure Dossier (Expired KYC + Failed Tax + Insolvent Statement -> Expected: declined, summary reports ALL 3)
+POST {{baseUrl}}{{apiPrefix}}/applications/{{createTripleFailureApplication.response.body.application_id}}/dossier
+Content-Type: application/json
+
+{
+  "manifest": {
+    "bank_statement": "tests/fixtures/invalid_docs/bank_statement_insolvent.pdf",
+    "kyc_id": "tests/fixtures/invalid_docs/kyc_id_expired.jpg",
+    "tax_filing": "tests/fixtures/invalid_docs/tax_filing_failed_control.pdf"
+  }
+}
+
+
+# ==============================================================================
+# Polling Application Decision Memos & Validation Summaries
+# ==============================================================================
+
+###
+# 7A. Poll Clean Application (Expected: status "approved")
 GET {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}
 
 
 ###
-# 7B. Poll Degraded Application Status & Underwriting Memo (Expect: status "manual_review")
+# 7B. Poll Degraded Application (Expected: status "manual_review", summary flags OCR noise)
 GET {{baseUrl}}{{apiPrefix}}/applications/{{createDegradedApplication.response.body.application_id}}
 
 
 ###
-# 7C. Poll Benchmark Application Status & Underwriting Memo (Expect: status "approved")
+# 7C. Poll Benchmark Application (Expected: status "approved")
 GET {{baseUrl}}{{apiPrefix}}/applications/{{createBenchmarkApplication.response.body.application_id}}
 
 
 ###
+# 7D. Poll Expired KYC Application (Expected: status "declined", summary reflects KYC expiration)
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createExpiredKycApplication.response.body.application_id}}
+
+
+###
+# 7E. Poll Failed Tax Control Application (Expected: status "declined", summary reflects DSCR < 1.25)
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createTaxControlFailedApplication.response.body.application_id}}
+
+
+###
+# 7F. Poll Insolvent Statement Application (Expected: status "declined", summary reflects cashflow deficit)
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createInsolventStatementApplication.response.body.application_id}}
+
+
+###
+# 7G. Poll Corrupted Statement Application (Expected: status "failed", error_message reflects corrupt PDF)
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createCorruptedStatementApplication.response.body.application_id}}
+
+
+###
+# 7H. Poll Multi-Failure Application (Expected: status "declined", summary reflects BOTH KYC and Tax issues)
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createMultiFailureApplication.response.body.application_id}}
+
+
+###
+# 7I. Poll Triple Failure Application (Expected: status "declined", summary reflects ALL THREE issues)
+GET {{baseUrl}}{{apiPrefix}}/applications/{{createTripleFailureApplication.response.body.application_id}}
+
+
+# ==============================================================================
+# Telemetry & Negative Tests
+# ==============================================================================
+
+###
 # 8. Retrieve Stage-by-Stage Latency Telemetry (Real Wall-Clock Metrics)
-# Returns 404 while workflow is processing; returns real float timings once completed
 GET {{baseUrl}}{{apiPrefix}}/applications/{{createApplication.response.body.application_id}}/timing
 
 
@@ -161,4 +362,3 @@ GET {{baseUrl}}{{apiPrefix}}/applications/00000000-0000-0000-0000-000000000000
 ###
 # 11. Negative Test: Malformed UUID 404
 GET {{baseUrl}}{{apiPrefix}}/applications/not-a-valid-uuid
-
