@@ -38,6 +38,7 @@ async def create_application(
             "company_name": payload.company_name,
             "applicant_name": payload.applicant_name,
             "requested_facility": payload.requested_facility,
+            "has_manifest": bool(payload.manifest),
         },
     )
     application = Application(
@@ -48,6 +49,7 @@ async def create_application(
     )
     session.add(application)
     await session.commit()
+    await session.refresh(application)
 
     logger.info(
         "application_persisted",
@@ -56,6 +58,54 @@ async def create_application(
             "status": application.status,
         },
     )
+    if payload.manifest:
+        for doc_type, file_path_str in payload.manifest.items():
+            path_obj = Path(file_path_str)
+            file_size = path_obj.stat().st_size if path_obj.exists() else 0
+            doc = Document(
+                application_id=application.id,
+                doc_type=doc_type,
+                file_path=file_path_str,
+                file_name=path_obj.name,
+                file_size_bytes=file_size,
+                status=DocumentStatus.UPLOADED,
+            )
+            session.add(doc)
+
+        from app.tasks import dispatch_underwriting_workflow
+
+        try:
+            async_res = dispatch_underwriting_workflow(
+                application_id=str(application.id),
+                manifest=payload.manifest,
+                applicant_name=application.applicant_name,
+                requested_facility=float(application.requested_facility),
+            )
+            workflow_id = async_res.id or f"wf-{uuid4()}"
+        except Exception as exc:
+            logger.warning("Workflow dispatch deferred: %s", exc)
+            workflow_id = f"wf-{uuid4()}"
+
+        application.status = ApplicationStatus.PROCESSING
+        application.workflow_id = workflow_id
+        await session.commit()
+        await session.refresh(application)
+        logger.info(
+            "application_persisted_and_dispatched",
+            extra={
+                "application_id": application.application_id,
+                "workflow_id": workflow_id,
+                "status": application.status,
+            },
+        )
+    else:
+        logger.info(
+            "application_persisted_awaiting_dossier",
+            extra={
+                "application_id": application.application_id,
+                "status": application.status,
+            },
+        )
     return ApplicationResponse.model_validate(application)
 
 
@@ -108,10 +158,6 @@ async def submit_dossier(
             message=f"Application {application_id} has already been registered.",
         )
 
-    workflow_id = f"wf-{uuid4()}"
-    application.status = ApplicationStatus.PROCESSING
-    application.workflow_id = workflow_id
-
     # Persist ingested documents from manifest
     for doc_type, file_path_str in payload.manifest.items():
         path_obj = Path(file_path_str)
@@ -145,6 +191,23 @@ async def submit_dossier(
     )
     session.add(memo)
 
+    # Dispatch Celery Canvas workflow (Stage 1 chain -> Stage 2/3 chord)
+    from app.tasks import dispatch_underwriting_workflow
+    try:
+        async_res = dispatch_underwriting_workflow(
+            application_id=str(application.id),
+            manifest=payload.manifest,
+            applicant_name=application.applicant_name,
+            requested_facility=float(application.requested_facility),
+        )
+        workflow_id = async_res.id or f"wf-{uuid4()}"
+    except Exception as exc:
+        logger.warning("Workflow dispatch deferred: %s", exc)
+        workflow_id = f"wf-{uuid4()}"
+
+    application.status = ApplicationStatus.PROCESSING
+    application.workflow_id = workflow_id
+
     try:
         await session.commit()
     except IntegrityError as exc:
@@ -154,9 +217,9 @@ async def submit_dossier(
             extra={"application_id": application_id, "error": str(exc)},
         )
         return DossierSubmitResponse(
-            application_id=str(application.id),
-            workflow_id=application.workflow_id or "already-registered",
-            status=application.status,
+            application_id=application_id,
+            workflow_id=workflow_id or "already-registered",
+            status=ApplicationStatus.PROCESSING,
             message=f"Application {application_id} has already been registered.",
         )
 

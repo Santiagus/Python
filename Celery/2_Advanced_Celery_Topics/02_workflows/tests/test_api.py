@@ -55,4 +55,16 @@ class TestApplicationAPI:
 
         # 4. Query timing telemetry
         timing_resp = await async_client.get(f"/api/v1/applications/{app_id}/timing")
-        assert timing_resp.status_code in (200, 404)
+        assert timing_resp.status_code == 200
+        timing_data = timing_resp.json()
+        assert timing_data["application_id"] == app_id
+        assert "stage_1_validation_ms" in timing_data
+        assert timing_data["stage_1_validation_ms"] > 0
+
+    async def test_health_check_endpoint(self, async_client: AsyncClient) -> None:
+        """Verify liveness endpoint returns ok status."""
+        response = await async_client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "Underwriting" in data["service"]

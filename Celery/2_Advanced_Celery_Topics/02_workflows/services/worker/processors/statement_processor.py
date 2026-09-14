@@ -107,6 +107,7 @@ class StatementProcessor:
             status = "degraded"
             if confidence < 0.70:
                 errors.append(f"Low OCR confidence ({confidence * 100:.0f}%) on page {page_number}")
+                errors.append(f"Degraded OCR confidence ({confidence * 100:.0f}%) on page {page_number}")
             if "OCR_ERROR" in text:
                 errors.append("OCR optical sensor contrast error detected")
         else:

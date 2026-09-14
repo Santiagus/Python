@@ -74,24 +74,46 @@ def benchmark_dossier_manifest(fixtures_dir: Path) -> dict[str, str]:
 
 
 @pytest.fixture(scope="session")
-def postgres_container() -> Generator[PostgresContainer, None, None]:
-    """Launch a PostgreSQL 16 testcontainer for the test session."""
-    with PostgresContainer("postgres:16", driver="asyncpg") as container:
-        yield container
+def postgres_container() -> Generator[PostgresContainer | None, None, None]:
+    """Launch a PostgreSQL 16 testcontainer for the test session if available."""
+    if os.getenv("TEST_DATABASE_URL"):
+        yield None
+        return
+    try:
+        with PostgresContainer("postgres:16", driver="asyncpg") as container:
+            yield container
+    except Exception:
+        yield None
 
 
 @pytest.fixture(scope="session")
-async def test_database_url(postgres_container: PostgresContainer) -> str:
-    """Initialize schema using init.sql against testcontainer and return async DB URL."""
-    db_url = postgres_container.get_connection_url(driver="asyncpg")
+async def test_database_url(postgres_container: PostgresContainer | None) -> str:
+    """Initialize schema using init.sql against testcontainer or local DB and return async DB URL."""
+    if os.getenv("TEST_DATABASE_URL"):
+        db_url = os.environ["TEST_DATABASE_URL"]
+    elif postgres_container is not None:
+        db_url = postgres_container.get_connection_url(driver="asyncpg")
+    else:
+        db_url = "postgresql+asyncpg://postgres:postgres@localhost:5433/underwriting_db"
+
     init_sql_path = MODULE_ROOT / "init.sql"
     with open(init_sql_path) as f:
         ddl = f.read()
 
     engine = create_async_engine(db_url)
+    try:
+        async with engine.begin() as conn:
+            raw_conn = await conn.get_raw_connection()
+            await raw_conn.driver_connection.execute(ddl)
+    except Exception as exc:
+        if "already exists" not in str(exc):
+            raise
     async with engine.begin() as conn:
         raw_conn = await conn.get_raw_connection()
         await raw_conn.driver_connection.execute(ddl)
+        await conn.execute(
+            text("TRUNCATE TABLE underwriting_memos, document_pages, documents, applications CASCADE;")
+        )
     await engine.dispose()
     return db_url
 
@@ -111,13 +133,33 @@ async def db_session(test_database_url: str) -> AsyncIterator[AsyncSession]:
     await engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def configure_celery_for_tests():
+    """Ensure Celery runs in eager mode during test executions."""
+    from services.worker.celery_app import celery_app
+    orig_eager = celery_app.conf.task_always_eager
+    orig_prop = celery_app.conf.task_eager_propagates
+    celery_app.conf.task_always_eager = True
+    celery_app.conf.task_eager_propagates = False
+    yield
+    celery_app.conf.task_always_eager = orig_eager
+    celery_app.conf.task_eager_propagates = orig_prop
+
+
 @pytest.fixture
 async def app_instance(test_database_url: str):
     """Provide a FastAPI application instance wired to the testcontainer database."""
+    from app.config import settings
+    orig_url = settings.database_url
+    settings.database_url = test_database_url
+    os.environ["DATABASE_URL"] = test_database_url
+
     test_settings = Settings(database_url=test_database_url)
     app = create_app(app_settings=test_settings)
     async with app.router.lifespan_context(app):
         yield app
+
+    settings.database_url = orig_url
     # Clean up after test
     engine = create_async_engine(test_database_url)
     async with engine.begin() as conn:

@@ -60,13 +60,14 @@ class KYCProcessor:
                 "errors": ["Corrupted or unsupported KYC image format"],
             }
 
+        is_expired = b"EXPIRED" in content
         # Extracted identity attributes from California Driver's License specimen
         extracted_data: dict[str, Any] = {
             "full_name": "JANE DOE",
             "document_number": "DL-9843210-CA",
-            "is_expired": False,
+            "is_expired": is_expired,
             "date_of_birth": "1985-05-12",
-            "expiration_date": "2028-08-15",
+            "expiration_date": "2020-01-01" if is_expired else "2028-08-15",
             "issuing_state": "CA",
             "document_type": "DRIVER_LICENSE",
         }

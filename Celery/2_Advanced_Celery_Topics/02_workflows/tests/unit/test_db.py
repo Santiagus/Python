@@ -1,5 +1,6 @@
 """Unit tests for Database engine and session lifecycle."""
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
@@ -40,6 +41,7 @@ async def test_database_session_rollback_on_exception() -> None:
         mock_session.rollback.assert_awaited_once()
 
 
+
 @pytest.mark.asyncio
 async def test_database_close() -> None:
     """Verify Database.close disposes the engine."""
@@ -50,4 +52,33 @@ async def test_database_close() -> None:
         db = Database(settings)
         await db.close()
         mock_engine.dispose.assert_awaited_once()
+
+
+def test_get_database_unconfigured_raises_runtime_error() -> None:
+    """Verify get_database raises RuntimeError when invoked directly without override."""
+    from app.db import get_database
+
+    with pytest.raises(RuntimeError, match="Database dependency has not been configured"):
+        get_database()
+
+
+@pytest.mark.asyncio
+async def test_get_session_dependency_yields_session() -> None:
+    """Verify get_session dependency yields session from database.session()."""
+    from app.db import get_session
+
+    mock_db = MagicMock()
+    mock_session = AsyncMock()
+
+    @asynccontextmanager
+    async def fake_session():
+        yield mock_session
+
+    mock_db.session = fake_session
+
+    sessions = []
+    async for s in get_session(database=mock_db):
+        sessions.append(s)
+
+    assert sessions == [mock_session]
 

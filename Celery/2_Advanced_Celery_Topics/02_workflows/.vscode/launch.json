@@ -17,11 +17,48 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@localhost:5433/underwriting_db",
+                "REDIS_URL": "redis://localhost:6380/0",
+                "RABBITMQ_URL": "amqp://guest:guest@localhost:5673//",
                 "ENVIRONMENT": "development",
                 "LOG_LEVEL": "INFO",
                 "LOG_FORMAT": "pretty"
             },
             "justMyCode": true
+        },
+        {
+            "name": "Python Debugger: Celery Worker",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "celery",
+            "args": [
+                "-A",
+                "services.worker.celery_app:celery_app",
+                "worker",
+                "--loglevel=INFO",
+                "-P",
+                "solo"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@localhost:5433/underwriting_db",
+                "REDIS_URL": "redis://localhost:6380/0",
+                "RABBITMQ_URL": "amqp://guest:guest@localhost:5673//",
+                "ENVIRONMENT": "development",
+                "LOG_LEVEL": "INFO",
+                "LOG_FORMAT": "pretty"
+            },
+            "justMyCode": true,
+            "subProcess": true
+        }
+    ],
+    "compounds": [
+        {
+            "name": "FastAPI + Celery Worker",
+            "configurations": [
+                "Python Debugger: FastAPI",
+                "Python Debugger: Celery Worker"
+            ],
+            "stopAll": true
         }
     ]
 }

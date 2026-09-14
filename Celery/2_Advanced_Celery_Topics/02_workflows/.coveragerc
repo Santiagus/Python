@@ -1,0 +1,6 @@
+[run]
+concurrency = greenlet, thread
+source =
+    app
+    services/worker
+

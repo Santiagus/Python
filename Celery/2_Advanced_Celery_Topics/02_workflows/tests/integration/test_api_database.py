@@ -164,3 +164,107 @@ class TestApiDatabaseIntegration:
         doc_stmt = select(func.count(Document.id)).where(Document.application_id == UUID(app_id))
         doc_count = (await db_session.execute(doc_stmt)).scalar()
         assert doc_count == 3
+
+    async def test_submit_dossier_invalid_uuid_returns_404(
+        self, async_client: AsyncClient, clean_dossier_manifest: dict[str, str]
+    ) -> None:
+        """Submitting dossier with malformed UUID returns 404."""
+        resp = await async_client.post(
+            "/api/v1/applications/not-a-valid-uuid/dossier",
+            json={"manifest": clean_dossier_manifest},
+        )
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Application not found"
+
+    async def test_submit_dossier_dispatch_error_fallback(
+        self,
+        async_client: AsyncClient,
+        clean_dossier_manifest: dict[str, str],
+        monkeypatch,
+    ) -> None:
+        """When Celery dispatch raises an exception, route falls back gracefully to generated workflow_id."""
+        create_resp = await async_client.post(
+            "/api/v1/applications",
+            json={
+                "company_name": "Dispatch Error Inc.",
+                "applicant_name": "JANE DOE",
+                "requested_facility": 150000.00,
+            },
+        )
+        app_id = create_resp.json()["application_id"]
+
+        def mock_dispatch_fail(*args, **kwargs):
+            raise ConnectionError("RabbitMQ broker connection refused")
+
+        import app.tasks
+        monkeypatch.setattr(app.tasks, "dispatch_underwriting_workflow", mock_dispatch_fail)
+
+        resp = await async_client.post(
+            f"/api/v1/applications/{app_id}/dossier",
+            json={"manifest": clean_dossier_manifest},
+        )
+        assert resp.status_code == 202
+        payload = resp.json()
+        assert payload["workflow_id"].startswith("wf-")
+
+    async def test_submit_dossier_integrity_error_rollback(
+        self,
+        async_client: AsyncClient,
+        clean_dossier_manifest: dict[str, str],
+        monkeypatch,
+    ) -> None:
+        """When DB commit encounters an IntegrityError conflict, it rolls back and returns already registered."""
+        create_resp = await async_client.post(
+            "/api/v1/applications",
+            json={
+                "company_name": "Integrity Conflict Inc.",
+                "applicant_name": "JANE DOE",
+                "requested_facility": 180000.00,
+            },
+        )
+        app_id = create_resp.json()["application_id"]
+
+        from sqlalchemy.exc import IntegrityError
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        original_commit = AsyncSession.commit
+
+        async def mock_commit(session_self):
+            raise IntegrityError("duplicate key value violates unique constraint", params=None, orig=Exception())
+
+        monkeypatch.setattr(AsyncSession, "commit", mock_commit)
+
+        resp = await async_client.post(
+            f"/api/v1/applications/{app_id}/dossier",
+            json={"manifest": clean_dossier_manifest},
+        )
+        assert resp.status_code == 202
+        payload = resp.json()
+        assert "already been registered" in payload["message"]
+
+    async def test_timing_telemetry_edge_cases_404(
+        self, async_client: AsyncClient
+    ) -> None:
+        """Timing endpoint returns 404 for invalid UUID, non-existent app, and app without memo."""
+        # 1. Invalid UUID
+        invalid_resp = await async_client.get("/api/v1/applications/invalid-uuid/timing")
+        assert invalid_resp.status_code == 404
+        assert "Timing telemetry not yet available" in invalid_resp.json()["detail"]
+
+        # 2. Non-existent app
+        non_existent_id = str(uuid4())
+        non_existent_resp = await async_client.get(f"/api/v1/applications/{non_existent_id}/timing")
+        assert non_existent_resp.status_code == 404
+
+        # 3. Application exists but no dossier/memo submitted
+        create_resp = await async_client.post(
+            "/api/v1/applications",
+            json={
+                "company_name": "No Memo Inc.",
+                "applicant_name": "JANE DOE",
+                "requested_facility": 100000.00,
+            },
+        )
+        app_id = create_resp.json()["application_id"]
+        no_memo_resp = await async_client.get(f"/api/v1/applications/{app_id}/timing")
+        assert no_memo_resp.status_code == 404

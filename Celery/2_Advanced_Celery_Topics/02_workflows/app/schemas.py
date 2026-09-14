@@ -15,6 +15,10 @@ class ApplicationCreate(BaseModel):
     company_name: str = Field(..., description="Legal commercial entity name", examples=["Apex Fintech Dynamics Inc."])
     applicant_name: str = Field(..., description="Authorized executive full name", examples=["JANE DOE"])
     requested_facility: float = Field(..., gt=0, description="Requested facility principal amount in USD", examples=[250000.00])
+    manifest: dict[str, str] | None = Field(
+        default=None,
+        description="Optional document manifest. If provided, the underwriting workflow is dispatched immediately.",
+    )
 
 
 class DossierSubmitRequest(BaseModel):
