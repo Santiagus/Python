@@ -344,3 +344,43 @@ class TestApiDatabaseIntegration:
         assert timing_payload["stage_3_fanin_aggregation_ms"] > 0
         assert timing_payload["total_pipeline_ms"] > 0
 
+    async def test_multi_failure_dossier_via_api(
+        self,
+        async_client: AsyncClient,
+        multi_failure_manifest: dict[str, str],
+    ) -> None:
+        """Verify submitting multi-failure manifest via API transitions app to declined with both errors in memo."""
+        # 1. Create Application
+        create_resp = await async_client.post(
+            "/api/v1/applications",
+            json={
+                "company_name": "Multi Risk Enterprise LLC",
+                "applicant_name": "JANE DOE",
+                "requested_facility": 350000.00,
+            },
+        )
+        assert create_resp.status_code == 201
+        app_id = create_resp.json()["application_id"]
+
+        # 2. Submit multi-failure dossier (Expired KYC + Failed Tax Control)
+        dossier_resp = await async_client.post(
+            f"/api/v1/applications/{app_id}/dossier",
+            json={"manifest": multi_failure_manifest},
+        )
+        assert dossier_resp.status_code == 202
+
+        # 3. Poll application status
+        get_resp = await async_client.get(f"/api/v1/applications/{app_id}")
+        assert get_resp.status_code == 200
+        payload = get_resp.json()
+        assert payload["status"] == "declined"
+        memo = payload["underwriting_memo"]
+        assert memo is not None
+        assert memo["decision"] == "declined"
+        # Verify both errors in audit_flags
+        assert any("expired" in flag.lower() for flag in memo["audit_flags"])
+        assert any("dscr" in flag.lower() for flag in memo["audit_flags"])
+        # Verify both errors in summary string
+        assert "KYC document expired" in memo["summary"]
+        assert "Tax filing DSCR" in memo["summary"]
+
