@@ -16,7 +16,7 @@ import os
 import subprocess
 import sys
 import time
-from typing import AsyncIterator, Generator
+from collections.abc import Generator
 from uuid import UUID
 
 import pytest

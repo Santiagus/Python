@@ -1,6 +1,6 @@
 """Database connection factory and session management for async SQLAlchemy."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import Depends
@@ -22,7 +22,7 @@ class Database:
         )
 
     @asynccontextmanager
-    async def session(self) -> AsyncIterator[AsyncSession]:
+    async def session(self) -> AsyncGenerator[AsyncSession, None]:
         """Provide a transactional async session with automatic rollback on error."""
         async with self.session_factory() as session:
             try:
@@ -41,7 +41,7 @@ def get_database() -> Database:
     raise RuntimeError("Database dependency has not been configured in application state")
 
 
-async def get_session(database: Database = Depends(get_database)) -> AsyncIterator[AsyncSession]:
+async def get_session(database: Database = Depends(get_database)) -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency yielding a transactional AsyncSession for request handlers."""
     async with database.session() as session:
         yield session

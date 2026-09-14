@@ -2,7 +2,7 @@
 
 import os
 import sys
-from collections.abc import AsyncIterator, Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
 import pytest
@@ -117,7 +117,7 @@ async def test_database_url(postgres_container: PostgresContainer | None) -> str
 
 
 @pytest.fixture
-async def db_session(test_database_url: str) -> AsyncIterator[AsyncSession]:
+async def db_session(test_database_url: str) -> AsyncGenerator[AsyncSession, None]:
     """Provide an isolated transactional async database session for tests."""
     engine = create_async_engine(test_database_url)
     session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -232,7 +232,7 @@ async def app_instance(test_database_url: str):
 
 
 @pytest.fixture
-async def async_client(app_instance) -> AsyncIterator[AsyncClient]:
+async def async_client(app_instance) -> AsyncGenerator[AsyncClient, None]:
     """Provide an AsyncClient wired to the test application."""
     async with AsyncClient(transport=ASGITransport(app=app_instance), base_url="http://test") as client:
         yield client

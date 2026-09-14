@@ -2,7 +2,7 @@
 
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -77,7 +77,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     effective_settings = app_settings or settings
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Configure structured logging and manage database engine lifecycle."""
         configure_logging(
             level=effective_settings.log_level,
