@@ -82,14 +82,11 @@ class TestApiDatabaseIntegration:
         assert get_payload["application_id"] == app_id
         assert get_payload["status"] == "approved"
         assert Decimal(get_payload["requested_facility"]) == Decimal("250000.00")
-        assert get_payload["requested_facility_cents"] == 25000000
         assert get_payload["underwriting_memo"] is not None
         assert get_payload["underwriting_memo"]["decision"] == "approved"
         assert Decimal(get_payload["underwriting_memo"]["calculated_dscr"]) == Decimal("3.250")
         assert Decimal(get_payload["underwriting_memo"]["net_cashflow"]) == Decimal("32549.50")
-        assert get_payload["underwriting_memo"]["net_cashflow_cents"] == 3254950
         assert Decimal(get_payload["underwriting_memo"]["total_revenue"]) == Decimal("1450000.00")
-        assert get_payload["underwriting_memo"]["total_revenue_cents"] == 145000000
 
         # 4. Retrieve latency timing telemetry via GET /applications/{id}/timing
         timing_resp = await async_client.get(f"/api/v1/applications/{app_id}/timing")

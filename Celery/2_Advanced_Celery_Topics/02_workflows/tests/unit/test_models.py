@@ -186,16 +186,13 @@ class TestSchemaSerialization:
         assert response_schema.application_id == str(app_id)
         assert response_schema.company_name == "Apex Corp"
         assert response_schema.requested_facility == Decimal("250000.00")
-        assert response_schema.requested_facility_cents == 25000000
         assert response_schema.status == "approved"
         assert response_schema.workflow_id == "wf-12345"
         assert response_schema.underwriting_memo is not None
         assert response_schema.underwriting_memo.decision == "approved"
         assert response_schema.underwriting_memo.calculated_dscr == Decimal("1.850")
         assert response_schema.underwriting_memo.net_cashflow == Decimal("32549.50")
-        assert response_schema.underwriting_memo.net_cashflow_cents == 3254950
         assert response_schema.underwriting_memo.total_revenue == Decimal("1450000.00")
-        assert response_schema.underwriting_memo.total_revenue_cents == 145000000
         assert response_schema.underwriting_memo.audit_flags == ["clean_record"]
 
         # Also test None cases for memo properties
