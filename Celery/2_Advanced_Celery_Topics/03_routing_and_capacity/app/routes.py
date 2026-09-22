@@ -220,20 +220,6 @@ async def submit_batch_disbursement(
     session.add(batch)
     await session.flush()  # Generate batch.batch_id
 
-    # 4. Bulk insert child disbursement line items
-    disbursement_objects = [
-        Disbursement(
-            batch_id=batch.batch_id,
-            recipient_name=item.recipient_name,
-            account_number=item.account_number,
-            routing_number=item.routing_number,
-            amount_cents=to_cents(item.amount),
-            status="pending",
-        )
-        for item in payload.disbursements
-    ]
-    session.add_all(disbursement_objects)
-    # 4. Bulk insert child disbursement line items in a single multi-row statement
     # 4. Bulk insert child disbursement line items in a single multi-row relational statement
     insert_stmt = insert(Disbursement).returning(Disbursement.disbursement_id)
     insert_res = await session.execute(
@@ -255,7 +241,6 @@ async def submit_batch_disbursement(
     await session.refresh(batch)
 
     # 5. Extract item UUID strings and dispatch sliced chunks
-    item_ids = [str(d.disbursement_id) for d in disbursement_objects]
     dispatcher.dispatch_batch_settlement(batch.batch_id, item_ids)
 
     return BatchDisbursementResponse(
