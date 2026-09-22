@@ -139,6 +139,42 @@ class TestInstantPayoutEndpoints:
         res = await async_client.get(f"/payments/{uuid4()}", headers=auth_headers)
         assert res.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_account_validation_cache_and_clear(
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
+        db_session,
+    ) -> None:
+        """Verify in-memory account cache hits and clear_account_cache behavior."""
+        from app.routes import _ACCOUNT_CACHE, clear_account_cache
+
+        clear_account_cache()
+        assert len(_ACCOUNT_CACHE) == 0
+
+        acc_id = UUID("a0000000-0000-0000-0000-000000000001")
+        payload = {
+            "idempotency_key": f"idemp_cache_{uuid4().hex}",
+            "source_account_id": str(acc_id),
+            "destination_account_number": "9876543210",
+            "destination_routing_number": "021000021",
+            "amount": "10.00",
+            "rail": "rtp",
+        }
+        with patch("app.routes.dispatcher.dispatch_instant_payout"):
+            # First call: cache miss, populates cache
+            res1 = await async_client.post("/payments/instant", json=payload, headers=auth_headers)
+            assert res1.status_code == 202
+            assert acc_id in _ACCOUNT_CACHE
+
+            # Second call: cache hit
+            payload["idempotency_key"] = f"idemp_cache_{uuid4().hex}"
+            res2 = await async_client.post("/payments/instant", json=payload, headers=auth_headers)
+            assert res2.status_code == 202
+
+        clear_account_cache()
+        assert len(_ACCOUNT_CACHE) == 0
+
 
 @pytest.mark.integration
 class TestBatchDisbursementEndpoints:

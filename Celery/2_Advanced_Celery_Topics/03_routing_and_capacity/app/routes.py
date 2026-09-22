@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import logging
+import time
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -43,6 +44,32 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Payment Orchestration"])
 dispatcher = PaymentDispatcher()
+
+# Process-local in-memory cache for validated enterprise funding account existence.
+# Eliminates redundant SELECT queries to PostgreSQL/PgBouncer on high-concurrency ingestion.
+_ACCOUNT_CACHE: dict[UUID, float] = {}
+_ACCOUNT_CACHE_TTL_SECONDS = 300.0
+
+
+def clear_account_cache() -> None:
+    """Clear the process-local account validation cache (used in test isolation)."""
+    _ACCOUNT_CACHE.clear()
+
+
+async def validate_account_exists(session: DbSession, account_id: UUID) -> None:
+    """Validate that source account exists using process-local in-memory TTL caching."""
+    now_ts = time.monotonic()
+    if account_id in _ACCOUNT_CACHE and _ACCOUNT_CACHE[account_id] > now_ts:
+        return
+
+    account_stmt = select(Account.account_id).where(Account.account_id == account_id)
+    acc_res = await session.execute(account_stmt)
+    if not acc_res.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Source account '{account_id}' not found",
+        )
+    _ACCOUNT_CACHE[account_id] = now_ts + _ACCOUNT_CACHE_TTL_SECONDS
 
 
 # =============================================================================
@@ -89,20 +116,15 @@ async def submit_instant_payout(
             error_detail=existing_payment.error_detail,
         )
 
-    # 2. Verify funding source account exists
-    account_stmt = select(Account).where(Account.account_id == payload.source_account_id)
-    acc_res = await session.execute(account_stmt)
-    account = acc_res.scalar_one_or_none()
+    # 2. Fast-Path Account Validation via In-Memory TTL Cache
+    await validate_account_exists(session, payload.source_account_id)
 
-    if not account:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Source account '{payload.source_account_id}' not found",
-        )
-
-    # 3. Create new Payment record in 'pending' state
+    # 3. Create new Payment record in 'pending' state (Pre-generated UUID & timestamp)
+    payment_id = uuid4()
+    now_utc = datetime.now(timezone.utc)
     amount_cents = to_cents(payload.amount)
     payment = Payment(
+        payment_id=payment_id,
         idempotency_key=payload.idempotency_key,
         source_account_id=payload.source_account_id,
         destination_account_number=payload.destination_account_number,
@@ -111,26 +133,28 @@ async def submit_instant_payout(
         rail=payload.rail.value,
         priority=PaymentPriority.critical.value,
         status=PaymentStatus.pending.value,
+        created_at=now_utc,
+        updated_at=now_utc,
     )
     session.add(payment)
     await session.commit()
-    await session.refresh(payment)
+    # Note: session.refresh(payment) eliminated to prevent redundant synchronous SELECT query
 
     # 4. Dispatch Celery task to 'critical' queue via Dedicated Producer
-    dispatcher.dispatch_instant_payout(payment.payment_id)
+    dispatcher.dispatch_instant_payout(payment_id)
 
     return InstantPaymentResponse(
-        payment_id=payment.payment_id,
-        idempotency_key=payment.idempotency_key,
-        source_account_id=payment.source_account_id,
-        destination_account_mask=f"******{payment.destination_account_number[-4:]}",
-        destination_routing_number=payment.destination_routing_number,
+        payment_id=payment_id,
+        idempotency_key=payload.idempotency_key,
+        source_account_id=payload.source_account_id,
+        destination_account_mask=f"******{payload.destination_account_number[-4:]}",
+        destination_routing_number=payload.destination_routing_number,
         amount=payload.amount,
-        amount_cents=payment.amount_cents,
+        amount_cents=amount_cents,
         rail=payload.rail,
         priority=PaymentPriority.critical,
         status=PaymentStatus.pending,
-        created_at=payment.created_at,
+        created_at=now_utc,
         cleared_at=None,
         external_reference=None,
         error_detail=None,
@@ -193,16 +217,8 @@ async def submit_batch_disbursement(
     _: AuthenticatedUser,
 ) -> BatchDisbursementResponse:
     """Ingest and schedule a high-volume batch disbursement."""
-    # 1. Verify funding source account exists
-    account_stmt = select(Account).where(Account.account_id == payload.source_account_id)
-    acc_res = await session.execute(account_stmt)
-    account = acc_res.scalar_one_or_none()
-
-    if not account:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Source account '{payload.source_account_id}' not found",
-        )
+    # 1. Fast-Path Account Validation via In-Memory TTL Cache
+    await validate_account_exists(session, payload.source_account_id)
 
     # 2. Compute total minor units and item count
     total_items = len(payload.disbursements)

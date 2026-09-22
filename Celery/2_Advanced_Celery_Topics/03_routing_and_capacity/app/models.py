@@ -97,7 +97,6 @@ class Payment(Base):
         String(128),
         unique=True,
         nullable=False,
-        index=True,
     )
     source_account_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -130,7 +129,6 @@ class Payment(Base):
         String(32),
         nullable=False,
         default="pending",
-        index=True,
     )  # 'pending', 'processing', 'settled', 'failed', 'rejected'
     cleared_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
@@ -203,7 +201,6 @@ class BatchSettlement(Base):
         String(32),
         nullable=False,
         default="pending",
-        index=True,
     )  # 'pending', 'processing', 'completed', 'partially_failed', 'failed'
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -267,7 +264,6 @@ class Disbursement(Base):
         String(32),
         nullable=False,
         default="pending",
-        index=True,
     )  # 'pending', 'processing', 'settled', 'failed', 'rejected'
     error_detail: Mapped[str | None] = mapped_column(
         Text,

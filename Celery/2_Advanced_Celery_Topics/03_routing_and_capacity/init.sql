@@ -76,15 +76,15 @@ CREATE TABLE IF NOT EXISTS disbursements (
 );
 
 -- -----------------------------------------------------------------------------
--- Indexes for High-Concurrency Performance
+-- Indexes for High-Concurrency Performance (Partial & Deduplicated)
 -- -----------------------------------------------------------------------------
+-- Note: idempotency_key is already uniquely indexed by payments_idempotency_key_key.
 CREATE INDEX IF NOT EXISTS idx_payments_source_account ON payments(source_account_id);
-CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
-CREATE INDEX IF NOT EXISTS idx_payments_idempotency ON payments(idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_payments_pending ON payments(payment_id) WHERE status IN ('pending', 'processing');
 CREATE INDEX IF NOT EXISTS idx_batch_settlements_source ON batch_settlements(source_account_id);
-CREATE INDEX IF NOT EXISTS idx_batch_settlements_status ON batch_settlements(status);
+CREATE INDEX IF NOT EXISTS idx_batch_settlements_pending ON batch_settlements(batch_id) WHERE status IN ('pending', 'processing');
 CREATE INDEX IF NOT EXISTS idx_disbursements_batch_id ON disbursements(batch_id);
-CREATE INDEX IF NOT EXISTS idx_disbursements_status ON disbursements(status);
+CREATE INDEX IF NOT EXISTS idx_disbursements_pending ON disbursements(disbursement_id) WHERE status IN ('pending', 'processing');
 
 -- -----------------------------------------------------------------------------
 -- Specimen Seed Accounts
