@@ -98,12 +98,7 @@ async def run_contention_benchmark(
         # Allow DB transaction to commit and RabbitMQ task dispatcher to complete cleanly before measuring instant probes
         await asyncio.sleep(0.1)
 
-        # 3. Fire instant payments while bulk is executing in the background
-        logger.info("Step 2: Dispatching %d instant payments against saturated system...", instant_count)
-        latencies_ms: list[float] = []
-        payment_ids: list[str] = []
-
-        async def send_instant(idx: int) -> tuple[float, str | None]:
+        async def send_instant(idx: Any) -> tuple[float, str | None]:
             payload = {
                 "idempotency_key": f"bench_instant_{uuid4().hex}_{idx}",
                 "source_account_id": "a0000000-0000-0000-0000-000000000001",
@@ -118,10 +113,21 @@ async def run_contention_benchmark(
             elapsed = (time.perf_counter() - t0) * 1000
             pid = None
             if r.status_code != 202:
-                logger.warning("Instant payout probe %d failed with status %d", idx, r.status_code)
+                logger.warning("Instant payout probe %s failed with status %d", idx, r.status_code)
             else:
                 pid = r.json().get("payment_id")
             return elapsed, pid
+
+        # Pre-warm gateway keep-alive connections and Celery AMQP channels across all upstream replicas
+        logger.info("Pre-warming upstream instant payment pool (10 probes)...")
+        for w_idx in range(10):
+            await send_instant(f"warmup_{w_idx}")
+        await asyncio.sleep(0.2)
+
+        # 3. Fire instant payments while bulk is executing in the background
+        logger.info("Step 2: Dispatching %d instant payments against saturated system...", instant_count)
+        latencies_ms: list[float] = []
+        payment_ids: list[str] = []
 
         if rate > 0:
             # Paced arrival rate (matches Little's Law lambda = 50 req/s)

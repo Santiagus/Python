@@ -134,5 +134,16 @@ class TestDatabaseAndLifecycle:
                  patch("app.main.close_db", new_callable=AsyncMock):
                 async with lifespan(app):
                     pass
+
+            # Broker warmup failure branch handles gracefully
+            mock_celery_fail = MagicMock()
+            mock_celery_fail.connection_for_write.side_effect = RuntimeError("broker warmup fail")
+            with patch("app.main.get_engine", return_value=mock_engine), \
+                 patch("services.worker.celery_app.celery_app", mock_celery_fail), \
+                 patch("app.main.close_bank_client", new_callable=AsyncMock), \
+                 patch("app.main.close_db", new_callable=AsyncMock):
+                async with lifespan(app):
+                    pass
         finally:
             settings.environment = original_env
+

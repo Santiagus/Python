@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-22T17:39:59.084639+00:00",
+  "timestamp": "2026-09-22T17:38:15.217017+00:00",
   "environment": {
     "api_url": "http://localhost:8010",
     "mode": "paced",
@@ -11,25 +11,25 @@
   },
   "bulk_ingestion": {
     "items_count": 500,
-    "ingestion_duration_ms": 57.07,
+    "ingestion_duration_ms": 63.69,
     "status_code": 202
   },
   "api_ingestion_latency_ms": {
     "count": 100,
-    "min": 13.7,
-    "mean": 20.29,
-    "p50": 15.98,
-    "p95": 49.3,
-    "p99": 56.58,
-    "max": 56.58,
+    "min": 11.9,
+    "mean": 18.24,
+    "p50": 14.69,
+    "p95": 45.49,
+    "p99": 65.84,
+    "max": 65.84,
     "sla_threshold_ms": 100.0,
     "sla_passed": true
   },
   "worker_clearing_latency_ms": {
     "sample_size": 20,
-    "min": 20.63,
-    "p50": 21.78,
-    "p99": 50.54,
+    "min": 17.52,
+    "p50": 20.41,
+    "p99": 70.74,
     "sla_threshold_ms": 100.0,
     "sla_passed": true
   }

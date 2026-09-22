@@ -43,6 +43,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         except Exception as exc:
             logger.warning("db_warmup_failed", extra={"error": str(exc)})
 
+        # Eagerly warm Celery Kombu AMQP broker connection pool
+        try:
+            from services.worker.celery_app import celery_app
+            with celery_app.connection_for_write() as conn:
+                conn.connect()
+        except Exception as exc:
+            logger.warning("broker_warmup_failed", extra={"error": str(exc)})
+
     yield
 
     # 2. Shutdown: Gracefully dispose database connection pool
