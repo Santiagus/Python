@@ -141,3 +141,69 @@ class PaymentTrafficUser(FastHttpUser):
             else:
                 response.failure(f"Unexpected status: {response.status_code}")
 
+
+if __name__ == "__main__":
+    import argparse
+    import subprocess
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description="Locust Multi-Rail Payment Traffic Load Generator"
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("API_URL", "http://localhost:8010"),
+        help="API Gateway URL (default: http://localhost:8010)",
+    )
+    parser.add_argument(
+        "-u",
+        "--users",
+        type=int,
+        default=int(os.getenv("LOCUST_USERS", "10")),
+        help="Number of concurrent users (default: 10)",
+    )
+    parser.add_argument(
+        "-r",
+        "--spawn-rate",
+        type=int,
+        default=int(os.getenv("LOCUST_SPAWN_RATE", "5")),
+        help="User spawn rate per second (default: 5)",
+    )
+    parser.add_argument(
+        "-t",
+        "--run-time",
+        default=os.getenv("LOCUST_RUN_TIME", "10s"),
+        help="Benchmark duration (default: 10s)",
+    )
+    parser.add_argument(
+        "--web",
+        action="store_true",
+        default=False,
+        help="Launch interactive Locust web UI instead of headless mode",
+    )
+    args, unknown = parser.parse_known_args()
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "locust",
+        "-f",
+        __file__,
+        "--host",
+        args.host,
+    ]
+    if not args.web:
+        cmd.extend([
+            "--headless",
+            "-u",
+            str(args.users),
+            "-r",
+            str(args.spawn_rate),
+            "-t",
+            str(args.run_time),
+        ])
+    cmd.extend(unknown)
+
+    print(f"Executing Locust load test: {' '.join(cmd)}")
+    sys.exit(subprocess.call(cmd))
+

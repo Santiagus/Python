@@ -197,6 +197,8 @@ def configure_api_scale(replicas: int, pool: int, overflow: int, chunk_size: int
         bool: True if successful, False otherwise.
     """
     env = os.environ.copy()
+    env["API_INSTANT_DB_POOL_SIZE"] = str(pool)
+    env["API_INSTANT_DB_MAX_OVERFLOW"] = str(overflow)
     env["API_DB_POOL_SIZE"] = str(pool)
     env["API_DB_MAX_OVERFLOW"] = str(overflow)
     env["BATCH_CHUNK_SIZE"] = str(chunk_size)
@@ -204,7 +206,7 @@ def configure_api_scale(replicas: int, pool: int, overflow: int, chunk_size: int
 
     try:
         subprocess.run(
-            ["docker", "compose", "up", "-d", "--scale", f"api={replicas}"],
+            ["docker", "compose", "up", "-d", "--scale", f"api_instant={replicas}"],
             env=env,
             check=True,
             capture_output=True,
@@ -458,15 +460,15 @@ def identify_pareto_frontier(results: list[dict[str, Any]]) -> dict[str, Any] | 
 def main() -> None:
     """CLI Entry point for capacity matrix benchmarking."""
     parser = argparse.ArgumentParser(description="Multi-Dimensional Capacity Matrix Runner")
-    parser.add_argument("--replicas", type=str, default="1,2,4", help="Comma-separated container replica counts")
-    parser.add_argument("--chunk-sizes", type=str, default="100", help="Comma-separated chunk sizes (e.g. 50,100,250)")
-    parser.add_argument("--rate-limits", type=str, default="3000/m", help="Comma-separated Celery rate limits (e.g. 500/m,3000/m,None)")
-    parser.add_argument("--rate", type=float, default=50.0, help="Aggregate arrival rate in req/s for Little's Law pacing (set 0 for unconstrained)")
-    parser.add_argument("--users", type=int, default=25, help="Number of concurrent Locust users")
-    parser.add_argument("--spawn-rate", type=int, default=10, help="Locust user spawn rate per second")
-    parser.add_argument("--duration", type=str, default="20s", help="Duration per profile (e.g. 20s)")
-    parser.add_argument("--quick", action="store_true", help="Quick mode (15s duration, replicas 1, 2, 4)")
-    parser.add_argument("--api-url", type=str, default="http://localhost:8010", help="API gateway base URL (Nginx)")
+    parser.add_argument("--replicas", type=str, default="2", help="Comma-separated container replica counts (default: '2'; use '1,2,4' for full matrix)")
+    parser.add_argument("--chunk-sizes", type=str, default="100", help="Comma-separated chunk sizes (default: '100'; e.g. 50,100,250)")
+    parser.add_argument("--rate-limits", type=str, default="3000/m", help="Comma-separated Celery rate limits (default: '3000/m'; e.g. 500/m,3000/m,None)")
+    parser.add_argument("--rate", type=float, default=50.0, help="Aggregate arrival rate in req/s for Little's Law pacing (default: 50.0; set 0 for unconstrained)")
+    parser.add_argument("--users", type=int, default=25, help="Number of concurrent Locust users (default: 25)")
+    parser.add_argument("--spawn-rate", type=int, default=10, help="Locust user spawn rate per second (default: 10)")
+    parser.add_argument("--duration", type=str, default="15s", help="Duration per profile (default: '15s')")
+    parser.add_argument("--quick", action="store_true", help="Quick mode (10s duration, replicas 1, 2)")
+    parser.add_argument("--api-url", type=str, default="http://localhost:8010", help="API gateway base URL (default: http://localhost:8010)")
     parser.add_argument("--output", type=str, default=None, help="Custom output JSON path")
 
     args = parser.parse_args()
@@ -513,9 +515,9 @@ def main() -> None:
                         )
                         results.append(res)
         finally:
-            # Always restore recommended 4-replica horizontal configuration
-            logger.info("Restoring API Gateway to production reference state (4 container replicas)...")
-            configure_api_scale(4, 7, 5, 100)
+            # Always restore production reference state (2 container replicas)
+            logger.info("Restoring API Gateway to production reference state (2 container replicas)...")
+            configure_api_scale(2, 10, 10, 100)
             set_celery_bulk_rate_limit("500/m")
             wait_for_api_healthy(args.api_url, timeout_seconds=10.0)
 

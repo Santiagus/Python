@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-22T18:00:25.685329+00:00",
+  "timestamp": "2026-09-22T17:53:51.433213+00:00",
   "gateway_url": "http://localhost:8010",
   "total_replicas": 2,
   "upstream_replicas": [
@@ -9,37 +9,37 @@
   "test_1_paced_stream": {
     "scenario": "Paced Arrival Stream (~33 req/s during 2000ms Contention)",
     "total_requests": 20,
-    "busy_upstream": "172.22.0.12:8000",
+    "busy_upstream": "172.22.0.6:8000",
     "busy_node_hits": 0,
     "busy_node_share_pct": 0.0,
     "idle_nodes_share_pct": 100.0,
     "distribution": {
-      "172.22.0.6:8000": 20
+      "172.22.0.12:8000": 20
     },
     "latencies_ms": {
-      "p50": 3.37,
-      "p95": 4.28,
-      "p99": 4.28,
-      "max": 4.28
+      "p50": 3.5,
+      "p95": 4.33,
+      "p99": 4.33,
+      "max": 4.33
     },
     "bypassed_successfully": true
   },
   "test_2_concurrent_burst": {
     "scenario": "Concurrent Burst (30 clients simultaneous)",
     "total_requests": 30,
-    "busy_upstream": "172.22.0.6:8000",
-    "busy_node_hits": 10,
-    "busy_node_share_pct": 33.3,
-    "idle_nodes_share_pct": 66.7,
+    "busy_upstream": "172.22.0.12:8000",
+    "busy_node_hits": 11,
+    "busy_node_share_pct": 36.7,
+    "idle_nodes_share_pct": 63.3,
     "distribution": {
-      "172.22.0.12:8000": 20,
-      "172.22.0.6:8000": 10
+      "172.22.0.6:8000": 19,
+      "172.22.0.12:8000": 11
     },
     "latencies_ms": {
-      "p50": 30.35,
-      "p95": 39.1,
-      "p99": 39.3,
-      "max": 39.3
+      "p50": 34.91,
+      "p95": 46.47,
+      "p99": 49.67,
+      "max": 49.67
     },
     "head_of_line_prevented": true
   },
@@ -51,7 +51,7 @@
     },
     "least_conn_measured": {
       "paced_stream_busy_hits": "0 of 20 (0.0%)",
-      "paced_stream_p99_latency": "4.28 ms",
+      "paced_stream_p99_latency": "4.33 ms",
       "head_of_line_blocking": "Zero Head-of-Line Blocking (100% Bypass)"
     }
   }

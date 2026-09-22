@@ -1,13 +1,12 @@
 {
-  "timestamp": "2026-09-22T18:00:25.685329+00:00",
-  "gateway_url": "http://localhost:8010",
+  "timestamp": "2026-09-22T17:49:15.123700+00:00",
   "total_replicas": 2,
   "upstream_replicas": [
     "172.22.0.12:8000",
     "172.22.0.6:8000"
   ],
   "test_1_paced_stream": {
-    "scenario": "Paced Arrival Stream (~33 req/s during 2000ms Contention)",
+    "scenario": "Paced Arrival Stream (~33 req/s)",
     "total_requests": 20,
     "busy_upstream": "172.22.0.12:8000",
     "busy_node_hits": 0,
@@ -17,10 +16,10 @@
       "172.22.0.6:8000": 20
     },
     "latencies_ms": {
-      "p50": 3.37,
-      "p95": 4.28,
-      "p99": 4.28,
-      "max": 4.28
+      "p50": 3.66,
+      "p95": 4.5,
+      "p99": 4.5,
+      "max": 4.5
     },
     "bypassed_successfully": true
   },
@@ -28,30 +27,30 @@
     "scenario": "Concurrent Burst (30 clients simultaneous)",
     "total_requests": 30,
     "busy_upstream": "172.22.0.6:8000",
-    "busy_node_hits": 10,
-    "busy_node_share_pct": 33.3,
-    "idle_nodes_share_pct": 66.7,
+    "busy_node_hits": 13,
+    "busy_node_share_pct": 43.3,
+    "idle_nodes_share_pct": 56.7,
     "distribution": {
-      "172.22.0.12:8000": 20,
-      "172.22.0.6:8000": 10
+      "172.22.0.12:8000": 17,
+      "172.22.0.6:8000": 13
     },
     "latencies_ms": {
-      "p50": 30.35,
-      "p95": 39.1,
-      "p99": 39.3,
-      "max": 39.3
+      "p50": 30.88,
+      "p95": 39.32,
+      "p99": 40.85,
+      "max": 40.85
     },
     "head_of_line_prevented": true
   },
   "comparison_matrix": {
     "round_robin_theoretical": {
-      "paced_stream_busy_hits": "~50% (10 of 20 requests)",
+      "paced_stream_busy_hits": "~25% (5 of 20 requests)",
       "paced_stream_p99_latency": "> 2,000 ms (Queued behind slow request)",
       "head_of_line_blocking": "Severe Head-of-Line Blocking"
     },
     "least_conn_measured": {
       "paced_stream_busy_hits": "0 of 20 (0.0%)",
-      "paced_stream_p99_latency": "4.28 ms",
+      "paced_stream_p99_latency": "4.5 ms",
       "head_of_line_blocking": "Zero Head-of-Line Blocking (100% Bypass)"
     }
   }

@@ -7,14 +7,21 @@ preventing head-of-line blocking and preserving sub-25ms tail latencies for real
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 from collections import Counter
 from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
+import sys
 import time
 from typing import Any
+
+# Ensure repository root is on sys.path for direct script execution
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 import httpx
 
@@ -25,15 +32,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("nginx_balancing_test")
 
-GATEWAY_URL = "http://localhost:8010"
-REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports" / "benchmarks"
 
-
-async def probe_baseline(client: httpx.AsyncClient, count: int = 16) -> list[str]:
+async def probe_baseline(
+    client: httpx.AsyncClient,
+    gateway_url: str = "http://localhost:8010",
+    count: int = 16,
+) -> list[str]:
     """Execute sequential baseline probes to discover all upstream container IPs.
 
     Args:
         client: HTTPX asynchronous client.
+        gateway_url: Base URL of the Nginx gateway.
         count: Number of baseline probes to dispatch.
 
     Returns:
@@ -42,17 +51,22 @@ async def probe_baseline(client: httpx.AsyncClient, count: int = 16) -> list[str
     # 1. Dispatch sequential probes to observe idle distribution
     upstreams: list[str] = []
     for _ in range(count):
-        res = await client.get(f"{GATEWAY_URL}/health/live")
+        res = await client.get(f"{gateway_url.rstrip('/')}/health/live")
         addr = res.headers.get("X-Upstream-Addr", "unknown")
         upstreams.append(addr)
     return upstreams
 
 
-async def execute_slow_request(client: httpx.AsyncClient, delay_ms: int = 2000) -> dict[str, Any]:
+async def execute_slow_request(
+    client: httpx.AsyncClient,
+    gateway_url: str = "http://localhost:8010",
+    delay_ms: int = 2000,
+) -> dict[str, Any]:
     """Dispatch a long-running request to tie up one container's connection pool.
 
     Args:
         client: HTTPX asynchronous client.
+        gateway_url: Base URL of the Nginx gateway.
         delay_ms: Duration in milliseconds to hold the connection open.
 
     Returns:
@@ -60,7 +74,7 @@ async def execute_slow_request(client: httpx.AsyncClient, delay_ms: int = 2000) 
     """
     start = time.perf_counter()
     res = await client.get(
-        f"{GATEWAY_URL}/health/live",
+        f"{gateway_url.rstrip('/')}/health/live",
         params={"delay_ms": delay_ms},
         timeout=10.0,
     )
@@ -72,17 +86,21 @@ async def execute_slow_request(client: httpx.AsyncClient, delay_ms: int = 2000) 
     }
 
 
-async def execute_fast_probe(client: httpx.AsyncClient) -> dict[str, Any]:
+async def execute_fast_probe(
+    client: httpx.AsyncClient,
+    gateway_url: str = "http://localhost:8010",
+) -> dict[str, Any]:
     """Dispatch a single instantaneous probe request.
 
     Args:
         client: HTTPX asynchronous client.
+        gateway_url: Base URL of the Nginx gateway.
 
     Returns:
         dict[str, Any]: Upstream address and measured round-trip latency in milliseconds.
     """
     start = time.perf_counter()
-    res = await client.get(f"{GATEWAY_URL}/health/live", timeout=5.0)
+    res = await client.get(f"{gateway_url.rstrip('/')}/health/live", timeout=5.0)
     elapsed_ms = (time.perf_counter() - start) * 1000.0
     return {
         "upstream_addr": res.headers.get("X-Upstream-Addr", "unknown"),
@@ -91,23 +109,28 @@ async def execute_fast_probe(client: httpx.AsyncClient) -> dict[str, Any]:
     }
 
 
-async def run_paced_stream_test(client: httpx.AsyncClient, count: int = 20) -> dict[str, Any]:
+async def run_paced_stream_test(
+    client: httpx.AsyncClient,
+    gateway_url: str = "http://localhost:8010",
+    count: int = 20,
+    delay_ms: int = 2000,
+) -> dict[str, Any]:
     """Test 1: Paced Real-Time Traffic Stream under Asymmetric Contention.
 
-    Verifies that when 1 container is tied up with a 2-second in-flight task,
+    Verifies that when 1 container is tied up with a slow in-flight task,
     incoming paced real-time requests (e.g. instant payouts arriving at steady intervals)
     are 100% steered to the idle containers, resulting in 0 requests to the busy container.
     """
     logger.info("--- Test 1: Paced Real-Time Traffic Stream under Contention ---")
 
     # 1. Start slow request
-    slow_task = asyncio.create_task(execute_slow_request(client, delay_ms=2000))
+    slow_task = asyncio.create_task(execute_slow_request(client, gateway_url=gateway_url, delay_ms=delay_ms))
     await asyncio.sleep(0.05)
 
     # 2. Fire paced requests while slow request is in-flight
     fast_results: list[dict[str, Any]] = []
     for _ in range(count):
-        fast_results.append(await execute_fast_probe(client))
+        fast_results.append(await execute_fast_probe(client, gateway_url=gateway_url))
         await asyncio.sleep(0.03)  # 30ms pacing (~33 req/s)
 
     slow_res = await slow_task
@@ -121,7 +144,7 @@ async def run_paced_stream_test(client: httpx.AsyncClient, count: int = 20) -> d
     sorted_lat = sorted(latencies)
 
     return {
-        "scenario": "Paced Arrival Stream (~33 req/s)",
+        "scenario": f"Paced Arrival Stream (~33 req/s during {delay_ms}ms Contention)",
         "total_requests": count,
         "busy_upstream": busy_upstream,
         "busy_node_hits": busy_hits,
@@ -138,21 +161,26 @@ async def run_paced_stream_test(client: httpx.AsyncClient, count: int = 20) -> d
     }
 
 
-async def run_concurrent_burst_test(client: httpx.AsyncClient, burst_count: int = 30) -> dict[str, Any]:
+async def run_concurrent_burst_test(
+    client: httpx.AsyncClient,
+    gateway_url: str = "http://localhost:8010",
+    burst_count: int = 30,
+    delay_ms: int = 2000,
+) -> dict[str, Any]:
     """Test 2: High-Concurrency Burst under Asymmetric Contention.
 
-    Verifies that under an instantaneous burst of 30 concurrent connections,
+    Verifies that under an instantaneous burst of concurrent connections,
     `least_conn` balances connection depth across idle nodes first and prevents
-    head-of-line blocking (P99 stays far below the 2,000ms slow request).
+    head-of-line blocking (P99 stays far below the slow request duration).
     """
-    logger.info("--- Test 2: Concurrent Burst (30 simultaneous connections) ---")
+    logger.info(f"--- Test 2: Concurrent Burst ({burst_count} simultaneous connections) ---")
 
     # 1. Start slow request
-    slow_task = asyncio.create_task(execute_slow_request(client, delay_ms=2000))
+    slow_task = asyncio.create_task(execute_slow_request(client, gateway_url=gateway_url, delay_ms=delay_ms))
     await asyncio.sleep(0.05)
 
     # 2. Fire concurrent burst
-    fast_tasks = [execute_fast_probe(client) for _ in range(burst_count)]
+    fast_tasks = [execute_fast_probe(client, gateway_url=gateway_url) for _ in range(burst_count)]
     fast_results = await asyncio.gather(*fast_tasks)
 
     slow_res = await slow_task
@@ -166,7 +194,7 @@ async def run_concurrent_burst_test(client: httpx.AsyncClient, burst_count: int 
     sorted_lat = sorted(latencies)
 
     return {
-        "scenario": "Concurrent Burst (30 clients simultaneous)",
+        "scenario": f"Concurrent Burst ({burst_count} clients simultaneous)",
         "total_requests": burst_count,
         "busy_upstream": busy_upstream,
         "busy_node_hits": busy_hits,
@@ -183,31 +211,49 @@ async def run_concurrent_burst_test(client: httpx.AsyncClient, burst_count: int 
     }
 
 
-async def main() -> None:
-    """Execute complete empirical Nginx least_conn verification suite."""
+async def run_balancing_benchmark(
+    gateway_url: str = "http://localhost:8010",
+    delay_ms: int = 2000,
+    paced_count: int = 20,
+    burst_count: int = 30,
+    output_dir: Path = Path("reports/benchmarks"),
+) -> dict[str, Any]:
+    """Execute complete empirical Nginx least_conn verification suite.
+
+    Args:
+        gateway_url: Base URL of the Nginx Edge Gateway.
+        delay_ms: Artificial slow request latency in ms.
+        paced_count: Number of requests in paced stream test.
+        burst_count: Number of requests in burst test.
+        output_dir: Output directory for JSON telemetry reports.
+
+    Returns:
+        dict[str, Any]: Structured benchmark report.
+    """
     async with httpx.AsyncClient() as client:
         # 1. Topology discovery
-        baseline = await probe_baseline(client, count=16)
+        baseline = await probe_baseline(client, gateway_url=gateway_url, count=16)
         unique_upstreams = sorted(list(set(baseline)))
         logger.info(f"Discovered {len(unique_upstreams)} upstream API replicas: {unique_upstreams}")
 
         # 2. Run Test 1 (Paced Stream)
-        t1 = await run_paced_stream_test(client, count=20)
+        t1 = await run_paced_stream_test(client, gateway_url=gateway_url, count=paced_count, delay_ms=delay_ms)
 
         # 3. Run Test 2 (Burst)
-        t2 = await run_concurrent_burst_test(client, burst_count=30)
+        t2 = await run_concurrent_burst_test(client, gateway_url=gateway_url, burst_count=burst_count, delay_ms=delay_ms)
 
     # 4. Generate structured report
     report = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "gateway_url": gateway_url,
         "total_replicas": len(unique_upstreams),
         "upstream_replicas": unique_upstreams,
         "test_1_paced_stream": t1,
         "test_2_concurrent_burst": t2,
         "comparison_matrix": {
             "round_robin_theoretical": {
-                "paced_stream_busy_hits": "~25% (5 of 20 requests)",
-                "paced_stream_p99_latency": "> 2,000 ms (Queued behind slow request)",
+                "paced_stream_busy_hits": f"~{100 // max(len(unique_upstreams), 1)}% ({paced_count // max(len(unique_upstreams), 1)} of {paced_count} requests)",
+                "paced_stream_p99_latency": f"> {delay_ms:,} ms (Queued behind slow request)",
                 "head_of_line_blocking": "Severe Head-of-Line Blocking",
             },
             "least_conn_measured": {
@@ -222,10 +268,11 @@ async def main() -> None:
     print("\n" + "=" * 84)
     print("      EMPIRICAL AUDIT REPORT: NGINX `least_conn` DYNAMIC BALANCING")
     print("=" * 84)
+    print(f"Target Gateway:              {gateway_url}")
     print(f"Online Upstream Containers:  {len(unique_upstreams)} replicas ({', '.join(unique_upstreams)})")
     print("-" * 84)
-    print("TEST 1: PACED REAL-TIME ARRIVAL STREAM (Paced ~33 req/s during 2,000ms Contention)")
-    print(f"  • Contention Target (Busy Node):     {t1['busy_upstream']} (Serving 2.0s slow request)")
+    print(f"TEST 1: PACED REAL-TIME ARRIVAL STREAM (Paced ~33 req/s during {delay_ms:,}ms Contention)")
+    print(f"  • Contention Target (Busy Node):     {t1['busy_upstream']} (Serving {delay_ms / 1000:.1f}s slow request)")
     print(f"  • Fast Real-Time Requests Dispatched: {t1['total_requests']}")
     print(f"  • Requests Routed to Busy Node:      {t1['busy_node_hits']} ({t1['busy_node_share_pct']}%)")
     print(f"  • Requests Routed to Idle Nodes:     {t1['total_requests'] - t1['busy_node_hits']} ({t1['idle_nodes_share_pct']}%)")
@@ -233,8 +280,8 @@ async def main() -> None:
     print(f"  • Measured P99 Latency:              {t1['latencies_ms']['p99']} ms")
     print(f"  • Head-of-Line Blocking Bypassed:    {'✅ PASS (100% Steered to Idle Nodes)' if t1['bypassed_successfully'] else '❌ FAIL'}")
     print("-" * 84)
-    print("TEST 2: CONCURRENT BURST LOAD (30 Simultaneous Connections during 2,000ms Contention)")
-    print(f"  • Contention Target (Busy Node):     {t2['busy_upstream']} (Serving 2.0s slow request)")
+    print(f"TEST 2: CONCURRENT BURST LOAD ({burst_count} Simultaneous Connections during {delay_ms:,}ms Contention)")
+    print(f"  • Contention Target (Busy Node):     {t2['busy_upstream']} (Serving {delay_ms / 1000:.1f}s slow request)")
     print(f"  • Simultaneous Fast Connections:     {t2['total_requests']}")
     print(f"  • Busy Node Share under Burst:       {t2['busy_node_hits']} of {t2['total_requests']} ({t2['busy_node_share_pct']}%)")
     print(f"  • Measured P50 Latency:              {t2['latencies_ms']['p50']} ms")
@@ -245,16 +292,16 @@ async def main() -> None:
     print("SIDE-BY-SIDE ARCHITECTURAL COMPARISON:")
     print(f"{'Metric':<34} | {'Naive Round-Robin':<22} | {'Nginx least_conn (Measured)':<22}")
     print("-" * 84)
-    print(f"{'Paced Stream Traffic to Busy Node':<34} | {'~25% (5 of 20 reqs)':<22} | {t1['busy_node_share_pct']}% ({t1['busy_node_hits']} of 20 reqs)")
-    print(f"{'Paced Stream P99 Latency':<34} | {'> 2,000 ms (BLOCKED)':<22} | {t1['latencies_ms']['p99']} ms (PASSED)")
+    print(f"{'Paced Stream Traffic to Busy Node':<34} | {report['comparison_matrix']['round_robin_theoretical']['paced_stream_busy_hits']:<22} | {t1['busy_node_share_pct']}% ({t1['busy_node_hits']} of {paced_count} reqs)")
+    print(f"{'Paced Stream P99 Latency':<34} | {report['comparison_matrix']['round_robin_theoretical']['paced_stream_p99_latency']:<22} | {t1['latencies_ms']['p99']} ms (PASSED)")
     print(f"{'Burst Max Latency':<34} | {'> 2,000 ms (BLOCKED)':<22} | {t2['latencies_ms']['max']} ms (PASSED)")
     print(f"{'Head-of-Line Protection':<34} | {'❌ FAILED':<22} | {'✅ 100% SHIELDED':<22}")
     print("=" * 84 + "\n")
 
     # 6. Persist structured report
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    report_file = REPORTS_DIR / f"nginx_least_conn_benchmark_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
-    latest_file = REPORTS_DIR / "nginx_least_conn_benchmark_latest.json"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_file = output_dir / f"nginx_least_conn_benchmark_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
+    latest_file = output_dir / "nginx_least_conn_benchmark_latest.json"
 
     with open(report_file, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
@@ -262,8 +309,55 @@ async def main() -> None:
         json.dump(report, f, indent=2)
 
     logger.info(f"Persisted benchmark evidence to {latest_file}")
+    return report
+
+
+def main() -> None:
+    """CLI Entrypoint with parameter parsing and defaults."""
+    parser = argparse.ArgumentParser(
+        description="Empirical Nginx Upstream Balancing Benchmark: Least-Connections vs. Round-Robin."
+    )
+    parser.add_argument(
+        "--url",
+        default="http://localhost:8010",
+        help="Nginx Gateway Base URL (default: http://localhost:8010)",
+    )
+    parser.add_argument(
+        "--delay-ms",
+        type=int,
+        default=2000,
+        help="Delay in ms for artificial slow contention request (default: 2000)",
+    )
+    parser.add_argument(
+        "--paced-count",
+        type=int,
+        default=20,
+        help="Number of paced stream requests (default: 20)",
+    )
+    parser.add_argument(
+        "--burst-count",
+        type=int,
+        default=30,
+        help="Number of concurrent burst requests (default: 30)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/benchmarks"),
+        help="Directory to save benchmark reports (default: reports/benchmarks)",
+    )
+    args = parser.parse_args()
+
+    asyncio.run(
+        run_balancing_benchmark(
+            gateway_url=args.url,
+            delay_ms=args.delay_ms,
+            paced_count=args.paced_count,
+            burst_count=args.burst_count,
+            output_dir=args.output_dir,
+        )
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    main()
