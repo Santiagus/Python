@@ -355,15 +355,21 @@ You will see:
 * `payment_postgres` (Port `5432`)
 * `payment_redis` (Port `6379`)
 
-### 2. Run Ingestion SLA Capacity Benchmark (The Golden Architecture)
-Run the calibrated dual-layer benchmark harness comparing instant payment latency under simultaneous corporate payroll saturation:
+### 2. Operational & Capacity Benchmarking Scripts
+The repository includes a comprehensive suite of benchmarking and seeding harnesses in `scripts/`. Every script supports zero-parameter execution with sensible defaults. For the complete parameter reference and verification guide, see the [Operational & Benchmark Scripts Guide](scripts/README.md).
 
 ```bash
-# Run Little's Law Paced Contention Benchmark (35 req/s for 20 seconds)
+# 1. Run Little's Law Paced Contention Benchmark (35 req/s for 20 seconds)
 python scripts/benchmark_ingestion_pools.py --rate 35 --duration 20
 
-# Run Unconstrained Burst Benchmark (concurrency 25 for 10 seconds)
+# 2. Run Unconstrained Burst Benchmark (concurrency 25 for 10 seconds)
 python scripts/benchmark_ingestion_pools.py --burst --concurrency 25 --duration 10
+
+# 3. Run Dynamic Nginx Upstream Balancing Benchmark (least_conn)
+python scripts/test_nginx_least_conn.py
+
+# 4. Run Multi-Dimensional Horizontal Capacity Matrix Runner
+python scripts/benchmark_capacity_matrix.py
 ```
 
 ### 3. Run Automated Tests
