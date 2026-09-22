@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-09-22T14:47:52.396188+00:00",
+  "total_replicas": 4,
+  "upstream_replicas": [
+    "172.22.0.10:8000",
+    "172.22.0.11:8000",
+    "172.22.0.12:8000",
+    "172.22.0.6:8000"
+  ],
+  "busy_upstream": "172.22.0.12:8000",
+  "burst_count": 30,
+  "distribution": {
+    "172.22.0.10:8000": {
+      "count": 8,
+      "share_pct": 26.7,
+      "role": "idle_worker"
+    },
+    "172.22.0.11:8000": {
+      "count": 8,
+      "share_pct": 26.7,
+      "role": "idle_worker"
+    },
+    "172.22.0.12:8000": {
+      "count": 6,
+      "share_pct": 20.0,
+      "role": "busy_target"
+    },
+    "172.22.0.6:8000": {
+      "count": 8,
+      "share_pct": 26.7,
+      "role": "idle_worker"
+    }
+  },
+  "busy_node_received_requests": 6,
+  "busy_node_traffic_share_pct": 20.0,
+  "idle_nodes_traffic_share_pct": 80.0,
+  "latencies_ms": {
+    "p50": 32.95,
+    "p95": 36.07,
+    "p99": 36.09,
+    "max": 36.09
+  },
+  "head_of_line_blocking_prevented": false,
+  "evaluation": "WARN: Traffic was routed to busy container"
+}

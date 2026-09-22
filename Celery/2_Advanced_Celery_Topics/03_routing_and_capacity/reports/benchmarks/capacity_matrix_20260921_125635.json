@@ -1,0 +1,88 @@
+{
+  "timestamp": "20260921_125635",
+  "hardware": "AMD Ryzen 9 7900 (12 Cores / 24 Threads, 32GB RAM)",
+  "locust_users": 15,
+  "duration_per_profile": "8s",
+  "pareto_optimal": {
+    "replicas": 1,
+    "chunk_size": 100,
+    "rate_limit": "3000/m",
+    "db_pool_budget": 5,
+    "db_overflow_budget": 5,
+    "max_gateway_db_demand": 10,
+    "celery_db_demand": 32,
+    "total_max_db_demand": 42,
+    "db_headroom_percent": 58.0,
+    "measured_db_connections_peak": 17,
+    "aggregated": {
+      "request_count": 65,
+      "failure_count": 0,
+      "median_response_time": 1100.0,
+      "avg_response_time": 1284.9688731230203,
+      "min_response_time": 484.1614830002072,
+      "max_response_time": 2883.5613449991797,
+      "requests_per_sec": 10.077431767044082,
+      "failures_per_sec": 0.0,
+      "p50": 1100.0,
+      "p90": 2100.0,
+      "p95": 2400.0,
+      "p99": 2900.0
+    },
+    "instant_payment": {
+      "request_count": 54,
+      "failure_count": 0,
+      "median_response_time": 1200.0,
+      "avg_response_time": 1280.909967425773,
+      "min_response_time": 590.0852989980194,
+      "max_response_time": 2570.1308700008667,
+      "requests_per_sec": 8.372020237236622,
+      "failures_per_sec": 0.0,
+      "p50": 1200.0,
+      "p90": 2100.0,
+      "p95": 2100.0,
+      "p99": 2600.0
+    }
+  },
+  "matrix": [
+    {
+      "replicas": 1,
+      "chunk_size": 100,
+      "rate_limit": "3000/m",
+      "db_pool_budget": 5,
+      "db_overflow_budget": 5,
+      "max_gateway_db_demand": 10,
+      "celery_db_demand": 32,
+      "total_max_db_demand": 42,
+      "db_headroom_percent": 58.0,
+      "measured_db_connections_peak": 17,
+      "aggregated": {
+        "request_count": 65,
+        "failure_count": 0,
+        "median_response_time": 1100.0,
+        "avg_response_time": 1284.9688731230203,
+        "min_response_time": 484.1614830002072,
+        "max_response_time": 2883.5613449991797,
+        "requests_per_sec": 10.077431767044082,
+        "failures_per_sec": 0.0,
+        "p50": 1100.0,
+        "p90": 2100.0,
+        "p95": 2400.0,
+        "p99": 2900.0
+      },
+      "instant_payment": {
+        "request_count": 54,
+        "failure_count": 0,
+        "median_response_time": 1200.0,
+        "avg_response_time": 1280.909967425773,
+        "min_response_time": 590.0852989980194,
+        "max_response_time": 2570.1308700008667,
+        "requests_per_sec": 8.372020237236622,
+        "failures_per_sec": 0.0,
+        "p50": 1200.0,
+        "p90": 2100.0,
+        "p95": 2100.0,
+        "p99": 2600.0
+      }
+    }
+  ]
+}

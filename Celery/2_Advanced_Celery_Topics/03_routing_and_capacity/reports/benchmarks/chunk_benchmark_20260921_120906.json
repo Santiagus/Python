@@ -1,0 +1,29 @@
+{
+  "benchmark_type": "celery_batch_chunk_sizing",
+  "timestamp": "20260921_120906",
+  "hardware": {
+    "processor": "AMD Ryzen 9 7900 (12 cores / 24 threads)",
+    "memory": "32 GB DDR5"
+  },
+  "topology": {
+    "worker_bulk_concurrency": 2,
+    "worker_bulk_prefetch": 4,
+    "celery_rate_limit": "500/m"
+  },
+  "batch_size": 5000,
+  "results": [
+    {
+      "chunk_size": 100,
+      "batch_size": 5000,
+      "total_chunks": 50,
+      "db_persist_duration_ms": 464.13,
+      "dispatch_duration_ms": 57.17,
+      "clearing_duration_s": 3.634,
+      "items_per_second": 1375.8,
+      "effective_items_per_minute": 82546.0,
+      "chunks_per_second": 13.76,
+      "token_bucket_utilization_pct": 165.1,
+      "speedup_vs_n100": 1.0
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-09-22T14:50:44.251645+00:00",
+  "total_replicas": 4,
+  "upstream_replicas": [
+    "172.22.0.10:8000",
+    "172.22.0.11:8000",
+    "172.22.0.12:8000",
+    "172.22.0.6:8000"
+  ],
+  "test_1_paced_stream": {
+    "scenario": "Paced Arrival Stream (~33 req/s)",
+    "total_requests": 20,
+    "busy_upstream": "172.22.0.6:8000",
+    "busy_node_hits": 0,
+    "busy_node_share_pct": 0.0,
+    "idle_nodes_share_pct": 100.0,
+    "distribution": {
+      "172.22.0.12:8000": 7,
+      "172.22.0.10:8000": 7,
+      "172.22.0.11:8000": 6
+    },
+    "latencies_ms": {
+      "p50": 4.1,
+      "p95": 7.3,
+      "p99": 7.3,
+      "max": 7.3
+    },
+    "bypassed_successfully": true
+  },
+  "test_2_concurrent_burst": {
+    "scenario": "Concurrent Burst (30 clients simultaneous)",
+    "total_requests": 30,
+    "busy_upstream": "172.22.0.11:8000",
+    "busy_node_hits": 0,
+    "busy_node_share_pct": 0.0,
+    "idle_nodes_share_pct": 100.0,
+    "distribution": {
+      "172.22.0.12:8000": 12,
+      "172.22.0.6:8000": 9,
+      "172.22.0.10:8000": 9
+    },
+    "latencies_ms": {
+      "p50": 47.02,
+      "p95": 67.48,
+      "p99": 69.47,
+      "max": 69.47
+    },
+    "head_of_line_prevented": true
+  },
+  "comparison_matrix": {
+    "round_robin_theoretical": {
+      "paced_stream_busy_hits": "~25% (5 of 20 requests)",
+      "paced_stream_p99_latency": "> 2,000 ms (Queued behind slow request)",
+      "head_of_line_blocking": "Severe Head-of-Line Blocking"
+    },
+    "least_conn_measured": {
+      "paced_stream_busy_hits": "0 of 20 (0.0%)",
+      "paced_stream_p99_latency": "7.3 ms",
+      "head_of_line_blocking": "Zero Head-of-Line Blocking (100% Bypass)"
+    }
+  }
+}

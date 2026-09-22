@@ -1,0 +1,81 @@
+{
+  "benchmark_type": "celery_batch_chunk_sizing",
+  "timestamp": "20260921_121000",
+  "hardware": {
+    "processor": "AMD Ryzen 9 7900 (12 cores / 24 threads)",
+    "memory": "32 GB DDR5"
+  },
+  "topology": {
+    "worker_bulk_concurrency": 2,
+    "worker_bulk_prefetch": 4,
+    "celery_rate_limit": "500/m"
+  },
+  "batch_size": 5000,
+  "results": [
+    {
+      "chunk_size": 25,
+      "batch_size": 5000,
+      "total_chunks": 200,
+      "db_persist_duration_ms": 366.6,
+      "dispatch_duration_ms": 88.0,
+      "clearing_duration_s": 13.3,
+      "items_per_second": 375.9,
+      "effective_items_per_minute": 22556.0,
+      "chunks_per_second": 15.04,
+      "token_bucket_utilization_pct": 180.5,
+      "speedup_vs_n100": 0.26
+    },
+    {
+      "chunk_size": 50,
+      "batch_size": 5000,
+      "total_chunks": 100,
+      "db_persist_duration_ms": 389.32,
+      "dispatch_duration_ms": 28.26,
+      "clearing_duration_s": 7.023,
+      "items_per_second": 711.9,
+      "effective_items_per_minute": 42715.0,
+      "chunks_per_second": 14.24,
+      "token_bucket_utilization_pct": 170.9,
+      "speedup_vs_n100": 0.48
+    },
+    {
+      "chunk_size": 100,
+      "batch_size": 5000,
+      "total_chunks": 50,
+      "db_persist_duration_ms": 451.77,
+      "dispatch_duration_ms": 14.72,
+      "clearing_duration_s": 3.405,
+      "items_per_second": 1468.5,
+      "effective_items_per_minute": 88108.0,
+      "chunks_per_second": 14.68,
+      "token_bucket_utilization_pct": 176.2,
+      "speedup_vs_n100": 1.0
+    },
+    {
+      "chunk_size": 250,
+      "batch_size": 5000,
+      "total_chunks": 20,
+      "db_persist_duration_ms": 570.56,
+      "dispatch_duration_ms": 7.91,
+      "clearing_duration_s": 1.48,
+      "items_per_second": 3378.6,
+      "effective_items_per_minute": 202714.0,
+      "chunks_per_second": 13.51,
+      "token_bucket_utilization_pct": 162.2,
+      "speedup_vs_n100": 2.3
+    },
+    {
+      "chunk_size": 500,
+      "batch_size": 5000,
+      "total_chunks": 10,
+      "db_persist_duration_ms": 631.45,
+      "dispatch_duration_ms": 4.02,
+      "clearing_duration_s": 1.197,
+      "items_per_second": 4175.8,
+      "effective_items_per_minute": 250550.0,
+      "chunks_per_second": 8.35,
+      "token_bucket_utilization_pct": 100.2,
+      "speedup_vs_n100": 2.84
+    }
+  ]
+}

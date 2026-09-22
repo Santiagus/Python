@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-09-21T10:23:48.303054+00:00",
+  "environment": {
+    "api_url": "http://localhost:8010",
+    "mode": "paced",
+    "arrival_rate_req_sec": 50.0
+  },
+  "parameters": {
+    "bulk_saturation_count": 500,
+    "instant_probes_count": 50
+  },
+  "bulk_ingestion": {
+    "items_count": 500,
+    "ingestion_duration_ms": 62.44,
+    "status_code": 202
+  },
+  "api_ingestion_latency_ms": {
+    "count": 50,
+    "min": 9.29,
+    "mean": 10.95,
+    "p50": 10.23,
+    "p95": 12.5,
+    "p99": 35.16,
+    "max": 35.16,
+    "sla_threshold_ms": 100.0,
+    "sla_passed": true
+  },
+  "worker_clearing_latency_ms": {
+    "sample_size": 20,
+    "min": 12.45,
+    "p50": 13.65,
+    "p99": 18.97,
+    "sla_threshold_ms": 100.0,
+    "sla_passed": true
+  }
+}
