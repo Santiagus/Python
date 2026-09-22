@@ -202,13 +202,16 @@ High-performance Locust user profile simulating realistic production multi-rail 
 ---
 
 ### 7. `benchmark_capacity_matrix.py`
-Automated capacity matrix engine that dynamically scales API container replicas (`api_instant`), audits PostgreSQL connection pool headroom via `pg_stat_activity`, and computes the Pareto-optimal operating point.
+Automated capacity matrix engine that dynamically scales API container replicas ($C \in [1, 2, 4, 8]$), audits PostgreSQL connection pool headroom via `pg_stat_activity`, and computes the Pareto-optimal operating point. Enforces:
+- **$C=1$ Unified Baseline**: 1 single container processes ALL rails (instant payments + batch payroll disbursements). Nginx dynamically rewires `batch_backend` to `api_instant:8000` while `api_batch=0`.
+- **$C \ge 2$ Segregated Topology**: Isolated container pools partitioned into $C/2$ instant and $C/2$ batch containers, with Nginx enforcing path-based physical isolation.
+- **Two-Tier Table Output**: Explicitly separates Real-Time Instant Rails (`Inst P50`, `Inst P95`, `Inst P99`, `Inst SLA`) and Bulk Batch Rails (`Batch P50`, `Batch P95`, `Batch P99`, `Batch RPS`).
 
 * **Zero-Param Execution**:
   ```bash
   python scripts/benchmark_capacity_matrix.py
   ```
-  *Default*: Tests baseline configuration ($C=2$ replicas, $N=100$ chunk size, `500/m` rate limit, 25 Locust users at 35 req/s pace for 15 seconds), prints the empirical matrix table, restores the gateway to its reference state (2 replicas), and updates `reports/benchmarks/capacity_matrix_latest.json`.
+  *Default*: Tests baseline configuration ($C=2$ replicas: 1 instant + 1 batch, $N=100$ chunk size, `500/m` rate limit, 25 Locust users at 35 req/s pace for 15 seconds), prints the empirical two-tier matrix table, restores the gateway to its reference state (2 instant + 2 batch replicas), and updates `reports/benchmarks/capacity_matrix_latest.json`.
 
 * **Parameters**:
   | Parameter | Type | Default | Description |
@@ -231,6 +234,38 @@ Automated capacity matrix engine that dynamically scales API container replicas 
 
   # Quick sweep (10s per profile on replicas 1 and 2)
   python scripts/benchmark_capacity_matrix.py --quick
+  ```
+
+---
+
+### 8. `benchmark_bisection_capacity.py`
+Automated 4-phase constrained optimization engine executing a bisection/binary search across arrival rates ($\lambda \in [\lambda_{\min}, \lambda_{\max}]$) under continuous background bulk load to empirically locate the maximum instant capacity ($\lambda_{\max}$) where $P_{99} \le 100\text{ ms}$.
+- **Phase 1**: Locks bulk floor ($C_{\text{batch}}=1, W_{\text{bulk}}=2, N=100$, rate limit `500/m`).
+- **Phase 2**: Allocates surplus budget ($C_{\text{instant}}=4, W_{\text{critical}}=4$, `pool=7, overflow=7`).
+- **Phase 3**: Binary search loop across $\lambda$ with Little's Law pacing.
+- **Phase 4**: Audits PostgreSQL connection headroom and Redis client counts.
+
+* **Zero-Param Execution**:
+  ```bash
+  python scripts/benchmark_bisection_capacity.py
+  ```
+  *Default*: Sweeps arrival rates between $100.0\text{ req/s}$ and $450.0\text{ req/s}$ with $25.0\text{ req/s}$ tolerance and $2,500$ background bulk items per trial, prints the empirical bisection trace table, restores reference state, and updates `reports/benchmarks/bisection_latest.json`.
+
+* **Parameters**:
+  | Parameter | Type | Default | Description |
+  | :--- | :--- | :--- | :--- |
+  | `--min-rate` | `float` | `100.0` | Minimum arrival rate search floor in req/s. |
+  | `--max-rate` | `float` | `450.0` | Maximum arrival rate search ceiling in req/s. |
+  | `--tolerance` | `float` | `25.0` | Convergence tolerance between low and high bound in req/s. |
+  | `--duration` | `str` | `"12s"` | Duration per bisection trial. |
+  | `--bulk-items` | `int` | `2500` | Background payroll items injected per trial. |
+  | `--api-url` | `str` | `"http://localhost:8010"` | Target Edge Gateway base URL. |
+  | `--output` | `str` | `None` | Optional custom destination JSON path. |
+
+* **Custom Examples**:
+  ```bash
+  # Refined search in the 30-100 req/s window with tighter 15 req/s tolerance
+  python scripts/benchmark_bisection_capacity.py --min-rate 30 --max-rate 100 --tolerance 15 --duration 10s --bulk-items 500
   ```
 
 ---

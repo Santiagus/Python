@@ -1,0 +1,226 @@
+{
+  "timestamp": "20260922_200502",
+  "hardware": "AMD Ryzen 9 7900 (12 Cores / 24 Threads, 32GB RAM)",
+  "optimal_instant_arrival_rate_max": 100.0,
+  "search_parameters": {
+    "min_rate": 100.0,
+    "max_rate": 400.0,
+    "tolerance": 30.0,
+    "duration": "10s",
+    "bulk_items": 1500
+  },
+  "fleet_configuration": {
+    "api_instant_replicas": 4,
+    "api_batch_replicas": 1,
+    "worker_critical_concurrency": 4,
+    "worker_bulk_concurrency": 2,
+    "worker_default_concurrency": 2,
+    "chunk_size": 100,
+    "celery_rate_limit": "500/m"
+  },
+  "storage_audit": {
+    "postgres_max_connections": 100,
+    "postgres_peak_total": 47,
+    "postgres_peak_active": 2,
+    "redis_peak_clients": 14
+  },
+  "best_passing_profile": null,
+  "bisection_trace": [
+    {
+      "candidate_rate": 250.0,
+      "users": 37,
+      "duration": "10s",
+      "bulk_items": 1500,
+      "bulk_duration_ms": 232.91,
+      "instant_payment": {
+        "request_count": 571,
+        "failure_count": 0,
+        "median_response_time": 510.0,
+        "avg_response_time": 478.79268636432664,
+        "requests_per_sec": 63.451939588086425,
+        "p50": 510.0,
+        "p90": 610.0,
+        "p95": 650.0,
+        "p99": 740.0
+      },
+      "batch_disbursement": {
+        "request_count": 69,
+        "failure_count": 0,
+        "median_response_time": 94.0,
+        "avg_response_time": 128.990023086732,
+        "requests_per_sec": 7.667572384549849,
+        "p50": 94.0,
+        "p90": 410.0,
+        "p95": 420.0,
+        "p99": 580.0
+      },
+      "aggregated": {
+        "request_count": 721,
+        "failure_count": 0,
+        "median_response_time": 470.0,
+        "avg_response_time": 411.8151211262296,
+        "requests_per_sec": 80.12057520667305,
+        "p50": 470.0,
+        "p90": 600.0,
+        "p95": 640.0,
+        "p99": 720.0
+      },
+      "db_total_connections": 47,
+      "db_active_connections": 2,
+      "redis_connected_clients": 14,
+      "sla_passed": false,
+      "iteration": 1,
+      "search_window": [
+        100.0,
+        400.0
+      ]
+    },
+    {
+      "candidate_rate": 175.0,
+      "users": 26,
+      "duration": "10s",
+      "bulk_items": 1500,
+      "bulk_duration_ms": 172.31,
+      "instant_payment": {
+        "request_count": 614,
+        "failure_count": 0,
+        "median_response_time": 320.0,
+        "avg_response_time": 310.6675038730822,
+        "requests_per_sec": 68.28292641978055,
+        "p50": 320.0,
+        "p90": 430.0,
+        "p95": 460.0,
+        "p99": 530.0
+      },
+      "batch_disbursement": {
+        "request_count": 88,
+        "failure_count": 0,
+        "median_response_time": 120.0,
+        "avg_response_time": 133.1556499886078,
+        "requests_per_sec": 9.786478053649331,
+        "p50": 120.0,
+        "p90": 250.0,
+        "p95": 280.0,
+        "p99": 310.0
+      },
+      "aggregated": {
+        "request_count": 773,
+        "failure_count": 0,
+        "median_response_time": 300.0,
+        "avg_response_time": 271.29400541535097,
+        "requests_per_sec": 85.96531290307878,
+        "p50": 300.0,
+        "p90": 410.0,
+        "p95": 460.0,
+        "p99": 510.0
+      },
+      "db_total_connections": 42,
+      "db_active_connections": 2,
+      "redis_connected_clients": 14,
+      "sla_passed": false,
+      "iteration": 2,
+      "search_window": [
+        100.0,
+        250.0
+      ]
+    },
+    {
+      "candidate_rate": 137.5,
+      "users": 20,
+      "duration": "10s",
+      "bulk_items": 1500,
+      "bulk_duration_ms": 197.77,
+      "instant_payment": {
+        "request_count": 565,
+        "failure_count": 0,
+        "median_response_time": 260.0,
+        "avg_response_time": 258.91933896816704,
+        "requests_per_sec": 62.80690285456099,
+        "p50": 260.0,
+        "p90": 340.0,
+        "p95": 360.0,
+        "p99": 430.0
+      },
+      "batch_disbursement": {
+        "request_count": 60,
+        "failure_count": 0,
+        "median_response_time": 94.0,
+        "avg_response_time": 93.87833334991835,
+        "requests_per_sec": 6.669759595174618,
+        "p50": 94.0,
+        "p90": 180.0,
+        "p95": 200.0,
+        "p99": 240.0
+      },
+      "aggregated": {
+        "request_count": 710,
+        "failure_count": 0,
+        "median_response_time": 230.0,
+        "avg_response_time": 224.68418261692344,
+        "requests_per_sec": 78.92548854289964,
+        "p50": 230.0,
+        "p90": 340.0,
+        "p95": 350.0,
+        "p99": 420.0
+      },
+      "db_total_connections": 42,
+      "db_active_connections": 2,
+      "redis_connected_clients": 14,
+      "sla_passed": false,
+      "iteration": 3,
+      "search_window": [
+        100.0,
+        175.0
+      ]
+    },
+    {
+      "candidate_rate": 118.8,
+      "users": 17,
+      "duration": "10s",
+      "bulk_items": 1500,
+      "bulk_duration_ms": 211.41,
+      "instant_payment": {
+        "request_count": 522,
+        "failure_count": 0,
+        "median_response_time": 200.0,
+        "avg_response_time": 221.68392361690448,
+        "requests_per_sec": 58.07058850988718,
+        "p50": 200.0,
+        "p90": 350.0,
+        "p95": 420.0,
+        "p99": 510.0
+      },
+      "batch_disbursement": {
+        "request_count": 66,
+        "failure_count": 0,
+        "median_response_time": 170.0,
+        "avg_response_time": 195.99466236380096,
+        "requests_per_sec": 7.342258317342058,
+        "p50": 170.0,
+        "p90": 410.0,
+        "p95": 450.0,
+        "p99": 720.0
+      },
+      "aggregated": {
+        "request_count": 644,
+        "failure_count": 0,
+        "median_response_time": 200.0,
+        "avg_response_time": 206.70087239759823,
+        "requests_per_sec": 71.64264176315584,
+        "p50": 200.0,
+        "p90": 350.0,
+        "p95": 410.0,
+        "p99": 510.0
+      },
+      "db_total_connections": 42,
+      "db_active_connections": 2,
+      "redis_connected_clients": 14,
+      "sla_passed": false,
+      "iteration": 4,
+      "search_window": [
+        100.0,
+        137.5
+      ]
+    }
+  ]
+}
