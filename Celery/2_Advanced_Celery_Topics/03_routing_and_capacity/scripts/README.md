@@ -239,11 +239,6 @@ Automated capacity matrix engine that dynamically scales API container replicas 
 ---
 
 ### 8. `benchmark_bisection_capacity.py`
-Automated 4-phase constrained optimization engine executing a bisection/binary search across arrival rates ($\lambda \in [\lambda_{\min}, \lambda_{\max}]$) under continuous background bulk load to empirically locate the maximum instant capacity ($\lambda_{\max}$) where $P_{99} \le 100\text{ ms}$.
-- **Phase 1**: Locks bulk floor ($C_{\text{batch}}=1, W_{\text{bulk}}=2, N=100$, rate limit `500/m`).
-- **Phase 2**: Allocates surplus budget ($C_{\text{instant}}=4, W_{\text{critical}}=4$, `pool=7, overflow=7`).
-- **Phase 3**: Binary search loop across $\lambda$ with Little's Law pacing.
-- **Phase 4**: Audits PostgreSQL connection headroom and Redis client counts.
 Automated Two-Stage 4-phase constrained optimization engine executing a bisection/binary search across arrival rates ($\lambda \in [\lambda_{\min}, \lambda_{\max}]$) under continuous background bulk load:
 - **Stage 1 (Unit Capacity Baseline)**: Locks bulk floor ($C_{\text{batch}}=1, W_{\text{bulk}}=2, N=100$, rate limit `500/m`), allocates $C_{\text{instant}}=4, W_{\text{critical}}=4$, and measures baseline knee ($c_{\text{inst}} = \lambda_{\max} / 4$).
 - **Stage 2 (Hardware Saturation Frontier - `--hardware-frontier`)**: Scales $C_{\text{instant}}$ from $4 \to 8$ containers, grows Celery $W_{\text{critical}}$ from $4 \to 6$ child processes via AMQP remote control, re-budgets database pools (`pool=4, overflow=3` $\implies 8 \times 7 = 56$ max conns, keeping total DB demand capped at $86/100$), and tests arrival rates up to $350\text{ req/s}$ to achieve ~85% Zen 4 physical core saturation.
@@ -253,17 +248,11 @@ Automated Two-Stage 4-phase constrained optimization engine executing a bisectio
   ```bash
   python scripts/benchmark_bisection_capacity.py
   ```
-  *Default*: Sweeps arrival rates between $100.0\text{ req/s}$ and $450.0\text{ req/s}$ with $25.0\text{ req/s}$ tolerance and $2,500$ background bulk items per trial, prints the empirical bisection trace table, restores reference state, and updates `reports/benchmarks/bisection_latest.json`.
   *Default*: Sweeps Stage 1 arrival rates between $100.0\text{ req/s}$ and $250.0\text{ req/s}$ with $20.0\text{ req/s}$ tolerance and $1,000$ background bulk items per trial, prints the empirical bisection trace table, restores reference state, and updates `reports/benchmarks/bisection_latest.json`.
 
 * **Parameters**:
   | Parameter | Type | Default | Description |
   | :--- | :--- | :--- | :--- |
-  | `--min-rate` | `float` | `100.0` | Minimum arrival rate search floor in req/s. |
-  | `--max-rate` | `float` | `450.0` | Maximum arrival rate search ceiling in req/s. |
-  | `--tolerance` | `float` | `25.0` | Convergence tolerance between low and high bound in req/s. |
-  | `--duration` | `str` | `"12s"` | Duration per bisection trial. |
-  | `--bulk-items` | `int` | `2500` | Background payroll items injected per trial. |
   | `--min-rate` | `float` | `100.0` | Stage 1 minimum arrival rate search floor in req/s. |
   | `--max-rate` | `float` | `250.0` | Stage 1 maximum arrival rate search ceiling in req/s. |
   | `--tolerance` | `float` | `20.0` | Convergence tolerance between low and high bound in req/s. |
@@ -279,7 +268,6 @@ Automated Two-Stage 4-phase constrained optimization engine executing a bisectio
 
 * **Custom Examples**:
   ```bash
-  # Refined search in the 30-100 req/s window with tighter 15 req/s tolerance
   # Stage 1 baseline sweep
   python scripts/benchmark_bisection_capacity.py --min-rate 30 --max-rate 100 --tolerance 15 --duration 10s --bulk-items 500
 
