@@ -208,15 +208,15 @@ Automated capacity matrix engine that dynamically scales API container replicas 
   ```bash
   python scripts/benchmark_capacity_matrix.py
   ```
-  *Default*: Tests baseline configuration ($C=2$ replicas, $N=100$ chunk size, `3000/m` rate limit, 25 Locust users at 50 req/s pace for 15 seconds), prints the empirical matrix table, restores the gateway to its reference state (2 replicas), and updates `reports/benchmarks/capacity_matrix_latest.json`.
+  *Default*: Tests baseline configuration ($C=2$ replicas, $N=100$ chunk size, `500/m` rate limit, 25 Locust users at 35 req/s pace for 15 seconds), prints the empirical matrix table, restores the gateway to its reference state (2 replicas), and updates `reports/benchmarks/capacity_matrix_latest.json`.
 
 * **Parameters**:
   | Parameter | Type | Default | Description |
   | :--- | :--- | :--- | :--- |
   | `--replicas` | `str` | `"2"` | Comma-separated container replica scales (e.g. `'1,2,4'`). |
   | `--chunk-sizes` | `str` | `"100"` | Comma-separated batch chunk sizes (e.g. `'50,100,250'`). |
-  | `--rate-limits` | `str` | `"3000/m"` | Comma-separated Celery rate limits (e.g. `'500/m,3000/m,None'`). |
-  | `--rate` | `float` | `50.0` | Little's Law aggregate arrival rate in req/s (`0` for unconstrained). |
+  | `--rate-limits` | `str` | `"500/m"` | Comma-separated Celery rate limits (e.g. `'500/m,3000/m,None'`). |
+  | `--rate` | `float` | `35.0` | Little's Law aggregate arrival rate in req/s (`0` for unconstrained). |
   | `--users` | `int` | `25` | Number of concurrent Locust load users. |
   | `--spawn-rate` | `int` | `10` | User spawn rate per second. |
   | `--duration` | `str` | `"15s"` | Load duration per profile. |
@@ -247,3 +247,4 @@ To run any script:
    docker compose up -d
    ```
    Verify that `payment_gateway` is listening on port `8010`, and all worker and API containers report healthy via `docker compose ps`.
+

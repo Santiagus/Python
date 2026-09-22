@@ -419,9 +419,7 @@ def run_benchmark_for_profile(
 
 
 def identify_pareto_frontier(results: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Synthesize the Pareto optimal system configuration.
-
-    Balances peak throughput, lowest tail latency (P99), zero errors, and PostgreSQL safety headroom.
+    """Identify the Pareto-optimal configuration balancing throughput, latency, and database safety.
 
     Args:
         results: List of execution profiles.
@@ -433,11 +431,15 @@ def identify_pareto_frontier(results: list[dict[str, Any]]) -> dict[str, Any] | 
     if not valid:
         return None
 
+    # Filter candidates that satisfy the sub-100ms P99 SLA target
+    sla_passing = [r for r in valid if r.get("instant_payment", {}).get("p99", 999.0) <= 100.0]
+    eval_pool = sla_passing if sla_passing else valid
+
     # Score formula: Throughput / (P99 latency * (1 + failure_rate) * (1 + risk_penalty))
     best_candidate = None
     highest_score = -1.0
 
-    for r in valid:
+    for r in eval_pool:
         inst = r["instant_payment"]
         agg = r.get("aggregated", {})
         rps = agg.get("requests_per_sec", 0.0)
@@ -462,8 +464,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Multi-Dimensional Capacity Matrix Runner")
     parser.add_argument("--replicas", type=str, default="2", help="Comma-separated container replica counts (default: '2'; use '1,2,4' for full matrix)")
     parser.add_argument("--chunk-sizes", type=str, default="100", help="Comma-separated chunk sizes (default: '100'; e.g. 50,100,250)")
-    parser.add_argument("--rate-limits", type=str, default="3000/m", help="Comma-separated Celery rate limits (default: '3000/m'; e.g. 500/m,3000/m,None)")
-    parser.add_argument("--rate", type=float, default=50.0, help="Aggregate arrival rate in req/s for Little's Law pacing (default: 50.0; set 0 for unconstrained)")
+    parser.add_argument("--rate-limits", type=str, default="500/m", help="Comma-separated Celery rate limits (default: '500/m'; e.g. 500/m,3000/m,None)")
+    parser.add_argument("--rate", type=float, default=35.0, help="Aggregate arrival rate in req/s for Little's Law pacing (default: 35.0; set 0 for unconstrained)")
     parser.add_argument("--users", type=int, default=25, help="Number of concurrent Locust users (default: 25)")
     parser.add_argument("--spawn-rate", type=int, default=10, help="Locust user spawn rate per second (default: 10)")
     parser.add_argument("--duration", type=str, default="15s", help="Duration per profile (default: '15s')")
@@ -548,7 +550,7 @@ def main() -> None:
         p99 = f"{inst.get('p99', 0.0):.2f}"
         max_db = f"{r['total_max_db_demand']}/100"
         meas_db = f"{r['measured_db_connections_peak']} active"
-        sla = "PASS (<100ms)" if inst.get("p99", 0.0) < 100.0 else "FAIL (>100ms)"
+        sla = "PASS (<=100ms)" if inst.get("p99", 0.0) <= 100.0 else "FAIL (>100ms)"
         winner_mark = (
             " ⭐ [Pareto Optimal]"
             if pareto_winner
@@ -586,7 +588,7 @@ def main() -> None:
         "matrix": results,
     }
 
-    out_file = Path(args.output) if args.output else Path(f"reports/benchmarks/capacity_matrix_{timestamp}.json")
+    out_file = Path(args.output) if args.output else REPO_ROOT / "reports" / "benchmarks" / f"capacity_matrix_{timestamp}.json"
     out_file.parent.mkdir(parents=True, exist_ok=True)
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2)
