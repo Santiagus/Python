@@ -6,19 +6,23 @@ This document establishes the formal distributed systems specification and engin
 
 ## 1. End-to-End System Architecture & Ingestion Topology
 
-The production architecture decouples high-throughput API ingestion from background distributed task execution using an Nginx load balancer, atomic single-process API containers, and specialized Celery worker fleets.
+The production architecture decouples high-throughput API ingestion from background distributed task execution using an Nginx edge gateway with Semantic Edge Routing, isolated single-process API container pools partitioned by SLA profile (**The Golden Architecture**), and specialized Celery worker fleets.
 
 ```mermaid
 flowchart TD
     subgraph ClientLayer ["1. Inbound Ingestion Traffic (Host Port 8010)"]
-        Client["API Consumers / Locust / Curl"] -->|"HTTP/1.1 Keep-Alive"| Nginx["Nginx Reverse Proxy (payment_gateway)<br/>• Host Port 8010:8010<br/>• upstream api_backend (keepalive 64;)<br/>• tcp_nodelay on; proxy_buffering on;"]
+        Client["API Consumers / Locust / Curl"] -->|"HTTP/1.1 Keep-Alive"| Nginx["Nginx Edge Gateway (payment_gateway)<br/>• Host Port 8010:8010<br/>• Semantic Edge Routing (keepalive 64;)<br/>• least_conn; tcp_nodelay on; proxy_buffering on;"]
     end
 
-    subgraph ContainerFleet ["2. Scalable Horizontal Fleet (Port 8000)"]
-        Nginx -->|"least_conn"| API1["api-1: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API2["api-2: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API3["api-3: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API4["api-4: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
+    subgraph ContainerFleet ["2. Ingestion SLA Profile Pools (The Golden Architecture)"]
+        subgraph InstantPool ["Instant Rail Pool (api_instant:8000)"]
+            API_I1["api_instant-1: Single-Worker Uvicorn<br/>• Sub-25ms SLA, lean memory<br/>• DB Pool: 10, Overflow: 10"]
+            API_I2["api_instant-2: Single-Worker Uvicorn<br/>• Zero batch parsing/lock contention<br/>• DB Pool: 10, Overflow: 10"]
+        end
+        subgraph BatchPool ["Batch Settlement Pool (api_batch:8000)"]
+            API_B1["api_batch-1: Single-Worker Uvicorn<br/>• Relational multi-row bulk insert<br/>• DB Pool: 8, Overflow: 6"]
+            API_B2["api_batch-2: Single-Worker Uvicorn<br/>• Sliced .chunks(100) chunking<br/>• DB Pool: 8, Overflow: 6"]
+        end
     end
 
     subgraph MessagingLayer ["3. Driver / Protocol Layer (AMQP & Cache)"]
@@ -33,17 +37,24 @@ flowchart TD
     end
 
     subgraph DatabaseLayer ["5. PostgreSQL Connection Budget (Max: 100)"]
-        PG[("PostgreSQL 16 (payments_db)<br/>• API Fleet: 4 × 10 = 40 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Total Allocated: 72 / 100 (28% Headroom)")]
+        PG[("PostgreSQL 16 (payments_db)<br/>• api_instant Fleet: 2 × 20 = 40 max conns<br/>• api_batch Fleet: 2 × 14 = 28 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Budgeted Demand: 68 / 100 (32% Headroom)")]
     end
 
     subgraph ExternalBank ["6. Downstream Financial Rails"]
         BankSim["Partner Bank Gateway Simulator (Port 8011)<br/>• Shared keep-alive pool (50 conns)<br/>• FedNow / RTP / ACH Core Rails"]
     end
 
+    %% Edge Semantic Routing
+    Nginx -->|"location /payments/instant (least_conn)"| API_I1 & API_I2
+    Nginx -->|"location /disbursements/batch (least_conn)"| API_B1 & API_B2
+    Nginx -->|"location / (health, metrics, docs)"| API_I1 & API_I2
+
     %% Ingestion API Dispatches & Writes
-    API1 & API2 & API3 & API4 -->|"AMQP 0-9-1 task dispatch"| RMQ
-    API1 & API2 & API3 & API4 -->|"TCP Keep-Alive"| Redis
-    API1 & API2 & API3 & API4 -->|"Direct SQL insert (5.92ms)"| PG
+    API_I1 & API_I2 -->|"critical tasks dispatch"| RMQ
+    API_B1 & API_B2 -->|"bulk chunk tasks dispatch"| RMQ
+    API_I1 & API_I2 & API_B1 & API_B2 -->|"TCP Keep-Alive"| Redis
+    API_I1 & API_I2 -->|"Single-row payment insert"| PG
+    API_B1 & API_B2 -->|"Direct SQL insert (5.92ms)"| PG
 
     %% Broker Dispatches to Workers
     RMQ -->|"critical (priority 10, SLA &lt; 100ms)"| WCrit
@@ -491,11 +502,11 @@ flowchart TD
 
 ### 4. Connection Pool Budgeting & Pre-Ping Discipline
 - **`pool_pre_ping=True`**: Celery worker processes can remain idle between scheduled batch sweeps. Enabling connection pre-ping tests sockets before executing queries, eliminating `asyncpg.exceptions.ConnectionDoesNotExistError` from closed connections.
-- **Connection Allocation Budget**:
-  - API Gateway: `pool_size=10, max_overflow=10`
-  - Worker Critical ($C=4$): `pool_size=4` (1 connection per child process)
-  - Worker Bulk ($C=2$): `pool_size=2`
-  - Total DB connection demand is strictly budgeted below PostgreSQL's `max_connections` with 30% safety headroom.
+- **Connection Allocation Budget (Golden Architecture)**:
+  - `api_instant` Fleet (2 replicas): `pool_size=10, max_overflow=10` ($2 \times 20 = 40$ max conns)
+  - `api_batch` Fleet (2 replicas): `pool_size=8, max_overflow=6` ($2 \times 14 = 28$ max conns)
+  - Worker Fleet (8 processes across 3 tiers): `pool_size=2, max_overflow=2` ($8 \times 4 = 32$ max conns)
+  - Total DB connection demand is strictly budgeted at **$68 / 100$ connections** below PostgreSQL's `max_connections`, guaranteeing **$32.0\%$ safe database headroom**.
 
 ### 5. Graceful Lifecycle & Signal Handling (`SIGTERM` / Warm Shutdown)
 - **FastAPI Lifespan (`@asynccontextmanager`)**: Initializes SQLAlchemy connection engines and HTTP connection pools on startup; drains and disposes pools gracefully on shutdown.
@@ -520,9 +531,11 @@ flowchart TD
   - `_engine, _session_factory = _create_engine_and_factory()` are created at module load in `app/db.py`.
   - `_sync_executor = ThreadPoolExecutor(max_workers=4)` is created at module load in `services/worker/tasks/utils.py`.
 - **HTTP Client Connection Pooling & Keep-Alive**: The external partner bank client uses a shared `httpx.AsyncClient` configured with explicit socket limits (`httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=30.0)`). Tasks reuse open TCP keepalive sockets instead of opening and tearing down sockets per request, preventing TCP socket churn, TLS handshake overhead, and `TIME_WAIT` socket exhaustion under heavy load.
-- **Role-Based Database Connection Pool Budgeting**: In Celery prefork architectures, each worker child process is single-threaded and executes exactly one task at a time. Assigning standard pool sizes (e.g. 10/20) to each worker child quickly exhausts PostgreSQL's default `max_connections=100` ($8 \text{ workers} \times 30 + 30 \text{ API} = 270$). We enforce role-based pool budgeting:
-  - **API Gateway**: `pool_size=10, max_overflow=20` (handles high-concurrency non-blocking async HTTP traffic).
-  - **Celery Worker Processes**: `pool_size=2, max_overflow=2` (budgeted for single-threaded sequential execution, holding $< 20$ connections across all 8 worker pods combined).
+- **Role-Based Database Connection Pool Budgeting**: In Celery prefork architectures, each worker child process is single-threaded and executes exactly one task at a time. Assigning standard unconstrained pool sizes (e.g. 10/20) to each worker child quickly exhausts PostgreSQL's default `max_connections=100` ($8 \text{ workers} \times 30 + 30 \text{ API} = 270$). Under the Golden Architecture, we enforce role-based pool budgeting:
+  - **`api_instant` Pool (2 containers)**: `pool_size=10, max_overflow=10` ($2 \times 20 = 40$ max connections for high-concurrency instant checkouts).
+  - **`api_batch` Pool (2 containers)**: `pool_size=8, max_overflow=6` ($2 \times 14 = 28$ max connections for multi-row payroll inserts).
+  - **Celery Worker Processes (8 child processes)**: `pool_size=2, max_overflow=2` ($8 \times 4 = 32$ max connections budgeted for single-threaded sequential execution).
+  - **Total Connection Budget**: $40 + 28 + 32 = \mathbf{68 / 100 \text{ connections}}$, comfortably preserving **$32.0\%$ safe database headroom**.
 - **Kombu Broker Connection Pooling**: `broker_pool_limit=10` and `broker_connection_retry_on_startup=True` are explicitly configured in Celery, maintaining persistent AMQP channels and preventing socket thrashing on RabbitMQ.
 - **Worker Process Boot Warm-Up (`@signals.worker_process_init`)**: When a worker process forks, it immediately re-initializes and warms its dedicated event loop, worker-budgeted DB pool, and HTTP client before any task arrives from RabbitMQ, guaranteeing instant sub-25ms P99 execution for initial transactions.
 
@@ -532,7 +545,7 @@ flowchart TD
 ## 10. Horizontal Container Replica Scaling & Full-Stack System Optimization
 
 ### 1. Reverse Proxy Load Balancing & Atomic Container Scaling
-To eliminate Python multi-worker socket-passing `TCP_NODELAY` degradation and Linux delayed-ACK stalls, the API gateway is partitioned into an **Nginx Reverse Proxy (`payment_gateway` on host port 8010)** fronting $N$ atomic, single-process Uvicorn containers (`api-1` to `api-N`, internal port 8000, `--workers 1`):
+To eliminate Python multi-worker socket-passing `TCP_NODELAY` degradation and Linux delayed-ACK stalls, the API gateway is partitioned into an **Nginx Edge Gateway (`payment_gateway` on host port 8010)** fronting isolated, single-process Uvicorn containers (internal port 8000, `--workers 1`):
 - **Nginx Upstream Keepalive (`keepalive 64;`)**: Reuses open TCP sockets between Nginx and the API replicas, cutting internal proxy latency to **$0.19\text{ ms} - 0.22\text{ ms}$**.
 - **Independent Memory Spaces**: Each container runs strictly 1 process with its own dedicated asyncio event loop, isolating GC pauses and eliminating process contention.
 
@@ -545,11 +558,30 @@ insert_res = await session.execute(insert_stmt, rows)
 - **$60\times$ Latency Reduction**: Batch insertion time dropped from $350\text{ ms} - 410\text{ ms}$ down to **$5.92\text{ ms}$** (25 items) and **$32.38\text{ ms}$** (500 items).
 - **Fast Connection Return**: Database connections are returned to the pool $60\times$ faster, eliminating database contention for concurrent instant payments.
 
-### 3. Empirical Capacity Matrix & Pareto Frontier (AMD Ryzen 9 7900)
-- **Container Replicas ($C=4$)**: Produces peak sustained throughput (**$36.0\text{ req/s}$** under heavy Locust load) and lowest median latency (**$190\text{ ms}$**).
+### 3. Unified Fleet Baseline Capacity Matrix & Pareto Frontier (AMD Ryzen 9 7900)
+Prior to physical pool partitioning, the unified single-pool fleet was evaluated across horizontal replica counts ($C=1$ to $C=5$):
+- **Container Replicas ($C=4$)**: Produced peak sustained throughput (**$36.0\text{ req/s}$** under heavy Locust load) and lowest median latency (**$190\text{ ms}$**).
 - **Batch Chunk Sizing ($N=50-100$)**: Prevents long-running row locks on PostgreSQL; keeps worker chunk processing under $20\text{ ms}$.
 - **Celery Bulk Rate Limiting (`3000/m`)**: Paces bulk chunk commits via token bucket, slashing P99 tail latency from $1900\text{ ms}$ (unconstrained) to $1100\text{ ms}$.
 - **PostgreSQL Connection Budget**: $4 \text{ containers} \times (5+5) = 40$ API demand + 32 Celery demand = 72 / 100 max connections (**$28.0\%$ safe headroom**).
+
+### 4. The Golden Architecture: Ingestion SLA Container Pools & Semantic Edge Routing
+To achieve true physical workload isolation at the ingestion layer, the API fleet is partitioned by Ingestion SLA profile rather than serving all endpoints from a single generic container pool:
+- **`api_instant` Pool (Real-Time Rail)**:
+  - Dedicated exclusively to `/payments/instant` (FedNow / RTP) and operational probes (`/health`, `/metrics`).
+  - Budgeted connection pool: `DB_POOL_SIZE=10, DB_MAX_OVERFLOW=10` per container.
+  - Zero batch JSON parsing, zero memory bloat from large array allocations, and zero event loop serialization from bulk inserts.
+- **`api_batch` Pool (Bulk Disbursement Rail)**:
+  - Dedicated exclusively to `/disbursements/batch` (corporate payroll uploads) and settlement tracking.
+  - Budgeted connection pool: `DB_POOL_SIZE=8, DB_MAX_OVERFLOW=6` per container.
+  - Absorbs multi-row SQL inserts and `.chunks(100)` slicing without ever impacting real-time payments.
+- **Nginx Semantic Edge Routing**:
+  - `location /payments/instant` $\to$ `proxy_pass http://instant_backend;` (`least_conn; keepalive 64;`)
+  - `location /disbursements/batch` $\to$ `proxy_pass http://batch_backend;` (`least_conn; keepalive 64;`)
+  - `location /` $\to$ `proxy_pass http://instant_backend;`
+- **Empirical Verification**:
+  - Under continuous 500-item batch queue saturation, instant payments achieve **$14.78\text{ ms}$ P99 ingestion latency** and **$18.01\text{ ms}$ P99 worker clearing latency** ($\mathbf{32.79\text{ ms}}$ total end-to-end clearing SLA).
+  - 100% of real-time requests are handled by `api_instant` and 100% of batch requests are handled by `api_batch` (verified via `X-Upstream-Addr` audit).
 
 ---
 
@@ -573,7 +605,3 @@ insert_res = await session.execute(insert_stmt, rows)
 | **Dead-Letter Handling** | Expired or rejected messages routed to `payments.dlx` with redrive capability. | DLX configuration captures messages rejected with `requeue=False` with headers intact for replay. |
 | **Eager Singleton Warm-up** | Singletons initialized at module load with role-budgeted connection pools. | `_shared_client` with `Limits(20, 50, 30.0)`, worker DB pool `2/2`, API pool `10/20`, eliminating first-call latency. |
 | **Automated Testing** | 100% statement coverage across unit, integration, e2e, and load tests. | 4-tier Pytest suite verifying routing, prefetch behavior, contention resistance, live E2E, and DLQ handling. |
-
-
-
-

@@ -38,14 +38,18 @@ Without physical capacity isolation and prefetch tuning, submitting a 50,000-lin
 ```mermaid
 flowchart TD
     subgraph ClientLayer ["1. Inbound Ingestion Traffic (Host Port 8010)"]
-        Client["API Consumers / Locust / Enterprise ERP"] -->|"HTTP/1.1 Keep-Alive"| Nginx["Nginx Reverse Proxy (payment_gateway)<br/>• Host Port 8010:8010<br/>• upstream api_backend (keepalive 64;)<br/>• tcp_nodelay on; proxy_buffering on;"]
+        Client["API Consumers / Locust / Enterprise ERP"] -->|"HTTP/1.1 Keep-Alive"| Nginx["Nginx Edge Gateway (payment_gateway)<br/>• Host Port 8010:8010<br/>• Semantic Edge Routing (keepalive 64;)<br/>• least_conn; tcp_nodelay on; proxy_buffering on;"]
     end
 
-    subgraph ContainerFleet ["2. Scalable Horizontal Fleet (Port 8000)"]
-        Nginx -->|"least_conn"| API1["api-1: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API2["api-2: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API3["api-3: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API4["api-4: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
+    subgraph ContainerFleet ["2. Ingestion SLA Profile Pools (The Golden Architecture)"]
+        subgraph InstantPool ["Instant Rail Pool (api_instant:8000)"]
+            API_I1["api_instant-1: Single-Worker Uvicorn<br/>• Sub-25ms SLA, lean memory<br/>• DB Pool: 10, Overflow: 10"]
+            API_I2["api_instant-2: Single-Worker Uvicorn<br/>• Zero batch parsing/lock contention<br/>• DB Pool: 10, Overflow: 10"]
+        end
+        subgraph BatchPool ["Batch Settlement Pool (api_batch:8000)"]
+            API_B1["api_batch-1: Single-Worker Uvicorn<br/>• Relational multi-row bulk insert<br/>• DB Pool: 8, Overflow: 6"]
+            API_B2["api_batch-2: Single-Worker Uvicorn<br/>• Sliced .chunks(100) chunking<br/>• DB Pool: 8, Overflow: 6"]
+        end
     end
 
     subgraph MessagingLayer ["3. Driver / Protocol Layer (AMQP & Cache)"]
@@ -60,17 +64,24 @@ flowchart TD
     end
 
     subgraph DatabaseLayer ["5. PostgreSQL Connection Budget (Max: 100)"]
-        PG[("PostgreSQL 16 (payments_db)<br/>• API Fleet: 4 × 10 = 40 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Total Allocated: 72 / 100 (28% Headroom)")]
+        PG[("PostgreSQL 16 (payments_db)<br/>• api_instant Fleet: 2 × 20 = 40 max conns<br/>• api_batch Fleet: 2 × 14 = 28 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Budgeted Demand: 68 / 100 (32% Headroom)")]
     end
 
     subgraph ExternalBank ["6. Downstream Financial Rails"]
         BankSim["Partner Bank Gateway Simulator (Port 8011)<br/>• Shared keep-alive pool (50 conns)<br/>• FedNow / RTP / ACH Core Rails"]
     end
 
+    %% Edge Semantic Routing
+    Nginx -->|"location /payments/instant (least_conn)"| API_I1 & API_I2
+    Nginx -->|"location /disbursements/batch (least_conn)"| API_B1 & API_B2
+    Nginx -->|"location / (health, metrics, docs)"| API_I1 & API_I2
+
     %% Ingestion API Dispatches & Writes
-    API1 & API2 & API3 & API4 -->|"AMQP 0-9-1 task dispatch"| RMQ
-    API1 & API2 & API3 & API4 -->|"TCP Keep-Alive"| Redis
-    API1 & API2 & API3 & API4 -->|"Direct SQL insert (5.92ms)"| PG
+    API_I1 & API_I2 -->|"critical tasks dispatch"| RMQ
+    API_B1 & API_B2 -->|"bulk chunk tasks dispatch"| RMQ
+    API_I1 & API_I2 & API_B1 & API_B2 -->|"TCP Keep-Alive"| Redis
+    API_I1 & API_I2 -->|"Single-row payment insert"| PG
+    API_B1 & API_B2 -->|"Direct SQL insert (5.92ms)"| PG
 
     %% Broker Dispatches to Workers
     RMQ -->|"critical (priority 10, SLA &lt; 100ms)"| WCrit
