@@ -18,6 +18,12 @@ Every project module must maintain enterprise-grade automated testing with a har
   * **Integration Tests** (`tests/integration/`): Verifying database transactions (SQLAlchemy asyncpg), API routes (HTTPX AsyncClient), and service boundaries.
   * **Canvas & Workflow Tests** (`tests/test_canvas_workflows.py`, `tests/test_partial_failure.py`): Testing Celery chains, groups, chords, signatures (`.s()` vs `.si()`), errbacks (`link_error`), and partial failures.
   * **Live E2E Tests** (`tests/test_live_e2e.py`): Real asynchronous message dispatching across live or containerized brokers and workers.
+* **Test Categorization & Directory Hierarchy**:
+  Every project must organize tests into dedicated directories reflecting the testing pyramid:
+  * **Unit Tests (`tests/unit/`)**: Pure in-memory tests isolating domain logic, parsers, mathematical precision engines, dispatcher chunk slicing, and individual schemas. External calls (DB, Redis, Celery, HTTP) must be mocked.
+  * **Integration Tests (`tests/integration/`)**: Verifying database transactions (SQLAlchemy asyncpg), API routes (HTTPX AsyncClient), middleware pipelines (`test_middlewares.py`), Kombu exchange/queue bindings, and service boundaries against real databases (via Testcontainers or local ports).
+  * **Live E2E Tests (`tests/e2e/test_live_e2e.py`)**: Real asynchronous message dispatching across the full live distributed stack: real PostgreSQL, real RabbitMQ broker, live autonomous Celery worker daemon subprocesses (`worker_critical`, `worker_bulk`), and live partner APIs (`bank_simulator_api`).
+  * **Capacity & Load Benchmarks (`tests/benchmarks/` or `scripts/`)**: Automated contention tests verifying queue isolation, prefetch buffer discipline, and SLA preservation under heavy background load.
 * **Hybrid Testcontainers Pattern**:
   Tests must seamlessly adapt to local developer containers or spin up ephemeral testcontainers when dependencies are missing:
   1. If `TEST_DATABASE_URL` / `TEST_REDIS_URL` / `TEST_RABBITMQ_URL` is configured, or local services are reachable, tests connect to the existing infrastructure.
@@ -89,14 +95,15 @@ Every API implementation must adhere to strict asynchronous and robustness patte
      - No verbose HTTP headers if standard fields (`status_code`, `path`, `method`, `duration_ms`) are present.
      - Extra domain attributes formatted concisely as `key=value`.
    * ContextVar propagation: Store `current_request_id: ContextVar[str | None]` to propagate correlation IDs across async calls and Celery task headers.
-3. **Centralized Error Handling Middleware (`app/main.py`)**:
-   * Provide an `ErrorHandlingMiddleware(BaseHTTPMiddleware)` that:
+3. **Centralized Error Handling Middleware (`app/middleware.py`)**:
+   * Provide an `ErrorHandlingMiddleware(BaseHTTPMiddleware)` isolated in `app/middleware.py` that:
      - Extracts incoming `X-Request-ID` or generates a new UUID.
      - Sets the `current_request_id` context variable.
      - Measures elapsed request latency (`duration_ms`).
      - Intercepts unhandled exceptions, logs them via `logger.exception("unhandled_request_error")`, and returns a normalized JSON response (`status_code=500`, `{"detail": "internal server error", "request_id": ...}`) to prevent server crashes.
      - Always attaches `X-Request-ID` to response headers.
      - Emits `request_error` on $4xx/5xx$ and `request_complete` on completion.
+     - Registered cleanly in `app/main.py` via `app.add_middleware(ErrorHandlingMiddleware)`.
 4. **Pydantic v2 & Strong Validation**:
    * Strictly use Pydantic v2 conventions (`model_config = ConfigDict(from_attributes=True)`).
    * Use `Field(..., description=..., examples=...)` with domain constraints (`gt=0`, `ge=0`, regex patterns).
@@ -125,3 +132,134 @@ When implementing or modifying Celery tasks and APIs:
    * Use `link_error` / errbacks to transition applications to failure states when unrecoverable fatal errors occur.
 4. **Observability**:
    * Propagate request and correlation IDs across async FastAPI requests and Celery worker task headers via Python `contextvars`.
+5. **Tiered Hybrid Queue Topology & Fine-Grained Routing Keys**:
+   * **Coalesced SLA Baseline**: Start by grouping tasks by SLA tier (`critical`, `default`, `bulk`) rather than creating a separate physical queue for every single task function. This prevents queue explosion, excessive broker channels, and dozens of idle worker processes running at 0.1% CPU.
+   * **Fine-Grained Routing Keys from Day One**: Every task must publish with a specific, semantic routing key (e.g., `payment.standard.receipt`, `payment.standard.webhook`, `payment.instant.payout`), even if tasks initially share a coalesced queue (e.g., `default` bound to `payment.standard.#`).
+   * **Dynamic Eviction & Physical Isolation Triggers**: Split a task out of `default` into a dedicated queue only when:
+     1. *Unreliable External Dependency*: Flaky third-party APIs (e.g., merchant webhooks taking 15s or throwing 500s) threaten to block reliable internal operations (e.g., user receipt emails).
+     2. *Heavy Resource Footprint*: Tasks requiring specialized compute (e.g., high-memory PDF generation, OCR, AI inference) risk OOM crashes on shared I/O workers.
+     3. *Spike Traffic & Volatility*: Flash sales or mass marketing campaigns that dump millions of tasks.
+     Because fine-grained routing keys are present from day one, splitting requires zero producer code modifications—only queue declaration and binding changes in configuration.
+   * **Documenting Architectural Decisions**: All queue topology definitions, SLA criteria, and eviction rationales must be explicitly recorded in project documentation (`docs/ARCHITECTURE_AND_STANDARDS.md`).
+
+---
+
+## 6. Modular Architecture & Production Reference Patterns
+Every module must reflect senior-level production standards, clean abstraction layers, and domain-driven service boundaries:
+
+1. **Producer vs. Consumer Separation**:
+   * **API Layer (The Producer)**: The HTTP web service never runs background tasks. It prepares payloads, slices batches into `.chunks()`, injects tracing context (`X-Request-ID`), and publishes AMQP messages via **`app/dispatcher.py`** (or directly from `routes.py`). Never name API-side dispatching files `app/tasks.py`, as this creates confusing naming collisions.
+   * **Worker Layer (The Consumer)**: The Celery worker daemon pulls and executes tasks via **`services/worker/tasks/`**.
+   * **Domain-Driven Task Organization**: When tasks are split into a `tasks/` package, group files strictly by **Business Domain** (e.g., `tasks/payouts.py`, `tasks/settlements.py`, `tasks/notifications.py`), **NEVER by queue name or priority level** (`tasks/critical.py`, `tasks/bulk.py`). Routing keys and queue assignments are operational configurations defined in `task_routes`, not permanent domain identities. Re-export all tasks in `tasks/__init__.py`.
+
+2. **Explicit Abstraction Layers (Application vs. Driver/Protocol)**:
+   Always structure code with respect for the distinction between high-level application orchestrators and low-level protocol drivers:
+   * **Messaging Stack**:
+     - *Application Layer (`celery`)*: Defines business workflows, canvas signatures (`chain`, `chord`, `group`), retries, and task execution lifecycle.
+     - *Driver / Protocol Layer (`kombu`)*: The underlying AMQP 0-9-1 engine. Handles socket connection pooling, channel multiplexing, and binary framing. Use Kombu primitives (`from kombu import Exchange, Queue`) explicitly whenever declaring AMQP exchanges, dead-letter exchanges (`x-dead-letter-exchange`), message TTLs (`x-message-ttl`), or message priorities (`x-max-priority`).
+   * **Database Stack**:
+     - *Application Layer (Pydantic v2 / Domain Services)*: Enforces validation, minor-unit financial rules, and business logic.
+     - *Driver / ORM Layer (SQLAlchemy 2.0 `asyncpg`)*: Manages connection pool pre-pinging, ACID transaction boundaries, and pessimistic row locking (`SELECT ... FOR UPDATE`).
+
+3. **Flat, Non-Nested Service Topologies (Anti-Nesting Invariant)**:
+   * Maintain clean, flat service hierarchies. Never nest external dependencies, partner simulators, or independent microservices inside a consumer's internal directory (e.g., **NEVER** `services/worker/simulators/`).
+   * Independent microservices or mock systems must live as flat sibling directories directly under `services/` (e.g., `services/worker/`, `services/bank_simulator_api/`).
+
+4. **Service Naming Invariant (`*_api`)**:
+   * Any service, container, or mock component that exposes an HTTP endpoint or acts as an external network API must explicitly include **`_api`** (or `api_`) in its directory and container name (e.g., `services/bank_simulator_api/`, `services/provider_api/`, `services/client_api/`). This ensures its role as a network boundary is immediately self-evident across the file tree and Docker Compose configurations.
+
+5. **Dedicated Service Isolation & Container Architecture (Anti-Monolith Invariant)**:
+   * **Colocated Service Builds**: In multi-service distributed architectures, each autonomous component must maintain its own dedicated build definition and minimal dependency set. Standalone services own their colocated `Dockerfile` and `requirements.txt` (e.g., `services/worker/Dockerfile` + `services/worker/requirements.txt`, `services/bank_simulator_api/Dockerfile` + `services/bank_simulator_api/requirements.txt`).
+   * **Zero Redundant Libraries (Principle of Least Privilege)**:
+     - Background Celery workers execute headless task loops and must **never** install web servers (`uvicorn`, `fastapi`).
+     - Standalone partner simulators / mock APIs serve lightweight HTTP endpoints and must **never** install Celery, Kombu, Redis, or PostgreSQL drivers.
+     - The ingestion API gateway installs only what is needed to ingest requests, validate schemas, persist records, and dispatch messages (`requirements_api.txt`).
+   * **Attack Surface & Audit Compliance (SOC2 / PCI-DSS)**: Eliminates image bloat ($\sim 80\text{ MB}$ vs $\sim 350\text{ MB}$), speeds up container pull/build times, and prevents CVE security scanners from flagging vulnerabilities in unused libraries.
+
+6. **Pythonic Snake-Case File & Manifest Naming (`snake_case`)**:
+   * Enforce Pythonic **`snake_case`** across all project dependency manifests, configuration scripts, and test suites (e.g., `requirements_api.txt`, `requirements_dev.txt`, `load_test_contention.py`).
+   * Unless an external packaging compiler explicitly mandates specific suffixes (such as `pip-tools` `.in` conventions), never introduce mixed kebab-case separators (e.g., never mix `requirements-api.txt` next to `requirements_dev.txt`). Absolute naming uniformity reflecting PEP 8 standards must be preserved across all repository modules.
+
+---
+
+## 7. Enterprise Security & Tokenization Standards
+Every distributed backend module must incorporate enterprise FinTech security standards (modeled on Stripe, Modern Treasury, and Nacha / PCI-DSS rules):
+
+1. **Access Security via FastAPI Security Dependencies**:
+   * **Prefixed Cryptographic API Keys**: M2M credentials follow the standard prefixed entropy format: `[prefix]_[environment]_[random_entropy]` (e.g., `sk_live_...` or `mt_live_key_...`) for instant secret scanning and environment clarity.
+   * **Hashed at Rest**: Plaintext API keys are revealed to users only once; databases and caches store strictly HMAC-SHA256 or SHA-256 hashes.
+   * **FastAPI Security Dependencies (`Depends`) over Middleware**: Enforce authentication via `fastapi.security.APIKeyHeader` / `HTTPBearer` rather than raw middleware. This guarantees automatic OpenAPI 3.1 `securitySchemes` generation (the interactive **"Authorize" 🔒** button in `/docs`), eliminates fragile URL regex whitelisting for public routes (`/health`, `/metrics`, `/docs`), enables declarative RBAC scopes, and attaches tenant context for downstream rate limiters.
+
+2. **Zero-Knowledge Broker & Tokenization Invariant (PCI-DSS / Nacha Compliance)**:
+   * **Zero PII in Message Queues**: Raw financial PII (bank account numbers, routing numbers, card numbers, SSN) must **never** travel across message brokers in plaintext or appear in Celery task arguments. Broker disk dumps, DLQ inspections, and worker crash traces must remain free of raw secrets.
+   * **Surrogate Tokens & Masking**: Sensitive credentials ingested at the API edge must be immediately exchanged for surrogate tokens (`tok_acc_...` or UUIDs) and encrypted in a dedicated vault. Application databases and log audit trails record strictly surrogate tokens and masked representations (`account_mask: "******7890"`).
+   * **Opaque Task Signatures**: Celery tasks accept strictly opaque identifiers (`payment_id: str`, `batch_id: str`) and minor-unit integers (`amount_cents: int`). Egress detokenization occurs strictly at the final worker wire transmission over Mutual TLS (mTLS).
+
+---
+
+## 8. High-Performance Resource Management & Connection/Thread Pooling Invariants
+Every distributed backend system must enforce rigorous connection pooling, thread reuse, and warm-up lifecycle patterns to eliminate first-call latency, prevent resource exhaustion, and achieve sub-25ms execution:
+
+1. **Eager Singleton Initialization at Module Load (Zero Cold-Start Invariant)**:
+   * Singletons, connection pools, and protocol adapters must be initialized eagerly at **module import time** (`_shared_client`, `_engine`, `_session_factory`, `_sync_executor`), never deferred to lazy instantiation on the first incoming request.
+   * Eliminates first-call latency spikes and guarantees consistent sub-25ms P99 transaction timing from the very first request.
+
+2. **External HTTP Client Connection Pooling & Keep-Alive**:
+   * Never instantiate ephemeral `httpx.AsyncClient` or `requests.Session` inside task functions or route handlers.
+   * External partner API clients must provide a shared client connection factory (`get_bank_simulator_client()`) backed by an eagerly initialized client with explicit pool limits:
+     ```python
+     httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=30.0)
+     ```
+   * Tasks reuse persistent TCP keep-alive sockets rather than opening and closing sockets per request, eliminating TCP/TLS handshake overhead and preventing OS socket exhaustion in `TIME_WAIT`.
+   * Provide explicit async lifecycle hooks (`await close_bank_client()`) registered in FastAPI `lifespan` and Celery worker shutdown signals.
+
+3. **Role-Based Database Connection Pool Budgeting (Anti-Starvation Invariant)**:
+   * In multi-process architectures (Celery prefork worker pools + FastAPI Uvicorn workers), connection pool sizes must be budgeted by process role:
+     - **API Gateway**: `pool_size=10, max_overflow=20` (serves concurrent async non-blocking HTTP requests).
+     - **Celery Worker Child Processes**: `pool_size=2, max_overflow=2` (budgeted for single-threaded sequential execution).
+   * Prevents worker fleets ($N$ processes) from requesting hundreds of database connections ($N \times 30 = 270$) and crashing PostgreSQL with `FATAL: remaining connection slots are reserved for non-replication superuser connections`.
+   * The combined total connection demand of all workers and API gateways must remain comfortably below PostgreSQL's `max_connections` (default 100) with at least 30% safety headroom.
+
+4. **Reusable Process Thread Pool for Sync-in-Async Bridging**:
+   * When bridging synchronous task runners with asynchronous coroutines in `run_sync()`, never construct ad-hoc `ThreadPoolExecutor(max_workers=1)` per call.
+   * Maintain an eagerly initialized module-level `ThreadPoolExecutor(max_workers=4, thread_name_prefix="sync_worker")` reused across all invocations, with clean teardown via `shutdown_sync_executor()`.
+
+5. **Kombu AMQP Broker Connection Pooling**:
+   * Always declare explicit broker connection pooling in Celery configuration:
+     ```python
+     celery_app.conf.update(
+         broker_pool_limit=10,
+         broker_connection_retry_on_startup=True,
+     )
+     ```
+   * Pools AMQP channels and broker connections, preventing connection thrashing under spike workloads.
+
+6. **Eager Worker Process Boot Warm-Up (`@signals.worker_process_init`)**:
+   * Celery prefork child processes must not inherit stale or closed file descriptors/sockets from the master parent process.
+   * Immediately upon process boot (`@signals.worker_process_init`), child processes must re-bind and pre-warm their thread-local event loop (`get_worker_loop()`), worker-budgeted DB pool (`init_worker_db()`), and process-local HTTP client (`init_bank_client()`).
+   * When the first task arrives from RabbitMQ, all connections are pre-warmed, delivering instant sub-25ms P99 execution.
+
+---
+
+## 9. Continuous Benchmark Profiling & Performance History Invariants
+Capacity contention benchmarks (`scripts/load_test_contention.py`) and performance profiling scripts must capture and persist structured metrics on every run to enable continuous trend analysis and regression detection:
+
+1. **Structured JSON Output Persistence**:
+   * Benchmarks must serialize execution results to `reports/benchmarks/benchmark_<YYYYMMDD_HHMMSS>.json` and maintain an updated `reports/benchmarks/latest.json`.
+   * Stored reports must capture:
+     - ISO 8601 UTC timestamp and test parameters (`bulk_saturation_count`, `instant_probes_count`, `arrival_rate_req_sec`, `mode`).
+     - **API Ingestion Roundtrip Latency** (count, min, mean, p50, p95, p99, max, SLA pass/fail).
+     - **Worker End-to-End Clearing SLA** (sample size, min, p50, p99, SLA pass/fail).
+
+2. **Arrival-Rate Pacing Discipline (Little's Law Validation)**:
+   * Synthetic client probes must follow Little's Law arrival-rate pacing (`--rate <lambda>`, inter-arrival interval $\Delta t = 1/\lambda$) rather than unconstrained simultaneous `asyncio.gather` bursts.
+   * Prevents client-side OS TCP socket backlog serialization from falsifying worker and database SLA metrics.
+
+3. **Dual-Layer Observability**:
+   * Always isolate and report two distinct latency metrics:
+     1. *Ingestion Latency*: Edge HTTP roundtrip under heavy background broker saturation (client $\to$ API $\to$ DB $\to$ RabbitMQ $\to$ HTTP 202).
+     2. *Clearing SLA*: Background processing time audited directly from the database (`cleared_at - created_at`), encompassing queue wait time, Celery worker execution, partner simulator HTTP roundtrip, and DB ACID state transition.
+
+4. **CI/CD Regression Tracking & Historical Audits**:
+   * Version-controlled or CI-archived `reports/benchmarks/*.json` files serve as an audit trail for performance evolution across commits, refactors, and dependency upgrades.
+   * Allows automated regression gates in CI to fail builds if P99 latency exceeds defined SLA thresholds ($> 100\text{ ms}$).
