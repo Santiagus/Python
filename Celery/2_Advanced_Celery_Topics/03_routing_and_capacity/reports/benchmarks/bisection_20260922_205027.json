@@ -1,0 +1,323 @@
+{
+  "timestamp": "20260922_205027",
+  "hardware": "AMD Ryzen 9 7900 (12 Cores / 24 Threads, 32GB RAM)",
+  "optimal_instant_arrival_rate_max": 157.5,
+  "search_parameters": {
+    "min_rate": 30.0,
+    "max_rate": 200.0,
+    "tolerance": 10.0,
+    "duration": "30s",
+    "bulk_items": 10000
+  },
+  "fleet_configuration": {
+    "api_instant_replicas": 4,
+    "api_batch_replicas": 1,
+    "worker_critical_concurrency": 4,
+    "worker_bulk_concurrency": 2,
+    "worker_default_concurrency": 2,
+    "chunk_size": 100,
+    "celery_rate_limit": "500/m"
+  },
+  "storage_audit": {
+    "postgres_max_connections": 100,
+    "postgres_peak_total": 39,
+    "postgres_peak_active": 3,
+    "redis_peak_clients": 14
+  },
+  "best_passing_profile": {
+    "candidate_rate": 157.5,
+    "users": 23,
+    "duration": "30s",
+    "bulk_items": 10000,
+    "bulk_duration_ms": 889.85,
+    "instant_payment": {
+      "request_count": 3750,
+      "failure_count": 0,
+      "median_response_time": 24.0,
+      "avg_response_time": 30.77352901121388,
+      "requests_per_sec": 129.19910607187927,
+      "p50": 24.0,
+      "p90": 65.0,
+      "p95": 79.0,
+      "p99": 97.0
+    },
+    "batch_disbursement": {
+      "request_count": 436,
+      "failure_count": 0,
+      "median_response_time": 37.0,
+      "avg_response_time": 49.960717862390034,
+      "requests_per_sec": 15.021549399290494,
+      "p50": 37.0,
+      "p90": 100.0,
+      "p95": 120.0,
+      "p99": 140.0
+    },
+    "aggregated": {
+      "request_count": 4577,
+      "failure_count": 0,
+      "median_response_time": 24.0,
+      "avg_response_time": 31.394991515409977,
+      "requests_per_sec": 157.6918155975977,
+      "p50": 24.0,
+      "p90": 68.0,
+      "p95": 83.0,
+      "p99": 110.0
+    },
+    "db_total_connections": 31,
+    "db_active_connections": 1,
+    "redis_connected_clients": 14,
+    "sla_passed": true,
+    "iteration": 2,
+    "search_window": [
+      115.0,
+      200.0
+    ]
+  },
+  "bisection_trace": [
+    {
+      "candidate_rate": 115.0,
+      "users": 17,
+      "duration": "30s",
+      "bulk_items": 10000,
+      "bulk_duration_ms": 707.45,
+      "instant_payment": {
+        "request_count": 2765,
+        "failure_count": 0,
+        "median_response_time": 22.0,
+        "avg_response_time": 27.18517072438933,
+        "requests_per_sec": 95.27996019245397,
+        "p50": 22.0,
+        "p90": 59.0,
+        "p95": 69.0,
+        "p99": 82.0
+      },
+      "batch_disbursement": {
+        "request_count": 271,
+        "failure_count": 0,
+        "median_response_time": 23.0,
+        "avg_response_time": 30.85218123617265,
+        "requests_per_sec": 9.338469877813752,
+        "p50": 23.0,
+        "p90": 65.0,
+        "p95": 75.0,
+        "p99": 120.0
+      },
+      "aggregated": {
+        "request_count": 3339,
+        "failure_count": 0,
+        "median_response_time": 22.0,
+        "avg_response_time": 26.316538175185155,
+        "requests_per_sec": 115.05959749822922,
+        "p50": 22.0,
+        "p90": 57.0,
+        "p95": 68.0,
+        "p99": 83.0
+      },
+      "db_total_connections": 26,
+      "db_active_connections": 1,
+      "redis_connected_clients": 14,
+      "sla_passed": true,
+      "iteration": 1,
+      "search_window": [
+        30.0,
+        200.0
+      ]
+    },
+    {
+      "candidate_rate": 157.5,
+      "users": 23,
+      "duration": "30s",
+      "bulk_items": 10000,
+      "bulk_duration_ms": 889.85,
+      "instant_payment": {
+        "request_count": 3750,
+        "failure_count": 0,
+        "median_response_time": 24.0,
+        "avg_response_time": 30.77352901121388,
+        "requests_per_sec": 129.19910607187927,
+        "p50": 24.0,
+        "p90": 65.0,
+        "p95": 79.0,
+        "p99": 97.0
+      },
+      "batch_disbursement": {
+        "request_count": 436,
+        "failure_count": 0,
+        "median_response_time": 37.0,
+        "avg_response_time": 49.960717862390034,
+        "requests_per_sec": 15.021549399290494,
+        "p50": 37.0,
+        "p90": 100.0,
+        "p95": 120.0,
+        "p99": 140.0
+      },
+      "aggregated": {
+        "request_count": 4577,
+        "failure_count": 0,
+        "median_response_time": 24.0,
+        "avg_response_time": 31.394991515409977,
+        "requests_per_sec": 157.6918155975977,
+        "p50": 24.0,
+        "p90": 68.0,
+        "p95": 83.0,
+        "p99": 110.0
+      },
+      "db_total_connections": 31,
+      "db_active_connections": 1,
+      "redis_connected_clients": 14,
+      "sla_passed": true,
+      "iteration": 2,
+      "search_window": [
+        115.0,
+        200.0
+      ]
+    },
+    {
+      "candidate_rate": 178.8,
+      "users": 26,
+      "duration": "30s",
+      "bulk_items": 10000,
+      "bulk_duration_ms": 1114.86,
+      "instant_payment": {
+        "request_count": 4171,
+        "failure_count": 0,
+        "median_response_time": 69.0,
+        "avg_response_time": 81.30531544160314,
+        "requests_per_sec": 143.7686319365688,
+        "p50": 69.0,
+        "p90": 160.0,
+        "p95": 170.0,
+        "p99": 210.0
+      },
+      "batch_disbursement": {
+        "request_count": 478,
+        "failure_count": 0,
+        "median_response_time": 37.0,
+        "avg_response_time": 55.431448543961146,
+        "requests_per_sec": 16.476002413253386,
+        "p50": 37.0,
+        "p90": 110.0,
+        "p95": 140.0,
+        "p99": 220.0
+      },
+      "aggregated": {
+        "request_count": 5071,
+        "failure_count": 0,
+        "median_response_time": 60.0,
+        "avg_response_time": 74.72752911258934,
+        "requests_per_sec": 174.79039380252703,
+        "p50": 60.0,
+        "p90": 150.0,
+        "p95": 170.0,
+        "p99": 210.0
+      },
+      "db_total_connections": 38,
+      "db_active_connections": 1,
+      "redis_connected_clients": 14,
+      "sla_passed": false,
+      "iteration": 3,
+      "search_window": [
+        157.5,
+        200.0
+      ]
+    },
+    {
+      "candidate_rate": 168.2,
+      "users": 25,
+      "duration": "30s",
+      "bulk_items": 10000,
+      "bulk_duration_ms": 1445.47,
+      "instant_payment": {
+        "request_count": 3986,
+        "failure_count": 0,
+        "median_response_time": 52.0,
+        "avg_response_time": 62.749650606873715,
+        "requests_per_sec": 137.43576442603828,
+        "p50": 52.0,
+        "p90": 110.0,
+        "p95": 130.0,
+        "p99": 150.0
+      },
+      "batch_disbursement": {
+        "request_count": 429,
+        "failure_count": 0,
+        "median_response_time": 56.0,
+        "avg_response_time": 71.33883338927068,
+        "requests_per_sec": 14.791756883785855,
+        "p50": 56.0,
+        "p90": 140.0,
+        "p95": 160.0,
+        "p99": 230.0
+      },
+      "aggregated": {
+        "request_count": 4869,
+        "failure_count": 0,
+        "median_response_time": 49.0,
+        "avg_response_time": 60.29885393385214,
+        "requests_per_sec": 167.8812686880031,
+        "p50": 49.0,
+        "p90": 110.0,
+        "p95": 130.0,
+        "p99": 160.0
+      },
+      "db_total_connections": 39,
+      "db_active_connections": 1,
+      "redis_connected_clients": 14,
+      "sla_passed": false,
+      "iteration": 4,
+      "search_window": [
+        157.5,
+        178.8
+      ]
+    },
+    {
+      "candidate_rate": 162.8,
+      "users": 24,
+      "duration": "30s",
+      "bulk_items": 10000,
+      "bulk_duration_ms": 1457.91,
+      "instant_payment": {
+        "request_count": 3829,
+        "failure_count": 0,
+        "median_response_time": 49.0,
+        "avg_response_time": 61.45350514340284,
+        "requests_per_sec": 132.143389457008,
+        "p50": 49.0,
+        "p90": 120.0,
+        "p95": 130.0,
+        "p99": 180.0
+      },
+      "batch_disbursement": {
+        "request_count": 405,
+        "failure_count": 0,
+        "median_response_time": 64.0,
+        "avg_response_time": 84.48596336802663,
+        "requests_per_sec": 13.977036492579847,
+        "p50": 64.0,
+        "p90": 170.0,
+        "p95": 220.0,
+        "p99": 270.0
+      },
+      "aggregated": {
+        "request_count": 4673,
+        "failure_count": 0,
+        "median_response_time": 46.0,
+        "avg_response_time": 59.992983604349135,
+        "requests_per_sec": 161.27084328352007,
+        "p50": 46.0,
+        "p90": 120.0,
+        "p95": 140.0,
+        "p99": 190.0
+      },
+      "db_total_connections": 39,
+      "db_active_connections": 3,
+      "redis_connected_clients": 14,
+      "sla_passed": false,
+      "iteration": 5,
+      "search_window": [
+        157.5,
+        168.2
+      ]
+    }
+  ]
+}

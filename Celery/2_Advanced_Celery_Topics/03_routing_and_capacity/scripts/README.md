@@ -244,12 +244,17 @@ Automated 4-phase constrained optimization engine executing a bisection/binary s
 - **Phase 2**: Allocates surplus budget ($C_{\text{instant}}=4, W_{\text{critical}}=4$, `pool=7, overflow=7`).
 - **Phase 3**: Binary search loop across $\lambda$ with Little's Law pacing.
 - **Phase 4**: Audits PostgreSQL connection headroom and Redis client counts.
+Automated Two-Stage 4-phase constrained optimization engine executing a bisection/binary search across arrival rates ($\lambda \in [\lambda_{\min}, \lambda_{\max}]$) under continuous background bulk load:
+- **Stage 1 (Unit Capacity Baseline)**: Locks bulk floor ($C_{\text{batch}}=1, W_{\text{bulk}}=2, N=100$, rate limit `500/m`), allocates $C_{\text{instant}}=4, W_{\text{critical}}=4$, and measures baseline knee ($c_{\text{inst}} = \lambda_{\max} / 4$).
+- **Stage 2 (Hardware Saturation Frontier - `--hardware-frontier`)**: Scales $C_{\text{instant}}$ from $4 \to 8$ containers, grows Celery $W_{\text{critical}}$ from $4 \to 6$ child processes via AMQP remote control, re-budgets database pools (`pool=4, overflow=3` $\implies 8 \times 7 = 56$ max conns, keeping total DB demand capped at $86/100$), and tests arrival rates up to $350\text{ req/s}$ to achieve ~85% Zen 4 physical core saturation.
+- **Teardown**: Always restores reference stack ($2\text{ instant} + 2\text{ batch}, W_{\text{critical}}=4$).
 
 * **Zero-Param Execution**:
   ```bash
   python scripts/benchmark_bisection_capacity.py
   ```
   *Default*: Sweeps arrival rates between $100.0\text{ req/s}$ and $450.0\text{ req/s}$ with $25.0\text{ req/s}$ tolerance and $2,500$ background bulk items per trial, prints the empirical bisection trace table, restores reference state, and updates `reports/benchmarks/bisection_latest.json`.
+  *Default*: Sweeps Stage 1 arrival rates between $100.0\text{ req/s}$ and $250.0\text{ req/s}$ with $20.0\text{ req/s}$ tolerance and $1,000$ background bulk items per trial, prints the empirical bisection trace table, restores reference state, and updates `reports/benchmarks/bisection_latest.json`.
 
 * **Parameters**:
   | Parameter | Type | Default | Description |
@@ -259,13 +264,27 @@ Automated 4-phase constrained optimization engine executing a bisection/binary s
   | `--tolerance` | `float` | `25.0` | Convergence tolerance between low and high bound in req/s. |
   | `--duration` | `str` | `"12s"` | Duration per bisection trial. |
   | `--bulk-items` | `int` | `2500` | Background payroll items injected per trial. |
+  | `--min-rate` | `float` | `100.0` | Stage 1 minimum arrival rate search floor in req/s. |
+  | `--max-rate` | `float` | `250.0` | Stage 1 maximum arrival rate search ceiling in req/s. |
+  | `--tolerance` | `float` | `20.0` | Convergence tolerance between low and high bound in req/s. |
+  | `--duration` | `str` | `"10s"` | Duration per bisection trial. |
+  | `--bulk-items` | `int` | `1000` | Background payroll items injected per trial. |
   | `--api-url` | `str` | `"http://localhost:8010"` | Target Edge Gateway base URL. |
   | `--output` | `str` | `None` | Optional custom destination JSON path. |
+  | `--hardware-frontier` | `flag` | `False` | Enables Stage 2 Hardware Saturation Frontier benchmark. |
+  | `--frontier-instant-replicas` | `int` | `8` | Frontier instant container count. |
+  | `--frontier-worker-critical` | `int` | `6` | Frontier Celery critical worker concurrency. |
+  | `--frontier-min-rate` | `float` | `150.0` | Frontier minimum search rate in req/s. |
+  | `--frontier-max-rate` | `float` | `350.0` | Frontier maximum search rate in req/s. |
 
 * **Custom Examples**:
   ```bash
   # Refined search in the 30-100 req/s window with tighter 15 req/s tolerance
+  # Stage 1 baseline sweep
   python scripts/benchmark_bisection_capacity.py --min-rate 30 --max-rate 100 --tolerance 15 --duration 10s --bulk-items 500
+
+  # Full Two-Stage Hardware Saturation Frontier Benchmark (AMD Ryzen 9 7900)
+  python scripts/benchmark_bisection_capacity.py --min-rate 100 --max-rate 200 --tolerance 15 --duration 10s --bulk-items 500 --hardware-frontier --frontier-instant-replicas 8 --frontier-worker-critical 6 --frontier-min-rate 160 --frontier-max-rate 320
   ```
 
 ---
