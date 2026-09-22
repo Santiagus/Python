@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-09-22T16:16:34.903000+00:00",
+  "label": "golden_arch",
+  "mode": "paced",
+  "parameters": {
+    "gateway_url": "http://localhost:8010",
+    "mode": "paced",
+    "duration_seconds": 10.0,
+    "actual_duration_seconds": 10.33,
+    "instant_rate": 35.0,
+    "burst_concurrency": null,
+    "batch_concurrency": 2,
+    "items_per_batch": 100
+  },
+  "cold_start_ms": {
+    "client_ms": 34.98,
+    "server_ms": 15.61
+  },
+  "instant_payments": {
+    "total_sent": 339,
+    "successful": 339,
+    "failed": 0,
+    "throughput_rps": 32.83,
+    "client_latency_ms": {
+      "min": 9.78,
+      "p50": 11.09,
+      "p90": 12.6,
+      "p95": 13.13,
+      "p99": 14.23,
+      "max": 14.89,
+      "mean": 11.29
+    },
+    "server_latency_ms": {
+      "min": 6.72,
+      "p50": 7.81,
+      "p90": 8.94,
+      "p95": 9.42,
+      "p99": 10.06,
+      "max": 10.82,
+      "mean": 7.93
+    },
+    "upstream_distribution": {
+      "172.22.0.10:8000": 170,
+      "172.22.0.11:8000": 169
+    }
+  },
+  "batch_disbursements": {
+    "total_batches": 188,
+    "successful_batches": 188,
+    "total_items": 18800,
+    "items_per_second": 1820.59,
+    "p50_duration_ms": 21.88,
+    "upstream_distribution": {
+      "172.22.0.12:8000": 94,
+      "172.22.0.6:8000": 94
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-09-22T15:51:11.648304+00:00",
+  "label": "after",
+  "parameters": {
+    "gateway_url": "http://localhost:8010",
+    "instant_rate_target": 40.0,
+    "duration_seconds": 12.0,
+    "actual_duration_seconds": 12.52,
+    "batch_concurrency": 3,
+    "items_per_batch": 150
+  },
+  "instant_payments": {
+    "total_sent": 465,
+    "successful": 462,
+    "failed": 3,
+    "throughput_rps": 36.89,
+    "latency_ms": {
+      "min": 10.2,
+      "mean": 152.14,
+      "p50": 13.74,
+      "p90": 614.2,
+      "p95": 790.87,
+      "p99": 1023.86,
+      "max": 1174.48
+    },
+    "upstream_distribution": {
+      "172.22.0.11:8000": 232,
+      "172.22.0.10:8000": 230,
+      "error": 3
+    }
+  },
+  "batch_disbursements": {
+    "total_batches_submitted": 155,
+    "successful_batches": 155,
+    "total_items_processed": 23250,
+    "item_throughput_per_sec": 1856.38,
+    "mean_batch_duration_ms": 133.08,
+    "p50_batch_duration_ms": 120.49,
+    "upstream_distribution": {
+      "172.22.0.6:8000": 81,
+      "172.22.0.12:8000": 74
+    }
+  }
+}
