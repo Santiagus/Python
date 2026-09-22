@@ -30,7 +30,11 @@ flowchart TD
         T7["test_live_e2e.py<br/>• Live AMQP message dispatch across RabbitMQ 3.13<br/>• Real worker daemon subprocesses (-Q critical, -Q bulk)<br/>• Live bank_simulator_api HTTP clearing over network<br/>• Full lifecycle async polling to settled/cleared states"]
     end
 
-    L1 --> L2 --> L3 --> L4 --> L5
+    subgraph L6["Layer 6: Edge Gateway & Ingestion SLA Pool Verification"]
+        T8["nginx.conf & benchmark_ingestion_pools.py<br/>• Semantic edge routing (/payments/instant -> api_instant:8000)<br/>• Upstream isolation headers (X-Upstream-Addr)<br/>• Dual-level health probes (port 8000 direct vs. port 8010 per-service)<br/>• Zero event-loop Head-Of-Line blocking under batch load"]
+    end
+
+    L1 --> L2 --> L3 --> L4 --> L5 --> L6
 ```
 
 ---
@@ -52,6 +56,9 @@ flowchart TD
 | **TC-11: Modular Middleware Pipeline** | `test_middlewares.py::test_middleware_execution_order` | HTTP requests to test endpoints | 1. Verify `X-Request-ID` attached and ContextVar reset on completion.<br/>2. Verify defensive headers (HSTS, CSP, nosniff, DENY).<br/>3. Verify unhandled crashes normalized to JSON 500.<br/>4. Verify high-resolution latency logged with `duration_ms`. | Complete 5-layer pipeline verified |
 | **TC-12: Producer Dispatcher Slicing** | `test_dispatcher.py::test_chunk_slicing_and_routing` | 1,000 disbursement records | 1. API dispatcher slices items into batches of 100.<br/>2. Publishes chunk signatures to `bulk` queue without loading worker task modules into API process. | Clean producer separation & exact chunk counts |
 | **TC-13: Live Multi-Process Distributed E2E** | `test_live_e2e.py::test_live_instant_payout_and_batch` | Live RabbitMQ + Celery Worker daemons | 1. Submit instant payout $\to$ verifies real AMQP dispatch, live worker execution, bank clearing, and final settled polling.<br/>2. Submit batch $\to$ verifies parallel chunk execution across live worker pool. | Full distributed execution verified |
+| **TC-14: Ingestion SLA Pool Isolation (Nginx Semantic Edge Routing)** | `scripts/benchmark_ingestion_pools.py` / `nginx.conf` | HTTP requests to `http://localhost:8010/payments/instant` and `http://localhost:8010/disbursements/batch` | 1. Inspect Nginx response header `X-Upstream-Addr`.<br/>2. Assert `/payments/instant` routes strictly to `api_instant:8000` upstream.<br/>3. Assert `/disbursements/batch` routes strictly to `api_batch:8000` upstream.<br/>4. Assert zero cross-pool contamination between instant and batch pools. | 100% physical upstream segregation verified |
+| **TC-15: Dual-Level Health Probes & Per-Service Edge Observability** | `nginx.conf` / Container Healthchecks | Internal container probe `http://localhost:8000/health/liveness`, Edge probes `http://localhost:8010/health/instant/liveness`, `http://localhost:8010/health/batch/liveness`, `/metrics/instant`, `/metrics/batch` | 1. Internal container port 8000 returns direct container state (Whitebox APM / Docker).<br/>2. Nginx edge rewrites `/health/instant/*` $\to$ `/health/*` on `api_instant` and `/health/batch/*` $\to$ `/health/*` on `api_batch`.<br/>3. Response JSON includes specific `service: "payment_api_instant"` vs `service: "payment_api_batch"` and active DB pool metrics. | Both monitoring layers (Whitebox direct & Blackbox edge) operational without false-green blind spots |
+| **TC-16: Calibrated Ingestion SLA Benchmark (Paced vs. Burst)** | `scripts/benchmark_ingestion_pools.py` | 50 concurrent instant payouts ($150.00$) at 200 req/s arrival rate (Little's Law pacing) against background 500-disbursement batch submissions | 1. Measure instant payout ingestion latency under clean baseline.<br/>2. Measure instant payout ingestion latency during active batch ingestion.<br/>3. Assert $P_{99}$ degradation is $< 5\text{ ms}$ (virtually $0\%$).<br/>4. Assert $P_{99} < 35\text{ ms}$ total gateway ingestion time. | Zero ingestion event-loop head-of-line blocking; instant SLA fully preserved |
 
 ---
 
@@ -74,3 +81,11 @@ flowchart TD
 1. Execute `scripts/load_test_contention.py` measuring queue latency under 50,000 bulk tasks.
 2. Record metrics in `docs/CAPACITY_NOTE.md`.
 3. Verify 100% statement coverage via `pytest --cov`.
+
+### Phase 4: Golden Architecture Ingestion SLA Calibration & Observability Validation
+1. Author `nginx.conf` with least-connection upstream balancing, TCP nodelay, keepalive pools, and semantic path routing.
+2. Implement per-service edge observability paths (`/health/instant/*`, `/health/batch/*`, `/metrics/instant`, `/metrics/batch`) with transparent upstream path rewriting to eliminate false-green monitoring blind spots.
+3. Configure dual container pools in `docker-compose.yml` (`api_instant` and `api_batch`) with role-budgeted PostgreSQL connection pools (20 max for instant, 14 max for batch).
+4. Run `scripts/benchmark_ingestion_pools.py` to empirically verify zero event-loop head-of-line blocking under sustained batch load.
+5. Document architectural decisions and benchmarks in `docs/PRODUCTION_ARCHITECTURE_AND_OPTIMIZATION_REPORT.md`.
+

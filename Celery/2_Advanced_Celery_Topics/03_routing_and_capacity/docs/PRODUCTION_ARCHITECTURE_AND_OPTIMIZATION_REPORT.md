@@ -25,15 +25,9 @@ To achieve sub-100ms P99 latency guarantees for real-time payments (FedNow / RTP
 ```mermaid
 flowchart TD
     subgraph ClientLayer ["1. Inbound Ingestion Traffic (Host Port 8010)"]
-        Client["API Consumers / Locust / Enterprise ERP"] -->|"HTTP/1.1 Keep-Alive"| Nginx["Nginx Reverse Proxy (payment_gateway)<br/>• Host Port 8010:8010<br/>• upstream api_backend (keepalive 64;)<br/>• tcp_nodelay on; proxy_buffering on;"]
         Client["API Consumers / Locust / Enterprise ERP"] -->|"HTTP/1.1 Keep-Alive"| Nginx["Nginx Edge Gateway (payment_gateway)<br/>• Host Port 8010:8010<br/>• Semantic Edge Routing (keepalive 64;)<br/>• least_conn; tcp_nodelay on; proxy_buffering on;"]
     end
 
-    subgraph ContainerFleet ["2. Scalable Horizontal Fleet (Port 8000)"]
-        Nginx -->|"least_conn"| API1["api-1: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API2["api-2: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API3["api-3: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
-        Nginx -->|"least_conn"| API4["api-4: Uvicorn Single-Worker<br/>Pool: 5, Overflow: 5"]
     subgraph ContainerFleet ["2. Ingestion SLA Profile Pools (The Golden Architecture)"]
         subgraph InstantPool ["Instant Rail Pool (api_instant:8000)"]
             API_I1["api_instant-1: Single-Worker Uvicorn<br/>• Sub-25ms SLA, lean memory<br/>• DB Pool: 10, Overflow: 10"]
@@ -57,7 +51,6 @@ flowchart TD
     end
 
     subgraph DatabaseLayer ["5. PostgreSQL Connection Budget (Max: 100)"]
-        PG[("PostgreSQL 16 (payments_db)<br/>• API Fleet: 4 × 10 = 40 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Total Allocated: 72 / 100 (28% Headroom)")]
         PG[("PostgreSQL 16 (payments_db)<br/>• api_instant Fleet: 2 × 20 = 40 max conns<br/>• api_batch Fleet: 2 × 14 = 28 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Budgeted Demand: 68 / 100 (32% Headroom)")]
     end
 
@@ -65,15 +58,14 @@ flowchart TD
         BankSim["Partner Bank Simulator API (Port 8011)<br/>• Shared keep-alive pool (50 conns)<br/>• FedNow / RTP / ACH Core Rails"]
     end
 
-    %% Edge Semantic Routing
+    %% Edge Semantic Routing & Per-Service Observability
     Nginx -->|"location /payments/instant (least_conn)"| API_I1 & API_I2
     Nginx -->|"location /disbursements/batch (least_conn)"| API_B1 & API_B2
-    Nginx -->|"location / (health, metrics, docs)"| API_I1 & API_I2
+    Nginx -->|"location /health/instant/*, /metrics/instant"| API_I1 & API_I2
+    Nginx -->|"location /health/batch/*, /metrics/batch"| API_B1 & API_B2
+    Nginx -->|"location / (default health, metrics, docs)"| API_I1 & API_I2
 
     %% Ingestion API Dispatches & Writes
-    API1 & API2 & API3 & API4 -->|"AMQP 0-9-1 task dispatch"| RMQ
-    API1 & API2 & API3 & API4 -->|"TCP Keep-Alive"| Redis
-    API1 & API2 & API3 & API4 -->|"Direct SQL insert (5.92ms)"| PG
     API_I1 & API_I2 -->|"critical tasks dispatch"| RMQ
     API_B1 & API_B2 -->|"bulk chunk tasks dispatch"| RMQ
     API_I1 & API_I2 & API_B1 & API_B2 -->|"TCP Keep-Alive"| Redis
