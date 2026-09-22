@@ -139,7 +139,7 @@ flowchart TD
 ├── init.sql                    # Database DDL (applications, documents, pages, underwriting_memos)
 ├── pytest.ini                  # Pytest configuration
 ├── requirements.txt            # Core runtime dependencies (FastAPI, Celery, Redis, SQLAlchemy, Psycopg)
-├── requirements-api.txt        # API-specific dependencies
+├── requirements_api.txt        # API-specific dependencies
 ├── requirements_dev.txt        # Development & test dependencies
 ├── app/                        # FastAPI Ingestion & Query Service
 │   ├── __init__.py
@@ -499,7 +499,7 @@ The harness records execution logs and produces:
 
 ## Comprehensive Architecture & Best Practices Audit
 
-For complete architectural documentation, see [docs/ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/02_workflows/docs/ARCHITECTURE_AND_STANDARDS.md).
+For complete architectural documentation, see [docs/ARCHITECTURE_AND_STANDARDS.md](/docs/ARCHITECTURE_AND_STANDARDS.md).
 
 ```mermaid
 flowchart TD

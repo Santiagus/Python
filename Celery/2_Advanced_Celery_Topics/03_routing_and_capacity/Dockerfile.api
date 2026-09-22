@@ -1,0 +1,31 @@
+# =============================================================================
+# FastAPI Ingestion Gateway Dockerfile (The Producer)
+# =============================================================================
+
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements_api.txt /workspace/requirements_api.txt
+RUN pip install --no-cache-dir -r /workspace/requirements_api.txt
+
+COPY app/ /workspace/app/
+COPY services/__init__.py /workspace/services/__init__.py
+COPY services/worker/__init__.py /workspace/services/worker/__init__.py
+COPY services/worker/celery_app.py /workspace/services/worker/celery_app.py
+COPY services/worker/tasks/ /workspace/services/worker/tasks/
+COPY services/bank_simulator_api/__init__.py /workspace/services/bank_simulator_api/__init__.py
+COPY services/bank_simulator_api/client.py /workspace/services/bank_simulator_api/client.py
+
+ENV PYTHONPATH=/workspace
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8010
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8010"]
+

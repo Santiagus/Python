@@ -164,3 +164,8 @@ cython_debug/
 
 # vscode config files
 .vscode/
+
+# Private Career & Resume Documentation
+RESUME_PERFORMANCE_METRICS.md
+*resume*
+*cv*

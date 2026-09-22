@@ -1,0 +1,15 @@
+# =============================================================================
+# PostgreSQL 16 Database with Automatic Schema Initialization
+# =============================================================================
+
+FROM postgres:16-alpine
+
+ENV POSTGRES_DB=payments_db
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+
+# Copy initialization DDL and specimen seeds to Docker entrypoint directory
+COPY init.sql /docker-entrypoint-initdb.d/init.sql
+
+EXPOSE 5432
+

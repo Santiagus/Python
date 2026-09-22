@@ -1,0 +1,22 @@
+[run]
+concurrency = greenlet, thread
+branch = True
+source =
+    app
+    services/worker
+    services/bank_simulator_api
+omit =
+    tests/*
+    scripts/*
+    .venv/*
+
+[report]
+show_missing = True
+fail_under = 100
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    raise NotImplementedError
+

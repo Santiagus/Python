@@ -1,0 +1,197 @@
+version: "3.8"
+
+services:
+  # =============================================================================
+  # Core Infrastructure Services
+  # =============================================================================
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: payment_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: payments_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payments_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: payment_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: payment_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  # =============================================================================
+  # Partner Bank Simulator API (Mock External Service)
+  # =============================================================================
+  bank_simulator_api:
+    build:
+      context: .
+      dockerfile: services/bank_simulator_api/Dockerfile
+    container_name: payment_bank_simulator_api
+    ports:
+      - "8011:8011"
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # =============================================================================
+  # Edge Gateway & Load Balancer (Reverse Proxy)
+  # =============================================================================
+  gateway:
+    image: nginx:alpine
+    container_name: payment_gateway
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+
+  # =============================================================================
+  # FastAPI Ingestion Fleet (The Scalable Producer)
+  # =============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+    stop_grace_period: 1s
+    expose:
+      - "8000"
+    volumes:
+      - ./app:/workspace/app:ro
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
+      SYNC_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/payments_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+      BANK_API_URL: http://bank_simulator_api:8011
+      DB_POOL_SIZE: ${API_DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${API_DB_MAX_OVERFLOW:-5}
+      BATCH_CHUNK_SIZE: ${BATCH_CHUNK_SIZE:-100}
+      RATE_LIMIT_RPM: ${RATE_LIMIT_RPM:-60000}
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      bank_simulator_api:
+        condition: service_healthy
+
+  # =============================================================================
+  # Specialized Autonomous Worker Fleet (The Consumers)
+  # =============================================================================
+  worker_critical:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: payment_worker_critical
+    command: >
+      celery -A services.worker.celery_app:celery_app worker
+      -Q critical
+      -c 4
+      --prefetch-multiplier=1
+      -O fair
+      --loglevel=INFO
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+      BANK_API_URL: http://bank_simulator_api:8011
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      bank_simulator_api:
+        condition: service_healthy
+
+  worker_default:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: payment_worker_default
+    command: >
+      celery -A services.worker.celery_app:celery_app worker
+      -Q default
+      -c 2
+      --prefetch-multiplier=2
+      --loglevel=INFO
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker_bulk:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: payment_worker_bulk
+    command: >
+      celery -A services.worker.celery_app:celery_app worker
+      -Q bulk
+      -c 2
+      --prefetch-multiplier=4
+      -O fair
+      --loglevel=INFO
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+      BANK_API_URL: http://bank_simulator_api:8011
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      bank_simulator_api:
+        condition: service_healthy
+
