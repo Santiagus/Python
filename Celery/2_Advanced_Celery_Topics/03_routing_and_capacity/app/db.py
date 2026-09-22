@@ -59,6 +59,7 @@ def _create_engine_and_factory(
             pool_pre_ping=True,
             pool_size=pool_size,
             max_overflow=max_overflow,
+            connect_args={"statement_cache_size": 0},
             echo=False,
             future=True,
         )

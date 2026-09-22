@@ -21,6 +21,34 @@ services:
       timeout: 3s
       retries: 5
 
+  # Transaction Connection Pooling Proxy (High-Performance Client Multiplexing)
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: payment_pgbouncer
+    ports:
+      - "6432:5432"
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: payments_db
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 25
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 5
+      SERVER_RESET_QUERY: "DISCARD ALL"
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 -U postgres -d payments_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: payment_rabbitmq
@@ -99,8 +127,8 @@ services:
       - ./app:/workspace/app:ro
     environment:
       SERVICE_NAME: api_instant
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
-      SYNC_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/payments_db
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@pgbouncer:5432/payments_db
+      SYNC_DATABASE_URL: postgresql://postgres:postgres@pgbouncer:5432/payments_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
       REDIS_URL: redis://redis:6379/0
       BANK_API_URL: http://bank_simulator_api:8011
@@ -118,6 +146,8 @@ services:
       start_period: 5s
     depends_on:
       postgres:
+        condition: service_healthy
+      pgbouncer:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -139,8 +169,8 @@ services:
       - ./app:/workspace/app:ro
     environment:
       SERVICE_NAME: api_batch
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
-      SYNC_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/payments_db
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@pgbouncer:5432/payments_db
+      SYNC_DATABASE_URL: postgresql://postgres:postgres@pgbouncer:5432/payments_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
       REDIS_URL: redis://redis:6379/0
       BANK_API_URL: http://bank_simulator_api:8011
@@ -158,6 +188,8 @@ services:
       start_period: 5s
     depends_on:
       postgres:
+        condition: service_healthy
+      pgbouncer:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -182,7 +214,7 @@ services:
       -O fair
       --loglevel=INFO
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@pgbouncer:5432/payments_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
       REDIS_URL: redis://redis:6379/0
       BANK_API_URL: http://bank_simulator_api:8011
@@ -190,6 +222,8 @@ services:
       LOG_LEVEL: INFO
     depends_on:
       postgres:
+        condition: service_healthy
+      pgbouncer:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -208,13 +242,15 @@ services:
       --prefetch-multiplier=2
       --loglevel=INFO
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@pgbouncer:5432/payments_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: development
       LOG_LEVEL: INFO
     depends_on:
       postgres:
+        condition: service_healthy
+      pgbouncer:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -232,7 +268,7 @@ services:
       -O fair
       --loglevel=INFO
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@pgbouncer:5432/payments_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
       REDIS_URL: redis://redis:6379/0
       BANK_API_URL: http://bank_simulator_api:8011
@@ -241,8 +277,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
       bank_simulator_api:
         condition: service_healthy
-

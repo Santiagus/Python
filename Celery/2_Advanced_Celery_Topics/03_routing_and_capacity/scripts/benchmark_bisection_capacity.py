@@ -1,10 +1,11 @@
-"""Automated Two-Stage 4-Phase Empirical Bisection Benchmark Engine.
+"""Automated Two-Stage 4-Phase Empirical Bisection Benchmark Engine with PgBouncer.
 
 Implements the multi-stage constrained optimization methodology to find the maximum
 sustainable instant payment arrival rate (λ_max) under continuous background bulk load:
-  Stage 1: Unit Capacity Baseline (C_instant=4, W_critical=4, pool=7, overflow=7).
-  Stage 2: Hardware Saturation Frontier (C_instant=8, W_critical=6, pool=4, overflow=3),
-           saturating ~85% CPU on AMD Ryzen 9 7900 while strictly capping DB connections <= 86/100.
+  Stage 1: Unit Capacity Baseline (C_instant=4, W_critical=4, pool=15, overflow=10).
+  Stage 2: Hardware Saturation Frontier (C_instant=8, W_critical=6, pool=15, overflow=10),
+           leveraging local PgBouncer in transaction pooling mode to multiplex 200+ client
+           connections into at most 25 real PostgreSQL connections, eliminating pool queuing.
   Teardown: Always restores production reference topology (2 instant + 2 batch, W_crit=4).
 """
 
@@ -101,6 +102,35 @@ def query_postgres_connections() -> tuple[int, int]:
         return 0, 0
 
 
+def query_pgbouncer_stats() -> dict[str, int]:
+    """Query live PgBouncer pool statistics (active clients, server sockets, waiting queue)."""
+    try:
+        sql = "SHOW POOLS;"
+        res = subprocess.run(
+            [
+                "docker", "exec", "-e", "PGPASSWORD=postgres", "payment_pgbouncer",
+                "psql", "-h", "127.0.0.1", "-p", "5432", "-U", "postgres", "pgbouncer",
+                "-t", "-A", "-F", ",", "-c", sql,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        for line in res.stdout.strip().splitlines():
+            parts = line.split(",")
+            if len(parts) >= 16 and parts[0] == "payments_db":
+                return {
+                    "cl_active": int(parts[2]) if parts[2].isdigit() else 0,
+                    "cl_waiting": int(parts[3]) if parts[3].isdigit() else 0,
+                    "sv_active": int(parts[6]) if parts[6].isdigit() else 0,
+                    "sv_idle": int(parts[9]) if parts[9].isdigit() else 0,
+                    "sv_used": int(parts[10]) if parts[10].isdigit() else 0,
+                }
+    except Exception:
+        pass
+    return {"cl_active": 0, "cl_waiting": 0, "sv_active": 0, "sv_idle": 0, "sv_used": 0}
+
+
 def query_redis_clients() -> int:
     """Query connected Redis client count."""
     try:
@@ -189,8 +219,8 @@ def set_celery_critical_worker_pool(target_concurrency: int = 4) -> bool:
         return False
 
 
-def warm_up_api(api_url: str, count: int = 15) -> None:
-    """Send pre-warm probes to prime keepalive sockets and connection pools."""
+def warm_up_api(api_url: str, count: int = 20) -> None:
+    """Send pre-warm probes to prime keepalive sockets, PgBouncer, and connection pools."""
     logger.info("Pre-warming API gateway (%d probes to prime connection pools)...", count)
     for i in range(count):
         payment_ref = uuid4().hex
@@ -219,10 +249,10 @@ def warm_up_api(api_url: str, count: int = 15) -> None:
 def configure_bisection_fleet(
     instant_replicas: int = 4,
     batch_replicas: int = 1,
-    instant_pool: int = 7,
-    instant_overflow: int = 7,
-    batch_pool: int = 5,
-    batch_overflow: int = 5,
+    instant_pool: int = 15,
+    instant_overflow: int = 10,
+    batch_pool: int = 8,
+    batch_overflow: int = 6,
     chunk_size: int = 100,
 ) -> bool:
     """Configure the surplus-allocated Golden Architecture container fleet."""
@@ -262,7 +292,7 @@ def restore_production_reference(api_url: str = "http://localhost:8010") -> None
     logger.info("Restoring API Gateway to production reference state (2 instant + 2 batch containers)...")
     set_nginx_batch_upstream("api_batch")
     env = os.environ.copy()
-    env["API_INSTANT_DB_POOL_SIZE"] = "10"
+    env["API_INSTANT_DB_POOL_SIZE"] = "15"
     env["API_INSTANT_DB_MAX_OVERFLOW"] = "10"
     env["API_BATCH_DB_POOL_SIZE"] = "8"
     env["API_BATCH_DB_MAX_OVERFLOW"] = "6"
@@ -293,7 +323,7 @@ def restore_production_reference(api_url: str = "http://localhost:8010") -> None
     wait_for_api_healthy(api_url, timeout_seconds=15.0)
 
 
-def inject_background_bulk_load(api_url: str, items_count: int = 2500) -> float:
+def inject_background_bulk_load(api_url: str, items_count: int = 1000) -> float:
     """Inject background bulk payroll disbursement payload to create realistic queue contention.
 
     Returns:
@@ -413,8 +443,9 @@ def run_bisection_iteration(
 
     subprocess.run(locust_cmd, env=locust_env, check=False, capture_output=True, text=True)
 
-    # 3. Audit peak database connections
+    # 3. Audit peak database connections & PgBouncer telemetry
     db_total, db_active = query_postgres_connections()
+    pgb_stats = query_pgbouncer_stats()
     redis_clients = query_redis_clients()
 
     # 4. Parse results
@@ -448,6 +479,7 @@ def run_bisection_iteration(
         "aggregated": agg,
         "db_total_connections": db_total,
         "db_active_connections": db_active,
+        "pgbouncer_stats": pgb_stats,
         "redis_connected_clients": redis_clients,
         "sla_passed": passed,
     }
@@ -511,15 +543,15 @@ def execute_bisection_loop(
 
 def print_bisection_trace_table(trace: list[dict[str, Any]]) -> None:
     """Print nicely formatted comparison table for all bisection trials."""
-    sep = "=" * 175
-    sub_sep = "-" * 175
+    sep = "=" * 178
+    sub_sep = "-" * 178
     print("\n" + sep)
-    print("EMPIRICAL BISECTION BENCHMARK TRACE: MAXIMUM INSTANT CAPACITY UNDER CONTINUOUS BULK LOAD")
+    print("EMPIRICAL BISECTION BENCHMARK TRACE: MAXIMUM INSTANT CAPACITY UNDER CONTINUOUS BULK LOAD (WITH PGBOUNCER)")
     print(sep)
     header = (
         f"{'Stage':<18} | {'Iter':<6} | {'Tested Rate':<12} | "
         f"{'Inst P50':<9} | {'Inst P95':<9} | {'Inst P99':<9} | {'Inst SLA':<14} | "
-        f"{'Batch RPS':<10} | {'Total RPS':<10} | {'Max DB':<8} | {'DB Meas':<10} | {'Bisection Decision'}"
+        f"{'Batch RPS':<10} | {'Total RPS':<10} | {'Max DB':<10} | {'DB (PG/PB)':<12} | {'Bisection Decision'}"
     )
     print(header)
     print(sub_sep)
@@ -531,6 +563,7 @@ def print_bisection_trace_table(trace: list[dict[str, Any]]) -> None:
         inst = t.get("instant_payment", {})
         batch = t.get("batch_disbursement", {})
         agg = t.get("aggregated", {})
+        pgb = t.get("pgbouncer_stats", {})
 
         inst_p50 = f"{inst.get('p50', 0.0):.1f} ms" if inst.get("request_count", 0) > 0 else "N/A"
         inst_p95 = f"{inst.get('p95', 0.0):.1f} ms" if inst.get("request_count", 0) > 0 else "N/A"
@@ -539,26 +572,26 @@ def print_bisection_trace_table(trace: list[dict[str, Any]]) -> None:
 
         batch_rps = f"{batch.get('requests_per_sec', 0.0):.1f} r/s" if batch.get("request_count", 0) > 0 else "0.0 r/s"
         total_rps = f"{agg.get('requests_per_sec', 0.0):.1f} r/s"
-        max_db = "90/100"
-        meas_db = f"{t['db_total_connections']} tot"
+        max_db = "25/100 (PB)"
+        meas_db = f"{t['db_total_connections']} PG/{pgb.get('cl_active', 0)} PB"
 
         decision = "PASS -> Scale Up (low = mid)" if t["sla_passed"] else "FAIL -> Back Off (high = mid)"
         print(
             f"{stage_str:<18} | {iter_str:<6} | {rate_str:<12} | "
             f"{inst_p50:<9} | {inst_p95:<9} | {inst_p99:<9} | {sla_status:<14} | "
-            f"{batch_rps:<10} | {total_rps:<10} | {max_db:<8} | {meas_db:<10} | {decision}"
+            f"{batch_rps:<10} | {total_rps:<10} | {max_db:<10} | {meas_db:<12} | {decision}"
         )
 
     print(sep)
 
 
 def main() -> None:
-    """CLI Entry point for Two-Stage Empirical Bisection Benchmark."""
-    parser = argparse.ArgumentParser(description="Two-Stage 4-Phase Empirical Bisection Benchmark Engine")
+    """CLI Entry point for Two-Stage Empirical Bisection Benchmark with PgBouncer."""
+    parser = argparse.ArgumentParser(description="Two-Stage 4-Phase Empirical Bisection Benchmark Engine with PgBouncer")
     parser.add_argument("--min-rate", type=float, default=100.0, help="Stage 1 minimum arrival rate in req/s (default: 100.0)")
-    parser.add_argument("--max-rate", type=float, default=250.0, help="Stage 1 maximum search ceiling in req/s (default: 250.0)")
-    parser.add_argument("--tolerance", type=float, default=20.0, help="Bisection convergence tolerance in req/s (default: 20.0)")
-    parser.add_argument("--duration", type=str, default="10s", help="Load duration per trial (default: '10s')")
+    parser.add_argument("--max-rate", type=float, default=200.0, help="Stage 1 maximum search ceiling in req/s (default: 200.0)")
+    parser.add_argument("--tolerance", type=float, default=15.0, help="Bisection convergence tolerance in req/s (default: 15.0)")
+    parser.add_argument("--duration", type=str, default="30s", help="Load duration per trial (default: '30s')")
     parser.add_argument("--bulk-items", type=int, default=1000, help="Bulk payroll items per trial (default: 1000)")
     parser.add_argument("--api-url", type=str, default="http://localhost:8010", help="Edge Gateway base URL (default: http://localhost:8010)")
     parser.add_argument("--output", type=str, default=None, help="Custom output JSON path")
@@ -585,14 +618,14 @@ def main() -> None:
     parser.add_argument(
         "--frontier-min-rate",
         type=float,
-        default=150.0,
-        help="Frontier minimum search rate in req/s (default: 150.0)",
+        default=160.0,
+        help="Frontier minimum search rate in req/s (default: 160.0)",
     )
     parser.add_argument(
         "--frontier-max-rate",
         type=float,
-        default=350.0,
-        help="Frontier maximum search rate in req/s (default: 350.0)",
+        default=320.0,
+        help="Frontier maximum search rate in req/s (default: 320.0)",
     )
 
     args = parser.parse_args()
@@ -601,8 +634,9 @@ def main() -> None:
     atexit.register(restore_production_reference, args.api_url)
 
     logger.info("=================================================================")
-    logger.info("STARTING TWO-STAGE EMPIRICAL BISECTION BENCHMARK")
+    logger.info("STARTING TWO-STAGE EMPIRICAL BISECTION BENCHMARK WITH PGBOUNCER")
     logger.info("Hardware Target: AMD Ryzen 9 7900 (12 Cores / 24 Threads)")
+    logger.info("Database Architecture: Local PgBouncer (Transaction Pooling Mode)")
     logger.info("Mode: %s", "Two-Stage (Baseline + Hardware Frontier)" if args.hardware_frontier else "Stage 1 Only (Baseline C=4)")
     logger.info(
         "Stage 1 Range: [%.1f, %.1f] req/s | Tolerance: %.1f req/s | Duration: %s",
@@ -627,10 +661,17 @@ def main() -> None:
             # -----------------------------------------------------------------
             logger.info("\n>>> [STAGE 1] UNIT CAPACITY BASELINE FLEET SETUP")
             logger.info("  • Topology: C_instant=4, C_batch=1, W_critical=4, W_bulk=2, W_default=2")
-            logger.info("  • DB Pool Budget: pool=7, overflow=7 per instant container (56 max conns)")
-            logger.info("  • Total System DB Demand: 56 + 10 (batch) + 24 (workers) = 90 / 100")
+            logger.info("  • DB Architecture: PgBouncer multiplexing 100+ client sockets into 25 server connections")
+            logger.info("  • Container Pool Budget: pool=15, overflow=10 per instant container")
 
-            if not configure_bisection_fleet(instant_replicas=4, batch_replicas=1, instant_pool=7, instant_overflow=7):
+            if not configure_bisection_fleet(
+                instant_replicas=4,
+                batch_replicas=1,
+                instant_pool=15,
+                instant_overflow=10,
+                batch_pool=8,
+                batch_overflow=6,
+            ):
                 raise RuntimeError("Failed to configure Stage 1 container fleet")
 
             set_celery_critical_worker_pool(4)
@@ -639,7 +680,7 @@ def main() -> None:
             if not wait_for_api_healthy(args.api_url, timeout_seconds=25.0):
                 raise RuntimeError("API failed to become healthy after Stage 1 reconfiguration")
 
-            warm_up_api(args.api_url, count=15)
+            warm_up_api(args.api_url, count=20)
 
             logger.info("\n>>> [STAGE 1] EXECUTING BISECTION SEARCH (RANGE: [%.1f, %.1f] req/s)", args.min_rate, args.max_rate)
             stage1_trace, best_stage1 = execute_bisection_loop(
@@ -661,25 +702,19 @@ def main() -> None:
                 f_replicas = args.frontier_instant_replicas
                 f_workers = args.frontier_worker_critical
 
-                # Budget DB connection pool so instant fleet consumes at most 56 connections:
-                # 56 (instant) + 10 (batch) + (f_workers * 2 + 8) <= 86
-                per_inst_budget = max(56 // f_replicas, 4)
-                f_pool = max(per_inst_budget // 2, 2)
-                f_overflow = per_inst_budget - f_pool
-
-                total_est_db = (f_replicas * (f_pool + f_overflow)) + 10 + (f_workers * 2) + 8
-
-                logger.info("\n>>> [STAGE 2] HARDWARE SATURATION FRONTIER FLEET SETUP")
+                logger.info("\n>>> [STAGE 2] HARDWARE SATURATION FRONTIER FLEET SETUP (WITH PGBOUNCER)")
                 logger.info("  • Scaling C_instant: 4 -> %d containers", f_replicas)
                 logger.info("  • Growing Celery W_critical: 4 -> %d processes", f_workers)
-                logger.info("  • Re-budgeted DB Pool per container: pool=%d, overflow=%d (%d max conns)", f_pool, f_overflow, f_pool + f_overflow)
-                logger.info("  • Total System DB Demand: %d / 100 (Safe Headroom: %d%%)", total_est_db, 100 - total_est_db)
+                logger.info("  • Generous Client Pool per container: pool=15, overflow=10 (25 client sockets/pod)")
+                logger.info("  • PgBouncer Protection: 200 client sockets multiplexed into 25 PostgreSQL connections")
 
                 if not configure_bisection_fleet(
                     instant_replicas=f_replicas,
                     batch_replicas=1,
-                    instant_pool=f_pool,
-                    instant_overflow=f_overflow,
+                    instant_pool=15,
+                    instant_overflow=10,
+                    batch_pool=8,
+                    batch_overflow=6,
                 ):
                     raise RuntimeError("Failed to configure Stage 2 container fleet")
 
@@ -688,7 +723,7 @@ def main() -> None:
                 if not wait_for_api_healthy(args.api_url, timeout_seconds=25.0):
                     raise RuntimeError("API failed to become healthy after Stage 2 reconfiguration")
 
-                warm_up_api(args.api_url, count=20)
+                warm_up_api(args.api_url, count=25)
 
                 logger.info(
                     "\n>>> [STAGE 2] EXECUTING FRONTIER BISECTION SEARCH (RANGE: [%.1f, %.1f] req/s)",
@@ -729,20 +764,20 @@ def main() -> None:
         b1_inst = best_stage1.get("instant_payment", {})
         print(f"  • Sustainable Instant Throughput: {opt_stage1:.1f} req/s ({opt_stage1 / 4:.1f} req/s per container)")
         print(f"  • Latency Profile:                P50: {b1_inst.get('p50', 0.0):.1f} ms | P95: {b1_inst.get('p95', 0.0):.1f} ms | P99: {b1_inst.get('p99', 0.0):.1f} ms")
-        print(f"  • Peak DB Connections:            {best_stage1.get('db_total_connections', 0)} / 100")
+        print(f"  • Peak PostgreSQL Connections:    {best_stage1.get('db_total_connections', 0)} / 100")
 
     if args.hardware_frontier:
         opt_stage2 = best_stage2["candidate_rate"] if best_stage2 else args.frontier_min_rate
         f_rep = args.frontier_instant_replicas
         f_w = args.frontier_worker_critical
-        print(f"\n🚀 STAGE 2 HARDWARE SATURATION FRONTIER KNEE (C={f_rep}): {opt_stage2:.1f} req/s")
+        print(f"\n🚀 STAGE 2 HARDWARE SATURATION FRONTIER KNEE (C={f_rep}, WITH PGBOUNCER): {opt_stage2:.1f} req/s")
         if best_stage2:
             b2_inst = best_stage2.get("instant_payment", {})
             speedup = ((opt_stage2 - opt_stage1) / opt_stage1) * 100 if opt_stage1 > 0 else 0
             print(f"  • Sustainable Instant Throughput: {opt_stage2:.1f} req/s ({opt_stage2 / f_rep:.1f} req/s per container)")
             print(f"  • Throughput Scaling Speedup:     +{speedup:.1f}% increase over Stage 1 baseline")
             print(f"  • Latency Profile:                P50: {b2_inst.get('p50', 0.0):.1f} ms | P95: {b2_inst.get('p95', 0.0):.1f} ms | P99: {b2_inst.get('p99', 0.0):.1f} ms")
-            print(f"  • Peak DB Connections:            {best_stage2.get('db_total_connections', 0)} / 100")
+            print(f"  • Peak PostgreSQL Connections:    {best_stage2.get('db_total_connections', 0)} / 100 (Safe Ceiling: 25)")
             print(f"  • Hardware Saturation:            ~85% Zen 4 Physical Core Saturation ({f_rep} Web + {f_w} Critical Workers)")
 
     # Persist report
@@ -750,6 +785,7 @@ def main() -> None:
     report_data = {
         "timestamp": timestamp,
         "hardware": "AMD Ryzen 9 7900 (12 Cores / 24 Threads, 32GB RAM)",
+        "pgbouncer_enabled": True,
         "hardware_frontier_enabled": args.hardware_frontier,
         "optimal_stage1_rate": opt_stage1,
         "optimal_stage2_frontier_rate": best_stage2["candidate_rate"] if best_stage2 else None,

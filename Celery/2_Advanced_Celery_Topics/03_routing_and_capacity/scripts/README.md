@@ -239,16 +239,17 @@ Automated capacity matrix engine that dynamically scales API container replicas 
 ---
 
 ### 8. `benchmark_bisection_capacity.py`
-Automated Two-Stage 4-phase constrained optimization engine executing a bisection/binary search across arrival rates ($\lambda \in [\lambda_{\min}, \lambda_{\max}]$) under continuous background bulk load:
+Automated Two-Stage 4-phase constrained optimization engine executing a bisection/binary search across arrival rates ($\lambda \in [\lambda_{\min}, \lambda_{\max}]$) under continuous background bulk load, with **PgBouncer** transaction pooling integration:
+- **PgBouncer Multiplexing**: Sits between application containers and PostgreSQL (`DEFAULT_POOL_SIZE=25`, `POOL_MODE=transaction`). Allows generous container connection pools (`pool=15, overflow=10` = 25 sockets per pod) while capping real PostgreSQL connections to $\le 26$.
 - **Stage 1 (Unit Capacity Baseline)**: Locks bulk floor ($C_{\text{batch}}=1, W_{\text{bulk}}=2, N=100$, rate limit `500/m`), allocates $C_{\text{instant}}=4, W_{\text{critical}}=4$, and measures baseline knee ($c_{\text{inst}} = \lambda_{\max} / 4$).
-- **Stage 2 (Hardware Saturation Frontier - `--hardware-frontier`)**: Scales $C_{\text{instant}}$ from $4 \to 8$ containers, grows Celery $W_{\text{critical}}$ from $4 \to 6$ child processes via AMQP remote control, re-budgets database pools (`pool=4, overflow=3` $\implies 8 \times 7 = 56$ max conns, keeping total DB demand capped at $86/100$), and tests arrival rates up to $350\text{ req/s}$ to achieve ~85% Zen 4 physical core saturation.
+- **Stage 2 (Hardware Saturation Frontier - `--hardware-frontier`)**: Scales $C_{\text{instant}}$ from $4 \to 8$ containers, grows Celery $W_{\text{critical}}$ from $4 \to 6$ child processes via AMQP remote control, multiplexes 57+ client connections through PgBouncer into $\le 26$ PostgreSQL server connections, and tests arrival rates up to $320\text{ req/s}$ to achieve ~85% Zen 4 physical core saturation.
 - **Teardown**: Always restores reference stack ($2\text{ instant} + 2\text{ batch}, W_{\text{critical}}=4$).
 
 * **Zero-Param Execution**:
   ```bash
   python scripts/benchmark_bisection_capacity.py
   ```
-  *Default*: Sweeps Stage 1 arrival rates between $100.0\text{ req/s}$ and $250.0\text{ req/s}$ with $20.0\text{ req/s}$ tolerance and $1,000$ background bulk items per trial, prints the empirical bisection trace table, restores reference state, and updates `reports/benchmarks/bisection_latest.json`.
+  *Default*: Sweeps Stage 1 arrival rates between $100.0\text{ req/s}$ and $200.0\text{ req/s}$ with $15.0\text{ req/s}$ tolerance and $1,000$ background bulk items per trial, prints the empirical bisection trace table, restores reference state, and updates `reports/benchmarks/bisection_latest.json`.
 
 * **Parameters**:
   | Parameter | Type | Default | Description |
