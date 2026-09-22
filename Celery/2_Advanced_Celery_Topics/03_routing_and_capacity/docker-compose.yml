@@ -78,8 +78,10 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - api_instant
-      - api_batch
+      api_instant:
+        condition: service_healthy
+      api_batch:
+        condition: service_healthy
 
   # =============================================================================
   # The Golden Architecture: Ingestion SLA Container Pools (The Producers)
@@ -96,6 +98,7 @@ services:
     volumes:
       - ./app:/workspace/app:ro
     environment:
+      SERVICE_NAME: api_instant
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
       SYNC_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/payments_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
@@ -107,6 +110,12 @@ services:
       RATE_LIMIT_RPM: ${RATE_LIMIT_RPM:-60000}
       ENVIRONMENT: development
       LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,6 +138,7 @@ services:
     volumes:
       - ./app:/workspace/app:ro
     environment:
+      SERVICE_NAME: api_batch
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/payments_db
       SYNC_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/payments_db
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
@@ -140,6 +150,12 @@ services:
       RATE_LIMIT_RPM: ${RATE_LIMIT_RPM:-60000}
       ENVIRONMENT: development
       LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     depends_on:
       postgres:
         condition: service_healthy

@@ -25,6 +25,7 @@ from app.schemas import (
     PaymentStatus,
     QueueMetric,
     QueueMetricsResponse,
+    ServiceMetricsResponse,
     from_cents,
     to_cents,
 )
@@ -214,8 +215,30 @@ class TestOperationalSchemas:
 
     def test_health_response_schema(self) -> None:
         """Verify HealthResponse schema."""
-        h = HealthResponse(status="healthy", environment="test", database="connected", rabbitmq="connected", redis="connected")
+        h = HealthResponse(
+            status="healthy",
+            service="api_instant",
+            environment="test",
+            database="connected",
+            rabbitmq="connected",
+            redis="connected",
+        )
         assert h.status == "healthy"
+        assert h.service == "api_instant"
+
+    def test_service_metrics_schema(self) -> None:
+        """Verify ServiceMetricsResponse schema."""
+        metric = QueueMetric(name="critical", messages_ready=0, messages_unacknowledged=0, consumers=1)
+        resp = ServiceMetricsResponse(
+            service="api_instant",
+            environment="development",
+            status="healthy",
+            db_pool={"pool_size": 10, "checked_in": 1, "checked_out": 0, "overflow": 0},
+            queues=[metric],
+        )
+        assert resp.service == "api_instant"
+        assert resp.db_pool["pool_size"] == 10
+        assert len(resp.queues) == 1
 
     def test_account_response_schema(self) -> None:
         """Verify AccountResponse schema."""

@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     )
 
     # 4. Operational & Security Settings
+    service_name: str = Field(
+        default="api",
+        description="Identifies the specific service instance or SLA pool (e.g. api_instant, api_batch)",
+    )
     environment: str = Field(
         default="development",
         description="Deployment environment (development, staging, production, test)",

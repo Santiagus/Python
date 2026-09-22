@@ -16,15 +16,27 @@
 ### 1. System Health & Infrastructure Probes
 ### =============================================================================
 
-### 1.1 Kubernetes Liveness Probe
+### 1.1 General System Health & Readiness Probe
+GET {{baseUrl}}/health
+Accept: application/json
+
+### 1.2 Kubernetes Liveness Probe
 GET {{baseUrl}}/health/live
 Accept: application/json
 
-### 1.2 Kubernetes Readiness Probe (PostgreSQL & RabbitMQ socket verification)
+### 1.3 Kubernetes Readiness Probe (PostgreSQL & RabbitMQ socket verification)
 GET {{baseUrl}}/health/ready
 Accept: application/json
 
-### 1.3 Partner Bank Simulator Health
+### 1.4 Dedicated Instant SLA Pool Health Check (api_instant pool)
+GET {{baseUrl}}/health/instant/ready
+Accept: application/json
+
+### 1.5 Dedicated Batch SLA Pool Health Check (api_batch pool)
+GET {{baseUrl}}/health/batch/ready
+Accept: application/json
+
+### 1.6 Partner Bank Simulator Health
 GET {{bankUrl}}/health
 Accept: application/json
 
@@ -203,12 +215,24 @@ Accept: application/json
 ### 7. Operational Telemetry & DLQ Redrive
 ### =============================================================================
 
-### 7.1 Inspect Real-Time RabbitMQ Queue Backlogs
+### 7.1 General Service Metrics & Database Pool Telemetry
+GET {{baseUrl}}/metrics
+Accept: application/json
+
+### 7.2 Dedicated Instant Pool Metrics (pool_size=10, queue depths)
+GET {{baseUrl}}/metrics/instant
+Accept: application/json
+
+### 7.3 Dedicated Batch Pool Metrics (pool_size=8, queue depths)
+GET {{baseUrl}}/metrics/batch
+Accept: application/json
+
+### 7.4 Inspect Real-Time RabbitMQ Queue Backlogs
 GET {{baseUrl}}/metrics/queues
 X-API-Key: {{apiKey}}
 Accept: application/json
 
-### 7.2 Redrive Messages from Dead-Letter Queue (DLQ)
+### 7.5 Redrive Messages from Dead-Letter Queue (DLQ)
 POST {{baseUrl}}/admin/queues/dlq/redrive
 X-API-Key: {{apiKey}}
 Content-Type: application/json

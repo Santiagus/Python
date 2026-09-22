@@ -44,10 +44,12 @@ flowchart TD
         BankSim["Partner Bank Gateway Simulator (Port 8011)<br/>• Shared keep-alive pool (50 conns)<br/>• FedNow / RTP / ACH Core Rails"]
     end
 
-    %% Edge Semantic Routing
+    %% Edge Semantic Routing & Per-Service Observability
     Nginx -->|"location /payments/instant (least_conn)"| API_I1 & API_I2
     Nginx -->|"location /disbursements/batch (least_conn)"| API_B1 & API_B2
-    Nginx -->|"location / (health, metrics, docs)"| API_I1 & API_I2
+    Nginx -->|"location /health/instant/*, /metrics/instant"| API_I1 & API_I2
+    Nginx -->|"location /health/batch/*, /metrics/batch"| API_B1 & API_B2
+    Nginx -->|"location / (default health, metrics, docs)"| API_I1 & API_I2
 
     %% Ingestion API Dispatches & Writes
     API_I1 & API_I2 -->|"critical tasks dispatch"| RMQ
@@ -575,10 +577,20 @@ To achieve true physical workload isolation at the ingestion layer, the API flee
   - Dedicated exclusively to `/disbursements/batch` (corporate payroll uploads) and settlement tracking.
   - Budgeted connection pool: `DB_POOL_SIZE=8, DB_MAX_OVERFLOW=6` per container.
   - Absorbs multi-row SQL inserts and `.chunks(100)` slicing without ever impacting real-time payments.
-- **Nginx Semantic Edge Routing**:
+- **Nginx Semantic Edge Routing & Per-Service Observability**:
   - `location /payments/instant` $\to$ `proxy_pass http://instant_backend;` (`least_conn; keepalive 64;`)
   - `location /disbursements/batch` $\to$ `proxy_pass http://batch_backend;` (`least_conn; keepalive 64;`)
-  - `location /` $\to$ `proxy_pass http://instant_backend;`
+  - `location /health/instant/` & `location = /health/instant` $\to$ `proxy_pass http://instant_backend/health/;`
+  - `location /health/batch/` & `location = /health/batch` $\to$ `proxy_pass http://batch_backend/health/;`
+  - `location /metrics/instant` $\to$ `proxy_pass http://instant_backend/metrics;`
+  - `location /metrics/batch` $\to$ `proxy_pass http://batch_backend/metrics;`
+  - `location /` (default fallback for `/health`, `/metrics`, `/docs`, `/openapi.json`) $\to$ `proxy_pass http://instant_backend;`
+- **Dual-Level Health Check Architecture (Zero Monitoring Blind Spots)**:
+  1. *Container/Pod Level*: Each container (`api_instant`, `api_batch`) defines an autonomous Docker Compose `healthcheck:` (`curl -sf http://localhost:8000/health/ready`) with 5s interval, 3s timeout, and 5 retries. Upstream orchestrators (`gateway`) wait for `condition: service_healthy` before routing traffic.
+  2. *Edge Gateway Level*: Nginx exposes dedicated per-service monitoring paths (`/health/instant/*`, `/health/batch/*`, `/metrics/instant`, `/metrics/batch`) so external monitoring scrapers (Prometheus, Datadog) and cloud load balancer target groups can pinpoint health status and connection pool metrics per SLA pool, eliminating the blind spot where generic `/health` only tested `instant_backend`.
+- **In-Container Service Identity & Telemetry**:
+  - Every container runs full FastAPI operational endpoints (`/health`, `/health/live`, `/health/ready`, `/metrics`) and identifies its specific role via `SERVICE_NAME` (`service: "api_instant"` vs `service: "api_batch"`).
+  - `/metrics` returns real-time SQLAlchemy pool telemetry (`pool_size`, `checked_in`, `checked_out`, `overflow`) and RabbitMQ queue backlogs.
 - **Empirical Verification**:
   - Under continuous 500-item batch queue saturation, instant payments achieve **$14.78\text{ ms}$ P99 ingestion latency** and **$18.01\text{ ms}$ P99 worker clearing latency** ($\mathbf{32.79\text{ ms}}$ total end-to-end clearing SLA).
   - 100% of real-time requests are handled by `api_instant` and 100% of batch requests are handled by `api_batch` (verified via `X-Upstream-Addr` audit).
@@ -600,7 +612,11 @@ To achieve true physical workload isolation at the ingestion layer, the API flee
 | **Queue Isolation** | Physical separation of `critical`, `default`, and `bulk` traffic. | Verified via Docker Compose running 3 separate worker container fleets with `-Q` bindings. |
 | **Prefetch Discipline** | Fair distribution on `critical`; high throughput on `bulk`. | `--prefetch-multiplier=1 -O fair` on critical; `--prefetch-multiplier=4` on bulk. |
 | **Task Batching** | High-volume batch ingestion partitioned using `.chunks()`. | Bulk disbursements chunked in batches of 100 to minimize RabbitMQ message and ack volume. |
-| **Dual Health Probes** | Kubernetes-ready `/health/live` and `/health/ready` endpoints. | Deep readiness probe verifies active DB pool and RabbitMQ connection status. |
+| **Dual Health Probes & Edge Observability** | Container-level `/health/ready` checks + edge per-service routing (`/health/instant/*`, `/health/batch/*`, `/metrics/*`). | Docker healthchecks on port 8000; Nginx per-service routing on port 8010; responses return specific `service` identity and DB pool metrics. |
+| **Time Limit Invariants** | Dual soft and hard time limits preventing hung worker threads. | `soft_time_limit=3s` catches timeouts and transitions records to `failed`; `time_limit=5s` kills stuck processes. |
+| **Dead-Letter Handling** | Expired or rejected messages routed to `payments.dlx` with redrive capability. | DLX configuration captures messages rejected with `requeue=False` with headers intact for replay. |
+| **Eager Singleton Warm-up** | Singletons initialized at module load with role-budgeted connection pools. | `_shared_client` with `Limits(20, 50, 30.0)`, worker DB pool `2/2`, API pool `10/20`, eliminating first-call latency. |
+| **Automated Testing** | 100% statement coverage across unit, integration, e2e, and load tests. | 4-tier Pytest suite verifying routing, prefetch behavior, contention resistance, live E2E, and DLQ handling. |
 | **Time Limit Invariants** | Dual soft and hard time limits preventing hung worker threads. | `soft_time_limit=3s` catches timeouts and transitions records to `failed`; `time_limit=5s` kills stuck processes. |
 | **Dead-Letter Handling** | Expired or rejected messages routed to `payments.dlx` with redrive capability. | DLX configuration captures messages rejected with `requeue=False` with headers intact for replay. |
 | **Eager Singleton Warm-up** | Singletons initialized at module load with role-budgeted connection pools. | `_shared_client` with `Limits(20, 50, 30.0)`, worker DB pool `2/2`, API pool `10/20`, eliminating first-call latency. |

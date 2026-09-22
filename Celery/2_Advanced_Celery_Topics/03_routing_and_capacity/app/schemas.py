@@ -331,9 +331,62 @@ class DLQRedriveResponse(BaseModel):
 class HealthResponse(BaseModel):
     """Comprehensive system health and service connectivity status."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "status": "healthy",
+                    "service": "api_instant",
+                    "environment": "development",
+                    "database": "connected",
+                    "rabbitmq": "connected",
+                    "redis": "connected",
+                }
+            ]
+        }
+    )
+
     status: str = Field(..., examples=["healthy"])
+    service: str = Field(default="api", examples=["api_instant"], description="Service instance or SLA pool identifier")
     environment: str = Field(..., examples=["development"])
     database: str = Field(..., examples=["connected"])
     rabbitmq: str = Field(..., examples=["connected"])
     redis: str = Field(..., examples=["connected"])
+
+
+class ServiceMetricsResponse(BaseModel):
+    """Service-level runtime, database pool, and operational metrics."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "service": "api_instant",
+                    "environment": "development",
+                    "status": "healthy",
+                    "db_pool": {
+                        "pool_size": 10,
+                        "checked_in": 10,
+                        "checked_out": 0,
+                        "overflow": 0,
+                    },
+                    "queues": [
+                        {
+                            "name": "critical",
+                            "messages_ready": 0,
+                            "messages_unacknowledged": 0,
+                            "consumers": 1,
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+
+    service: str = Field(..., examples=["api_instant"], description="Service instance or SLA pool identifier")
+    environment: str = Field(..., examples=["development"], description="Application environment")
+    status: str = Field(..., examples=["healthy"], description="Current service operational status")
+    db_pool: dict[str, int] = Field(..., description="Database connection pool metrics")
+    queues: list[QueueMetric] = Field(default_factory=list, description="Broker queue depths")
+
 

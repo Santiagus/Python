@@ -260,6 +260,38 @@ class TestOperationalEndpoints:
     """Test queue metrics, DLQ redrive, and health probes."""
 
     @pytest.mark.asyncio
+    async def test_get_service_metrics_connected(self, async_client: AsyncClient) -> None:
+        """Service metrics endpoint returns 200 with runtime DB pool and broker telemetry."""
+        mock_channel = MagicMock()
+        mock_channel.queue_declare.side_effect = [
+            ("critical", 2, 1),
+            Exception("Queue not declared"),
+            ("bulk", 0, 1),
+            ("rejected_payments", 0, 0),
+        ]
+        mock_conn = MagicMock()
+        mock_conn.channel.return_value = mock_channel
+        mock_conn.__enter__.return_value = mock_conn
+
+        with patch("app.routes.Connection", return_value=mock_conn):
+            res = await async_client.get("/metrics")
+            assert res.status_code == 200
+            body = res.json()
+            assert body["service"] == "api"
+            assert "db_pool" in body
+            assert len(body["queues"]) == 4
+
+    @pytest.mark.asyncio
+    async def test_get_service_metrics_broker_unreachable(self, async_client: AsyncClient) -> None:
+        """When broker fails during /metrics, returns graceful fallback metrics."""
+        with patch("app.routes.Connection", side_effect=RuntimeError("Broker failure")):
+            res = await async_client.get("/metrics")
+            assert res.status_code == 200
+            body = res.json()
+            assert body["service"] == "api"
+            assert all(q["messages_ready"] == 0 for q in body["queues"])
+
+    @pytest.mark.asyncio
     async def test_get_queue_metrics(
         self,
         async_client: AsyncClient,
@@ -412,11 +444,26 @@ class TestOperationalEndpoints:
             assert "DLQ redrive failed" in res.json()["detail"]
 
     @pytest.mark.asyncio
+    async def test_health_check_endpoint(self, async_client: AsyncClient, db_session) -> None:
+        """General /health endpoint returns 200 and HealthResponse."""
+        mock_conn = MagicMock()
+        mock_conn.__enter__.return_value = mock_conn
+        with patch("app.routes.Connection", return_value=mock_conn):
+            res = await async_client.get("/health")
+            assert res.status_code == 200
+            body = res.json()
+            assert body["status"] == "healthy"
+            assert body["service"] == "api"
+            assert body["database"] == "connected"
+            assert body["rabbitmq"] == "connected"
+
+    @pytest.mark.asyncio
     async def test_health_live_probe(self, async_client: AsyncClient) -> None:
-        """Liveness probe is public and returns 200."""
+        """Liveness probe is public and returns 200 with service identifier."""
         res = await async_client.get("/health/live")
         assert res.status_code == 200
         assert res.json()["status"] == "alive"
+        assert res.json()["service"] == "api"
 
     @pytest.mark.asyncio
     async def test_health_live_probe_with_delay(self, async_client: AsyncClient) -> None:
@@ -424,6 +471,7 @@ class TestOperationalEndpoints:
         res = await async_client.get("/health/live", params={"delay_ms": 10})
         assert res.status_code == 200
         assert res.json()["status"] == "alive"
+        assert res.json()["service"] == "api"
 
     @pytest.mark.asyncio
     async def test_health_ready_probe(self, async_client: AsyncClient, db_session) -> None:
@@ -435,6 +483,7 @@ class TestOperationalEndpoints:
             assert res.status_code == 200
             body = res.json()
             assert body["status"] == "healthy"
+            assert body["service"] == "api"
             assert body["database"] == "connected"
             assert body["rabbitmq"] == "connected"
 
@@ -445,6 +494,7 @@ class TestOperationalEndpoints:
             res = await async_client.get("/health/ready")
             assert res.status_code == 503
             assert "degraded" in res.json()["detail"]["status"]
+            assert res.json()["detail"]["service"] == "api"
 
     @pytest.mark.asyncio
     async def test_health_ready_probe_database_error(self, async_client: AsyncClient, db_session) -> None:
@@ -453,3 +503,4 @@ class TestOperationalEndpoints:
             res = await async_client.get("/health/ready")
             assert res.status_code == 503
             assert "unhealthy" in res.json()["detail"]["database"]
+            assert res.json()["detail"]["service"] == "api"

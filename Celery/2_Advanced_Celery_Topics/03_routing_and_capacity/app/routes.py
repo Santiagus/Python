@@ -13,11 +13,10 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Security, status
 from kombu import Connection
-from sqlalchemy import select, text
 from sqlalchemy import insert, select, text
 
 from app.config import Settings, get_settings
-from app.db import get_session
+from app.db import get_engine, get_session
 from app.dependencies import AuthenticatedUser, DbSession
 from app.dispatcher import PaymentDispatcher
 from app.models import Account, BatchSettlement, Disbursement, Payment
@@ -35,6 +34,7 @@ from app.schemas import (
     PaymentStatus,
     QueueMetric,
     QueueMetricsResponse,
+    ServiceMetricsResponse,
     from_cents,
     to_cents,
 )
@@ -329,6 +329,70 @@ async def get_account_details(
 # =============================================================================
 
 @router.get(
+    "/metrics",
+    response_model=ServiceMetricsResponse,
+    summary="Service runtime, connection pool, and operational metrics",
+)
+async def get_service_metrics(
+    settings: Settings = Depends(get_settings),
+) -> ServiceMetricsResponse:
+    """Return service-level metrics including DB pool telemetry and queue depths.
+
+    Args:
+        settings: Injected application settings.
+
+    Returns:
+        ServiceMetricsResponse: Runtime metrics, database pool status, and queue telemetry.
+    """
+    # 1. Inspect SQLAlchemy database pool stats
+    engine = get_engine()
+    sync_pool = getattr(engine.sync_engine, "pool", None)
+    pool_stats = {
+        "pool_size": getattr(sync_pool, "size", lambda: settings.db_pool_size)(),
+        "checked_in": getattr(sync_pool, "checkedin", lambda: 0)(),
+        "checked_out": getattr(sync_pool, "checkedout", lambda: 0)(),
+        "overflow": getattr(sync_pool, "overflow", lambda: 0)(),
+    }
+
+    # 2. Query RabbitMQ queue backlog depths
+    queues = ["critical", "default", "bulk", "rejected_payments"]
+    metric_list: list[QueueMetric] = []
+    try:
+        with Connection(settings.rabbitmq_url, connect_timeout=2.0) as conn:
+            channel = conn.channel()
+            for q in queues:
+                try:
+                    name, ready, consumers = channel.queue_declare(queue=q, passive=True)
+                    metric_list.append(
+                        QueueMetric(
+                            name=q,
+                            messages_ready=ready,
+                            messages_unacknowledged=0,
+                            consumers=consumers,
+                        )
+                    )
+                except Exception:
+                    metric_list.append(
+                        QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
+                    )
+    except Exception as exc:
+        logger.warning("service_metrics_broker_error", extra={"error": str(exc)})
+        metric_list = [
+            QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
+            for q in queues
+        ]
+
+    # 3. Assemble and return service metrics
+    return ServiceMetricsResponse(
+        service=settings.service_name,
+        environment=settings.environment,
+        status="healthy",
+        db_pool=pool_stats,
+        queues=metric_list,
+    )
+
+
+@router.get(
     "/metrics/queues",
     response_model=QueueMetricsResponse,
     summary="Get real-time RabbitMQ queue depths",
@@ -415,22 +479,46 @@ async def redrive_dlq_messages(
 
 
 # =============================================================================
-# 5. Dual Health Probes (/health/live & /health/ready)
+# 5. Dual Health Probes (/health, /health/live & /health/ready)
 # =============================================================================
 
+@router.get("/health", response_model=HealthResponse, summary="System Health & Readiness Check")
+async def health_check(
+    session: DbSession,
+    settings: Settings = Depends(get_settings),
+) -> HealthResponse:
+    """General health check verifying database and broker connectivity.
+
+    Args:
+        session: Injected async database session.
+        settings: Injected application settings.
+
+    Returns:
+        HealthResponse: Comprehensive connectivity status.
+    """
+    return await health_ready(session=session, settings=settings)
+
+
 @router.get("/health/live", summary="Kubernetes Liveness Probe")
-async def health_live(delay_ms: int = 0) -> dict[str, str]:
+async def health_live(
+    delay_ms: int = 0,
+    settings: Settings = Depends(get_settings),
+) -> dict[str, str]:
     """Kubernetes liveness probe: verifies process is alive.
 
     Args:
         delay_ms: Optional simulated processing delay in milliseconds for load balancing testing.
+        settings: Injected application settings.
+
+    Returns:
+        dict[str, str]: Liveness confirmation and service identifier.
     """
     # 1. Simulate in-flight processing delay if requested
     if delay_ms > 0:
         import asyncio
         await asyncio.sleep(delay_ms / 1000.0)
 
-    return {"status": "alive"}
+    return {"status": "alive", "service": settings.service_name}
 
 
 @router.get("/health/ready", response_model=HealthResponse, summary="Kubernetes Readiness Probe")
@@ -438,7 +526,18 @@ async def health_ready(
     session: DbSession,
     settings: Settings = Depends(get_settings),
 ) -> HealthResponse:
-    """Kubernetes readiness probe: verifies database and broker connectivity."""
+    """Kubernetes readiness probe: verifies database and broker connectivity.
+
+    Args:
+        session: Injected async database session.
+        settings: Injected application settings.
+
+    Returns:
+        HealthResponse: Readiness status across PostgreSQL and RabbitMQ.
+
+    Raises:
+        HTTPException: 503 if any core dependency is unhealthy.
+    """
     # 1. Check PostgreSQL connectivity
     db_status = "connected"
     try:
@@ -464,6 +563,7 @@ async def health_ready(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "status": overall_status,
+                "service": settings.service_name,
                 "environment": settings.environment,
                 "database": db_status,
                 "rabbitmq": rmq_status,
@@ -473,6 +573,7 @@ async def health_ready(
 
     return HealthResponse(
         status=overall_status,
+        service=settings.service_name,
         environment=settings.environment,
         database=db_status,
         rabbitmq=rmq_status,
