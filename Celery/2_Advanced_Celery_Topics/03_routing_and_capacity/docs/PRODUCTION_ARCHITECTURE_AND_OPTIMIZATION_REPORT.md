@@ -325,7 +325,59 @@ The following matrix records empirical telemetry collected from live multi-conta
 
 ---
 
-## 8. Automated Test Verification
+## 8. Dual-Layer Observability Architecture: Whitebox vs. Blackbox Monitoring
+
+To prevent operational blind spots while adhering to enterprise Prometheus/APM standards, the Golden Architecture establishes two discrete monitoring layers:
+
+```mermaid
+flowchart TD
+    subgraph ExternalWorld ["1. External / Blackbox Synthetic Monitoring (Port 8010 via Nginx)"]
+        Uptime["Datadog Synthetics / Pingdom / StatusPage.io"]
+    end
+
+    subgraph Edge ["Nginx Edge Gateway (payment_gateway:8010)"]
+        H_Instant["/health/instant (Monitors Instant Rail)"]
+        H_Batch["/health/batch (Monitors Batch Rail)"]
+    end
+
+    subgraph InternalVPC ["2. Internal / Whitebox APM Monitoring (Direct Port 8000)"]
+        Prometheus["Prometheus / Datadog Agent"]
+    end
+
+    subgraph Containers ["Application Containers (Port 8000)"]
+        C_Instant["api_instant (1..2):8000<br/>• Standard /health, /ready, /metrics"]
+        C_Batch["api_batch (1..2):8000<br/>• Standard /health, /ready, /metrics"]
+    end
+
+    Uptime -->|"Tests public edge availability"| H_Instant & H_Batch
+    H_Instant --> C_Instant
+    H_Batch --> C_Batch
+
+    Prometheus -->|"Scrapes directly per IP (no proxy)"| C_Instant
+    Prometheus -->|"Scrapes directly per IP (no proxy)"| C_Batch
+```
+
+1. **Internal Whitebox APM (Direct Port 8000)**:
+   - Prometheus and APM agents scrape each container directly at `http://<container_ip>:8000/metrics` without passing through Nginx.
+   - Bypassing the reverse proxy prevents time-series metric corruption (counter resets and fluctuating gauges caused by proxy load-balancing).
+   - Prometheus automatically attaches `instance="<ip>:8000"`, allowing Grafana dashboards to visualize per-container resource utilization (DB pool checkout, memory, CPU) alongside pool-wide aggregations.
+   - Docker Compose `healthcheck:` runs autonomously on `http://localhost:8000/health/ready` inside each container.
+
+2. **External Blackbox Synthetic Monitoring (Edge Port 8010 via Nginx)**:
+   - External uptime probes (Pingdom, StatusPage, Datadog Synthetics) query `https://gateway:8010/health/instant` and `https://gateway:8010/health/batch`.
+   - Eliminates the blind spot where a generic `/health` endpoint only tested `instant_backend`, which would keep status pages falsely green during an outage in the batch disbursement fleet.
+
+| Monitoring Dimension | Layer 1: Internal Whitebox Monitoring | Layer 2: External Blackbox Synthetic Monitoring |
+| :--- | :--- | :--- |
+| **Primary Agents** | Prometheus, Datadog Agent, Kubernetes Kubelet | Pingdom, Datadog Synthetics, StatusPage.io, Cloudflare |
+| **Network Target** | Individual container/Pod IPs (`172.22.0.x:8000` or `localhost:8000`) | Public Nginx Edge Gateway (`https://gateway:8010`) |
+| **Route Invoked** | Standard `/health`, `/health/ready`, `/metrics` (direct, unproxied) | Dedicated `/health/instant`, `/health/batch` (via reverse proxy) |
+| **Why Not the Other?** | Scraping via proxy corrupts time-series metrics via round-robin | External probes cannot reach private RFC 1918 container IPs |
+| **Operational Value** | Memory leaks, thread deadlocks, DB pool starvation per replica | SLA compliance, public status pages, multi-rail customer availability |
+
+---
+
+## 9. Automated Test Verification
 
 All architectural optimizations were verified using the comprehensive Pytest test suite:
 
@@ -334,8 +386,8 @@ All architectural optimizations were verified using the comprehensive Pytest tes
 ```
 
 **Results**:
-- **Tests Passed**: **120 of 120 passed** in $12.35\text{ seconds}$.
-- **Coverage**: **100.00% Statement and Branch Coverage** (`951 statements, 100 branches, 0 missed lines`).
-- **Health Checks**: Live and healthy across all services on `http://localhost:8010/health/ready`.
+- **Tests Passed**: **124 of 124 passed** in $10.68\text{ seconds}$.
+- **Coverage**: **100.00% Statement and Branch Coverage** (`983 statements, 102 branches, 0 missed lines`).
+- **Health Checks**: Live and healthy across all services on `http://localhost:8010/health/ready`, `/health/instant/ready`, and `/health/batch/ready`.
 
 

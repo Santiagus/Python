@@ -595,6 +595,65 @@ To achieve true physical workload isolation at the ingestion layer, the API flee
   - Under continuous 500-item batch queue saturation, instant payments achieve **$14.78\text{ ms}$ P99 ingestion latency** and **$18.01\text{ ms}$ P99 worker clearing latency** ($\mathbf{32.79\text{ ms}}$ total end-to-end clearing SLA).
   - 100% of real-time requests are handled by `api_instant` and 100% of batch requests are handled by `api_batch` (verified via `X-Upstream-Addr` audit).
 
+### 5. The Two Monitoring Layers: Whitebox vs. Blackbox Observability
+
+In production distributed architectures, operational monitoring is partitioned into two complementary layers that serve fundamentally different operational requirements:
+
+```mermaid
+flowchart TD
+    subgraph ExternalWorld ["1. External / Blackbox Synthetic Monitoring (Port 8010 via Nginx)"]
+        Uptime["Datadog Synthetics / Pingdom / StatusPage.io"]
+    end
+
+    subgraph Edge ["Nginx Edge Gateway (payment_gateway:8010)"]
+        H_Instant["/health/instant (Monitors Instant Rail)"]
+        H_Batch["/health/batch (Monitors Batch Rail)"]
+    end
+
+    subgraph InternalVPC ["2. Internal / Whitebox APM Monitoring (Direct Port 8000)"]
+        Prometheus["Prometheus / Datadog Agent"]
+    end
+
+    subgraph Containers ["Application Containers (Port 8000)"]
+        C_Instant["api_instant (1..2):8000<br/>• Standard /health, /ready, /metrics"]
+        C_Batch["api_batch (1..2):8000<br/>• Standard /health, /ready, /metrics"]
+    end
+
+    Uptime -->|"Tests public edge availability"| H_Instant & H_Batch
+    H_Instant --> C_Instant
+    H_Batch --> C_Batch
+
+    Prometheus -->|"Scrapes directly per IP (no proxy)"| C_Instant
+    Prometheus -->|"Scrapes directly per IP (no proxy)"| C_Batch
+```
+
+#### Layer 1: Internal Whitebox Monitoring (Prometheus, Kubelet, Datadog Agent)
+- **Scrapes Directly per Container (Bypassing Nginx)**: Internal APM systems (Prometheus server, Datadog Agent daemonset) never scrape metrics through the Nginx reverse proxy. Scraping through a reverse proxy causes time-series metric corruption: Nginx would round-robin across container replicas, causing Prometheus to observe oscillating counter resets, jittering gauge spikes, and incorrect rate calculations.
+- **Service Discovery & Uniform Endpoints**: Using Kubernetes Endpoints, Consul SD, or Docker overlay DNS, Prometheus discovers each container's internal IP directly and scrapes identical, uniform endpoints:
+  - `GET http://<container_ip>:8000/health/live` (Liveness)
+  - `GET http://<container_ip>:8000/health/ready` (Readiness)
+  - `GET http://<container_ip>:8000/metrics` (Runtime & connection pool telemetry)
+- **Automatic Labeling & Dashboard Aggregation**: Prometheus automatically injects metadata labels (`instance="<ip>:8000"`, `job="payment_api"`), while the application payload injects `service="api_instant"` or `service="api_batch"`. In Grafana, operators can drill down into individual container health (`by (instance)`) to detect single-pod memory leaks or connection pool starvation, or aggregate pool-wide (`by (service)`).
+- **Container Lifecycle Self-Healing**: Container orchestrators (Docker Compose `healthcheck:` or Kubernetes Kubelet) query `http://localhost:8000/health/ready` locally within the container namespace, restarting hung child processes automatically without depending on edge routing.
+
+#### Layer 2: External Blackbox Synthetic Monitoring (Edge Gateway / Nginx Port 8010)
+- **Customer-Facing Availability & Status Pages**: External uptime monitors (Pingdom, Datadog Synthetics, UptimeRobot, Cloudflare health checks) live outside the private VPC and can only communicate with the public gateway domain (`https://api.mycompany.com:8010`).
+- **Eliminating the False-Green Blind Spot**: If Nginx only exposed a single root `/health` routed to `instant_backend`, a catastrophic failure in the bulk batch ingestion fleet (`api_batch` OOM crash or DB pool deadlock) would go undetected by external monitoring. The public StatusPage would falsely report "100% Operational" while corporate clients failed to upload payroll disbursements.
+- **Rail-Specific Edge Health Checks**:
+  - `GET https://api.mycompany.com:8010/health/instant` $\to$ Verifies real-time FedNow / RTP rail availability.
+  - `GET https://api.mycompany.com:8010/health/batch` $\to$ Verifies corporate payroll disbursement ACH rail availability.
+  - If corporate payroll crashes, synthetic monitors trigger immediate targeted incident notifications (*"ACH Batch Disbursement Rail Degraded"*), while instant retail checkout rails continue operating normally.
+
+#### Summary Comparison Matrix
+
+| Monitoring Dimension | Layer 1: Internal Whitebox Monitoring | Layer 2: External Blackbox Synthetic Monitoring |
+| :--- | :--- | :--- |
+| **Primary Agents** | Prometheus, Datadog Agent, Kubernetes Kubelet | Pingdom, Datadog Synthetics, StatusPage.io, Cloudflare |
+| **Network Target** | Individual container/Pod IPs (`172.22.0.x:8000` or `localhost:8000`) | Public Nginx Edge Gateway (`https://gateway:8010`) |
+| **Route Invoked** | Standard `/health`, `/health/ready`, `/metrics` (direct, unproxied) | Dedicated `/health/instant`, `/health/batch` (via reverse proxy) |
+| **Why Not the Other?** | Scraping via proxy corrupts time-series metrics via round-robin | External probes cannot reach private RFC 1918 container IPs |
+| **Operational Value** | Memory leaks, thread deadlocks, DB pool starvation per replica | SLA compliance, public status pages, multi-rail customer availability |
+
 ---
 
 ## 11. Checklist of Architectural Standards
