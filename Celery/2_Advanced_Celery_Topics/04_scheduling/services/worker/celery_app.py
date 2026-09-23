@@ -1,18 +1,26 @@
 """Celery application configuration and lifecycle signal management for Module 04 Scheduling.
 
 Enforces AMQP 0-9-1 queue routing, strict JSON serialization, explicit timezone settings,
-and connection warm-up hooks at worker child process initialization.
+connection warm-up hooks at worker child process initialization, and pretty development logging.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from contextvars import Token
+from typing import Any
 
 from celery import Celery, signals
 from kombu import Exchange, Queue
 
 from app.config import get_settings
 from app.db import close_db_engine, init_db
+from app.logging_config import (
+    PrettyDevFormatter,
+    RequestContextFilter,
+    current_request_id,
+)
 from services.worker.locks import close_redis_client
 
 logger = logging.getLogger(__name__)
@@ -68,7 +76,84 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
 )
 
+# Active ContextVar tokens per task ID to prevent context leakage across task invocations
+_task_context_tokens: dict[str, Token[str | None]] = {}
 
+
+# =============================================================================
+# 4. Celery Logging Configuration Signals
+# =============================================================================
+@signals.after_setup_logger.connect
+def setup_celery_logger(logger: logging.Logger, **kwargs: object) -> None:
+    """Attach RequestContextFilter and PrettyDevFormatter to Celery root logger."""
+    for handler in logger.handlers:
+        handler.addFilter(RequestContextFilter())
+        handler.setFormatter(PrettyDevFormatter())
+
+
+@signals.after_setup_task_logger.connect
+def setup_celery_task_logger(logger: logging.Logger, **kwargs: object) -> None:
+    """Attach RequestContextFilter and PrettyDevFormatter to Celery task logger."""
+    for handler in logger.handlers:
+        handler.addFilter(RequestContextFilter())
+        handler.setFormatter(PrettyDevFormatter())
+
+
+# =============================================================================
+# 5. Distributed Tracing & Task ContextVar Signals
+# =============================================================================
+@signals.task_prerun.connect
+def handle_task_prerun(
+    sender: Any,
+    task_id: str,
+    task: Any,
+    args: Any,
+    kwargs: Any,
+    **kw: object,
+) -> None:
+    """Extract correlation_id from task headers and bind to worker ContextVar."""
+    request_headers = getattr(task.request, "headers", None) or {}
+    correlation_id = request_headers.get("correlation_id") or request_headers.get("request_id") or task_id
+    token = current_request_id.set(correlation_id)
+    _task_context_tokens[task_id] = token
+    logger.debug(
+        "worker_task_started",
+        extra={
+            "task_name": getattr(task, "name", "unknown"),
+            "task_id": task_id,
+            "correlation_id": correlation_id,
+        },
+    )
+
+
+@signals.task_postrun.connect
+def handle_task_postrun(
+    sender: Any,
+    task_id: str,
+    task: Any,
+    args: Any,
+    kwargs: Any,
+    retval: Any,
+    state: str,
+    **kw: object,
+) -> None:
+    """Reset ContextVar token upon task completion to prevent context leakage."""
+    token = _task_context_tokens.pop(task_id, None)
+    if token is not None:
+        current_request_id.reset(token)
+    logger.debug(
+        "worker_task_finished",
+        extra={
+            "task_name": getattr(task, "name", "unknown"),
+            "task_id": task_id,
+            "state": state,
+        },
+    )
+
+
+# =============================================================================
+# 6. Worker Lifecycle Signals
+# =============================================================================
 @signals.worker_process_init.connect
 def on_worker_process_init(**kwargs: object) -> None:
     """Warm database pool and logging context when worker child process forks.
@@ -82,8 +167,6 @@ def on_worker_process_init(**kwargs: object) -> None:
 @signals.worker_process_shutdown.connect
 def on_worker_process_shutdown(**kwargs: object) -> None:
     """Cleanly dispose of database and Redis pools on worker process termination."""
-    import asyncio
-
     logger.info("Disposing worker process resources")
     try:
         loop = asyncio.get_event_loop()
