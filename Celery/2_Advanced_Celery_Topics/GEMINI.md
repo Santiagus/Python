@@ -63,7 +63,7 @@ Clear architectural diagrams and execution traces must accompany every module.
   * Defines the test architecture hierarchy (Layer 1 Unit -> Layer 2 Canvas -> Layer 3 API -> Layer 4 Benchmarks).
   * Comprehensive Test Matrix table specifying: Test ID, Function/File, Fixture/Input, Invariants/Assertions, and Expected Outcome.
   * Red-Green-Refactor TDD roadmap.
-* **Mermaid Visualizations**:
+* **Mermaid Visualizations & Syntax Validation**:
   * Use Mermaid flowcharts (`flowchart TD` / `flowchart LR`) for system topologies, layer boundaries, and broker topologies.
   * **Mandatory Sequence Diagrams (`sequenceDiagram`)**:
     * Must cover **all execution paths**:
@@ -71,6 +71,18 @@ Clear architectural diagrams and execution traces must accompany every module.
       * Partial degradation (Result Envelope pattern -> degraded flag -> audit review).
       * Unrecoverable error / Errback compensation (`link_error` -> state machine failure transition -> notification).
       * Idempotency & deduplication rejection paths.
+  * **Mermaid Render & Syntax Verification (Pre-Commit Invariant)**:
+    * Mermaid diagrams frequently fail rendering due to unquoted parentheses/brackets, unescaped characters, or broken blocks.
+    * For **any** documentation modifications containing or modifying diagrams, mandatory verification must be run:
+      ```bash
+      python3 scripts/verify_mermaid.py [optional/target/path.md]
+      ```
+      (or `node scripts/verify_mermaid.mjs`).
+    * Rules to prevent malformations:
+      1. Always quote labels containing special characters: `id["Label (Extra Details)"]` or `participant DB as "PostgreSQL (ACID)"`.
+      2. Ensure all compound blocks (`subgraph`, `rect`, `opt`, `par`, `alt`) have a corresponding `end`.
+      3. Verify valid arrow syntax (`-->`, `->>`, `-->>`).
+    * Never commit documentation without automated verification confirming 0 Mermaid syntax errors.
 * **Docstrings per Method/Function**:
   * Mandatory Google-style docstrings for **every** module, class, and method/function (including internal helpers and tasks), specifying purpose, args, return type, and raised exceptions.
 * **Code Readability & Step-by-Step Block Comments**:

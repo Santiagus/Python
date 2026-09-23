@@ -18,6 +18,7 @@ This project enforces strict backend engineering, distributed task execution, an
   - **Atomic Idempotency via Unique Constraints**: Enforce idempotency via database `UNIQUE` constraints and catch `IntegrityError` instead of issuing speculative `SELECT` queries before `INSERT`.
 * **Documentation & Readability**:
   - `docs/TEST_PLAN.md`, `docs/ARCHITECTURE_AND_STANDARDS.md`, and Mermaid `flowchart` and `sequenceDiagram` diagrams covering all execution paths.
+  - **Mermaid Graph Render Verification**: For any documentation modifications involving Mermaid diagrams, mandatory syntax and render validation must be executed via `python3 scripts/verify_mermaid.py [path]` (or `node scripts/verify_mermaid.mjs`). Never commit malformed diagrams; always quote labels containing parentheses, brackets, or colons (`id["Label (Extra)"]`) and ensure block closure (`end`).
   - Mandatory Google-style docstrings for **every** method and function.
   - Step-by-step numbered block comments (`# 1. ...`, `# 2. ...`) for multi-stage or long functions so execution flow is effortlessly readable from method calls and headers.
 * **Celery Architecture & Abstraction Layers**:

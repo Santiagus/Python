@@ -156,6 +156,16 @@ sequenceDiagram
     end
 ```
 
+### Mermaid Render & Syntax Verification
+Mermaid graphs frequently suffer from render failures due to unquoted parentheses or brackets, unescaped characters, or broken blocks. For **any** documentation additions or modifications:
+1. Always quote labels containing special characters: `Node["Label (Details)"]` or `participant DB as "PostgreSQL (ACID)"`.
+2. Ensure every block (`subgraph`, `rect`, `opt`, `par`, `alt`) terminates with `end`.
+3. Verify renderability and syntax before committing by running:
+   ```bash
+   python3 scripts/verify_mermaid.py [path/to/doc.md]
+   ```
+   (or `node scripts/verify_mermaid.mjs`).
+
 ---
 
 ## 5. Architecture and Standards Audit (`docs/ARCHITECTURE_AND_STANDARDS.md`)
