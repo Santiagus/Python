@@ -4,7 +4,6 @@ branch = True
 source =
     app
     services/worker
-branch = True
 omit =
     tests/*
     */__pycache__/*
