@@ -6,8 +6,8 @@ configures structured logging, and manages database connection pool lifecycles.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
@@ -34,11 +34,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     engine = get_engine()
     from app.cache import get_account_cache
+
     cache_mgr = get_account_cache()
 
     if settings.environment not in ("test", "testing"):
         try:
             from sqlalchemy import text
+
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
         except Exception as exc:
@@ -47,6 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Eagerly warm Celery Kombu AMQP broker connection pool
         try:
             from services.worker.celery_app import celery_app
+
             with celery_app.connection_for_write() as conn:
                 conn.connect()
         except Exception as exc:
@@ -92,4 +95,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

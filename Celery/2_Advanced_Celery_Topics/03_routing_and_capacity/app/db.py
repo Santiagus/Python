@@ -8,9 +8,8 @@ singletons at module load to eliminate first-call warm time.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 import logging
-from typing import Any
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -27,6 +26,7 @@ logger = logging.getLogger(__name__)
 # Module-level engine and sessionmaker references
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+
 
 def _create_engine_and_factory(
     is_worker: bool = False,
@@ -75,8 +75,6 @@ def _create_engine_and_factory(
 
 
 # Eagerly initialize module-level engine and sessionmaker at load time to eliminate first-call warm time
-_engine: AsyncEngine | None
-_session_factory: async_sessionmaker[AsyncSession] | None
 _engine, _session_factory = _create_engine_and_factory(is_worker=False)
 
 
@@ -169,4 +167,3 @@ async def close_db() -> None:
         await _engine.dispose()
         _engine = None
         _session_factory = None
-

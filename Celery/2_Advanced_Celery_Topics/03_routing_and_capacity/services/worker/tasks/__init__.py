@@ -18,4 +18,3 @@ __all__ = [
     "process_payroll_chunk",
     "send_payment_receipt",
 ]
-

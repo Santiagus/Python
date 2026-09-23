@@ -6,8 +6,8 @@ enabling automatic Swagger UI 'Authorize' button generation and declarative secu
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 import logging
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Security, status
@@ -81,4 +81,3 @@ async def verify_api_key(
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 AppSettings = Annotated[Settings, Depends(get_app_settings)]
 AuthenticatedUser = Annotated[str, Security(verify_api_key)]
-

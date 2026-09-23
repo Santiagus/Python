@@ -6,8 +6,8 @@ check constraints, and optimized index layouts for high-throughput payment rails
 
 from __future__ import annotations
 
-from datetime import datetime
 import uuid
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
@@ -26,6 +26,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
     """Base declarative class for all application ORM models."""
+
     pass
 
 
@@ -290,4 +291,3 @@ class Disbursement(Base):
         "BatchSettlement",
         back_populates="disbursements",
     )
-

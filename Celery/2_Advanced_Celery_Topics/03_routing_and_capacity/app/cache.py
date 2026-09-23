@@ -8,10 +8,8 @@ asynchronous Redis Pub/Sub invalidation broadcasts (L2).
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 import logging
 import time
-from typing import Any
 from uuid import UUID
 
 import redis.asyncio as aioredis
@@ -216,4 +214,3 @@ def get_account_cache() -> AccountCacheManager:
 def clear_account_cache() -> None:
     """Evict all entries from local account cache (test isolation hook)."""
     _account_cache_manager.clear()
-

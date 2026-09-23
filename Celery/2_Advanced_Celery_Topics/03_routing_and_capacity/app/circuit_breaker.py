@@ -8,10 +8,9 @@ when error thresholds are breached, and supports automatic failover between inst
 
 from __future__ import annotations
 
-from enum import Enum
 import logging
 import time
-from typing import Any
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -187,4 +186,3 @@ def get_fallback_rail(primary_rail: str) -> str | None:
     if candidate_cb.can_execute():
         return candidate
     return None
-

@@ -6,9 +6,8 @@ Consumes .chunks(100) from the 'bulk' queue, applies worker token-bucket rate li
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -39,12 +38,14 @@ async def _execute_payroll_chunk(batch_id_str: str, chunk_index: int, item_ids: 
         disbursements = res.scalars().all()
 
         for d in disbursements:
-            items_payload.append({
-                "disbursement_id": str(d.disbursement_id),
-                "account_number": d.account_number,
-                "routing_number": d.routing_number,
-                "amount_cents": d.amount_cents,
-            })
+            items_payload.append(
+                {
+                    "disbursement_id": str(d.disbursement_id),
+                    "account_number": d.account_number,
+                    "routing_number": d.routing_number,
+                    "amount_cents": d.amount_cents,
+                }
+            )
 
     # 2. Transmit chunk to partner clearing rail with rate pacing
     await bank_client.clear_batch_chunk(
@@ -66,11 +67,7 @@ async def _execute_payroll_chunk(batch_id_str: str, chunk_index: int, item_ids: 
             await session.execute(update_disbursements_stmt)
 
             # Atomically increment processed items counter on parent batch
-            batch_stmt = (
-                select(BatchSettlement)
-                .where(BatchSettlement.batch_id == batch_uuid)
-                .with_for_update()
-            )
+            batch_stmt = select(BatchSettlement).where(BatchSettlement.batch_id == batch_uuid).with_for_update()
             batch_res = await session.execute(batch_stmt)
             batch = batch_res.scalar_one()
 
@@ -125,4 +122,3 @@ def process_payroll_chunk(self, batch_id: str, chunk_index: int, item_ids: list[
         },
     )
     return run_sync(_execute_payroll_chunk(batch_id, chunk_index, item_ids))
-

@@ -64,6 +64,7 @@ def register_middlewares(app: FastAPI, requests_per_minute: int | None = None) -
 
     # Added 2nd -> Rate limiting: Protects route and profiler from abusive traffic
     from app.config import get_settings
+
     settings = get_settings()
     rpm = requests_per_minute if requests_per_minute is not None else settings.rate_limit_rpm
     app.add_middleware(HttpRateLimitMiddleware, requests_per_minute=rpm)

@@ -6,9 +6,8 @@ database row locks, strict soft/hard time limits, and automated receipt chaining
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -100,7 +99,7 @@ async def _execute_instant_payout(payment_id_str: str) -> dict[str, Any]:
         )
         clearing_reference = clearing_res.get("clearing_reference")
         bank_success = True
-    except CircuitBreakerOpenError as cb_err:
+    except CircuitBreakerOpenError:
         fallback = get_fallback_rail(rail)
         if fallback:
             logger.warning(
@@ -191,6 +190,7 @@ def process_instant_payout(self, payment_id: str) -> dict[str, Any]:
         return run_sync(_execute_instant_payout(payment_id))
     except SoftTimeLimitExceeded:
         logger.error("payout_soft_time_limit_exceeded", extra={"payment_id": payment_id})
+
         # Execute compensating refund synchronously if soft time limit hit during bank I/O
         async def _compensate_timeout():
             session_factory = get_session_factory()
@@ -199,7 +199,9 @@ def process_instant_payout(self, payment_id: str) -> dict[str, Any]:
                 payment_res = await session.execute(payment_stmt)
                 payment = payment_res.scalar_one_or_none()
                 if payment and payment.status == "processing":
-                    account_stmt = select(Account).where(Account.account_id == payment.source_account_id).with_for_update()
+                    account_stmt = (
+                        select(Account).where(Account.account_id == payment.source_account_id).with_for_update()
+                    )
                     account_res = await session.execute(account_stmt)
                     account = account_res.scalar_one()
                     account.balance_cents += payment.amount_cents
@@ -213,4 +215,3 @@ def process_instant_payout(self, payment_id: str) -> dict[str, Any]:
             logger.exception("compensating_timeout_failed", extra={"payment_id": payment_id, "error": str(e)})
 
         raise
-

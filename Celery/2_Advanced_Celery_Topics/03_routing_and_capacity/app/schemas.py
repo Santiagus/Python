@@ -7,17 +7,16 @@ defensive field validations, and realistic specimen defaults for Swagger UI.
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 # =============================================================================
 # Monetary Precision Helpers
 # =============================================================================
+
 
 def to_cents(amount: Decimal) -> int:
     """Convert a Decimal monetary amount in dollars to minor-unit integer cents.
@@ -50,8 +49,10 @@ def from_cents(cents: int) -> Decimal:
 # Domain Enums
 # =============================================================================
 
+
 class PaymentRail(str, Enum):
     """Supported clearing and settlement payment rails."""
+
     fednow = "fednow"
     rtp = "rtp"
     ach = "ach"
@@ -59,6 +60,7 @@ class PaymentRail(str, Enum):
 
 class PaymentPriority(str, Enum):
     """Priority tiers mapped directly to isolated broker queues."""
+
     critical = "critical"
     default = "default"
     bulk = "bulk"
@@ -66,6 +68,7 @@ class PaymentPriority(str, Enum):
 
 class PaymentStatus(str, Enum):
     """Lifecycle statuses for individual payments."""
+
     pending = "pending"
     processing = "processing"
     settled = "settled"
@@ -75,6 +78,7 @@ class PaymentStatus(str, Enum):
 
 class BatchStatus(str, Enum):
     """Lifecycle statuses for high-volume batch disbursements."""
+
     pending = "pending"
     processing = "processing"
     completed = "completed"
@@ -85,6 +89,7 @@ class BatchStatus(str, Enum):
 # =============================================================================
 # Payment Schemas
 # =============================================================================
+
 
 class InstantPaymentRequest(BaseModel):
     """Inbound request payload for real-time instant payouts (FedNow/RTP)."""
@@ -183,6 +188,7 @@ class InstantPaymentResponse(BaseModel):
 # Batch Disbursement Schemas
 # =============================================================================
 
+
 class DisbursementItem(BaseModel):
     """Individual disbursement item within a high-volume batch."""
 
@@ -271,6 +277,7 @@ class BatchDisbursementResponse(BaseModel):
 # =============================================================================
 # Account & Operational Schemas
 # =============================================================================
+
 
 class AccountResponse(BaseModel):
     """Account balance and details representation."""
@@ -388,5 +395,3 @@ class ServiceMetricsResponse(BaseModel):
     status: str = Field(..., examples=["healthy"], description="Current service operational status")
     db_pool: dict[str, int] = Field(..., description="Database connection pool metrics")
     queues: list[QueueMetric] = Field(default_factory=list, description="Broker queue depths")
-
-

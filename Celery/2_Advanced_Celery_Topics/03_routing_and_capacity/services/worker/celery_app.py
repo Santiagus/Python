@@ -8,6 +8,8 @@ and context variable correlation ID propagation across worker processes.
 from __future__ import annotations
 
 import logging
+from typing import Any
+
 from celery import Celery, signals
 from kombu import Exchange, Queue
 
@@ -137,11 +139,7 @@ def handle_task_prerun(sender, task_id: str, task, args, kwargs, **kw) -> None:
     """Extract correlation_id from AMQP task headers and bind to worker ContextVar."""
     # 1. Inspect request headers attached during API dispatcher publish
     headers = getattr(task.request, "headers", None) or {}
-    correlation_id = (
-        headers.get("correlation_id")
-        or headers.get("request_id")
-        or task_id
-    )
+    correlation_id = headers.get("correlation_id") or headers.get("request_id") or task_id
 
     # 2. Bind to ContextVar so worker logs mirror the original HTTP request trace
     token = current_request_id.set(correlation_id)
@@ -226,5 +224,3 @@ def handle_worker_process_shutdown(sender, **kw) -> None:
 
     # 4. Close thread-local event loop
     utils.reset_worker_loop()
-
-

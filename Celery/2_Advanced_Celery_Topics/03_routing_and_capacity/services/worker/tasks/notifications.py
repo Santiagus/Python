@@ -6,7 +6,6 @@ Handles asynchronous receipt delivery and merchant event webhooks routed to the
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 from uuid import UUID
@@ -97,4 +96,3 @@ def dispatch_merchant_webhook(self, reference_id: str, event_type: str) -> dict[
         "reference_id": reference_id,
         "event_type": event_type,
     }
-

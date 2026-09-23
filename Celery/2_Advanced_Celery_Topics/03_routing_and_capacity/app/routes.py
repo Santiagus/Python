@@ -6,18 +6,17 @@ two-tier idempotency, minor-unit financial precision, and enterprise M2M authent
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import logging
-import time
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from kombu import Connection
 from sqlalchemy import insert, select, text
 
 from app.config import Settings, get_settings
-from app.db import get_engine, get_session
+from app.db import get_engine
 from app.dependencies import AuthenticatedUser, DbSession
 from app.dispatcher import PaymentDispatcher
 from app.models import Account, BatchSettlement, Disbursement, Payment
@@ -25,6 +24,7 @@ from app.schemas import (
     AccountResponse,
     BatchDisbursementRequest,
     BatchDisbursementResponse,
+    BatchStatus,
     DLQRedriveRequest,
     DLQRedriveResponse,
     HealthResponse,
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Payment Orchestration"])
 dispatcher = PaymentDispatcher()
 
-from app.cache import clear_account_cache, get_account_cache
+from app.cache import clear_account_cache, get_account_cache  # noqa: F401
 
 # Hybrid L1+L2 Cache Manager for enterprise funding account validation.
 # Eliminates redundant SELECT queries to PostgreSQL/PgBouncer on high-concurrency ingestion.
@@ -73,6 +73,7 @@ async def validate_account_exists(session: DbSession, account_id: UUID) -> None:
 # =============================================================================
 # 1. Real-Time Instant Payout Endpoints
 # =============================================================================
+
 
 @router.post(
     "/payments/instant",
@@ -202,6 +203,7 @@ async def get_payment_status(
 # 2. High-Volume Batch Settlement Endpoints
 # =============================================================================
 
+
 @router.post(
     "/disbursements/batch",
     response_model=BatchDisbursementResponse,
@@ -265,7 +267,7 @@ async def submit_batch_disbursement(
         total_amount=from_cents(batch.total_amount_cents),
         total_amount_cents=batch.total_amount_cents,
         processed_items=batch.processed_items,
-        status=batch.status,
+        status=BatchStatus(batch.status),
         created_at=batch.created_at,
     )
 
@@ -299,7 +301,7 @@ async def get_batch_status(
         total_amount=from_cents(batch.total_amount_cents),
         total_amount_cents=batch.total_amount_cents,
         processed_items=batch.processed_items,
-        status=batch.status,
+        status=BatchStatus(batch.status),
         created_at=batch.created_at,
     )
 
@@ -307,6 +309,7 @@ async def get_batch_status(
 # =============================================================================
 # 3. Account Management & Balance Endpoints
 # =============================================================================
+
 
 @router.get(
     "/accounts/{account_id}",
@@ -362,6 +365,7 @@ async def invalidate_account_cache(
 # 4. Operational Telemetry & DLQ Redrive Endpoints
 # =============================================================================
 
+
 @router.get(
     "/metrics",
     response_model=ServiceMetricsResponse,
@@ -406,15 +410,10 @@ async def get_service_metrics(
                         )
                     )
                 except Exception:
-                    metric_list.append(
-                        QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-                    )
+                    metric_list.append(QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0))
     except Exception as exc:
         logger.warning("service_metrics_broker_error", extra={"error": str(exc)})
-        metric_list = [
-            QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-            for q in queues
-        ]
+        metric_list = [QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0) for q in queues]
 
     # 3. Assemble and return service metrics
     return ServiceMetricsResponse(
@@ -456,16 +455,11 @@ async def get_queue_metrics(
                     )
                     total_ready += ready
                 except Exception:
-                    metric_list.append(
-                        QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-                    )
+                    metric_list.append(QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0))
     except Exception as exc:
         logger.warning("queue_metrics_fetch_error", extra={"error": str(exc)})
         # Return graceful zeros if broker unreachable
-        metric_list = [
-            QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-            for q in queues
-        ]
+        metric_list = [QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0) for q in queues]
 
     return QueueMetricsResponse(queues=metric_list, total_ready=total_ready)
 
@@ -486,7 +480,7 @@ async def redrive_dlq_messages(
     try:
         with Connection(settings.rabbitmq_url) as conn:
             channel = conn.channel()
-            for _ in range(payload.max_messages):
+            for _msg_idx in range(payload.max_messages):
                 msg = channel.basic_get(queue=payload.source_queue, no_ack=False)
                 if not msg:
                     break
@@ -494,7 +488,9 @@ async def redrive_dlq_messages(
                 channel.basic_publish(
                     msg.message,
                     exchange="payments.direct",
-                    routing_key="payment.instant.payout" if payload.destination_queue == "critical" else "payment.standard.default",
+                    routing_key="payment.instant.payout"
+                    if payload.destination_queue == "critical"
+                    else "payment.standard.default",
                 )
                 channel.basic_ack(msg.delivery_tag)
                 redriven += 1
@@ -515,6 +511,7 @@ async def redrive_dlq_messages(
 # =============================================================================
 # 5. Dual Health Probes (/health, /health/live & /health/ready)
 # =============================================================================
+
 
 @router.get("/health", response_model=HealthResponse, summary="System Health & Readiness Check")
 async def health_check(
@@ -550,6 +547,7 @@ async def health_live(
     # 1. Simulate in-flight processing delay if requested
     if delay_ms > 0:
         import asyncio
+
         await asyncio.sleep(delay_ms / 1000.0)
 
     return {"status": "alive", "service": settings.service_name}
@@ -613,4 +611,3 @@ async def health_ready(
         rabbitmq=rmq_status,
         redis=redis_status,
     )
-

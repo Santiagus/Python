@@ -7,6 +7,7 @@ from environment variables, .env files, or default values.
 from __future__ import annotations
 
 from functools import lru_cache
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -112,4 +113,3 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Return a cached singleton instance of application settings."""
     return Settings()
-

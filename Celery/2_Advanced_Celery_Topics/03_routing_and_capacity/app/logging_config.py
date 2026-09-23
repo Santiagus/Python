@@ -7,10 +7,9 @@ and domain attributes without cluttering the console with noisy HTTP headers.
 
 from __future__ import annotations
 
-from contextvars import ContextVar
 import logging
 import sys
-from typing import Any
+from contextvars import ContextVar
 
 # Global context variable for cross-correlating async calls and Celery task traces
 current_request_id: ContextVar[str | None] = ContextVar("current_request_id", default=None)
@@ -37,20 +36,39 @@ class PrettyDevFormatter(logging.Formatter):
 
     # ANSI color codes for pretty terminal output
     COLOR_MAP = {
-        logging.DEBUG: "\033[36m",    # Cyan
-        logging.INFO: "\033[32m",     # Green
+        logging.DEBUG: "\033[36m",  # Cyan
+        logging.INFO: "\033[32m",  # Green
         logging.WARNING: "\033[33m",  # Yellow
-        logging.ERROR: "\033[31m",    # Red
-        logging.CRITICAL: "\033[35m", # Magenta
+        logging.ERROR: "\033[31m",  # Red
+        logging.CRITICAL: "\033[35m",  # Magenta
     }
     RESET = "\033[0m"
 
     # Fields to exclude from extra key=value suffix to avoid redundancy
     EXCLUDED_RECORD_ATTRS = {
-        "args", "asctime", "created", "exc_info", "exc_text", "filename",
-        "funcName", "levelname", "levelno", "lineno", "module", "msecs",
-        "msg", "name", "pathname", "process", "processName", "relativeCreated",
-        "stack_info", "thread", "threadName", "request_id", "req_id_short",
+        "args",
+        "asctime",
+        "created",
+        "exc_info",
+        "exc_text",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "msg",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "thread",
+        "threadName",
+        "request_id",
+        "req_id_short",
         "message",
     }
 
@@ -112,4 +130,3 @@ def configure_logging(log_level: str = "INFO") -> None:
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("kombu").setLevel(logging.WARNING)
-

@@ -40,4 +40,3 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         finally:
             # 5. Invariant: Always reset ContextVar token to avoid context pollution in asyncio
             current_request_id.reset(token)
-

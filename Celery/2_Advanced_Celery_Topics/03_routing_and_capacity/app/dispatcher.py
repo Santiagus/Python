@@ -8,7 +8,6 @@ and AMQP message dispatching across isolated queues.
 from __future__ import annotations
 
 import logging
-from typing import Any
 from uuid import UUID
 
 from celery.result import AsyncResult
@@ -89,8 +88,7 @@ class PaymentDispatcher:
 
         # 2. Partition items into chunks of 100
         chunks = [
-            disbursement_ids[i : i + actual_chunk_size]
-            for i in range(0, len(disbursement_ids), actual_chunk_size)
+            disbursement_ids[i : i + actual_chunk_size] for i in range(0, len(disbursement_ids), actual_chunk_size)
         ]
 
         logger.info(
@@ -116,4 +114,3 @@ class PaymentDispatcher:
             task_results.append(result)
 
         return task_results
-

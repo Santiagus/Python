@@ -60,4 +60,3 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 response.headers[header_name] = header_value
 
         return response
-

@@ -7,14 +7,12 @@ automatic graceful fallback to an in-memory sliding window when Redis is offline
 
 from __future__ import annotations
 
-from collections import defaultdict
 import logging
-import math
 import time
-from typing import Any
+from collections import defaultdict
 
-from fastapi import Request
 import redis.asyncio as aioredis
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
 
@@ -222,4 +220,3 @@ class HttpRateLimitMiddleware(BaseHTTPMiddleware):
 
 # Backward-compatible alias
 RateLimitMiddleware = HttpRateLimitMiddleware
-
