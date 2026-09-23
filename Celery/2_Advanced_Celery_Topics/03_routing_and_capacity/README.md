@@ -43,18 +43,18 @@ flowchart TD
 
     subgraph ContainerFleet ["2. Ingestion SLA Profile Pools (The Golden Architecture)"]
         subgraph InstantPool ["Instant Rail Pool (api_instant:8000)"]
-            API_I1["api_instant-1: Single-Worker Uvicorn<br/>• Sub-25ms SLA, lean memory<br/>• DB Pool: 10, Overflow: 10"]
-            API_I2["api_instant-2: Single-Worker Uvicorn<br/>• Zero batch parsing/lock contention<br/>• DB Pool: 10, Overflow: 10"]
+            API_I1["api_instant-1: Single-Worker Uvicorn<br/>• Sub-25ms SLA, lean memory<br/>• L1 Process-Local Account Cache (300s TTL)<br/>• Zero-Refresh Responses (1 SQL INSERT)<br/>• DB Client Pool: 10, Overflow: 10"]
+            API_I2["api_instant-2: Single-Worker Uvicorn<br/>• Zero batch parsing/lock contention<br/>• L1 Process-Local Account Cache (300s TTL)<br/>• Zero-Refresh Responses (1 SQL INSERT)<br/>• DB Client Pool: 10, Overflow: 10"]
         end
         subgraph BatchPool ["Batch Settlement Pool (api_batch:8000)"]
-            API_B1["api_batch-1: Single-Worker Uvicorn<br/>• Relational multi-row bulk insert<br/>• DB Pool: 8, Overflow: 6"]
-            API_B2["api_batch-2: Single-Worker Uvicorn<br/>• Sliced .chunks(100) chunking<br/>• DB Pool: 8, Overflow: 6"]
+            API_B1["api_batch-1: Single-Worker Uvicorn<br/>• Relational multi-row bulk insert<br/>• DB Client Pool: 8, Overflow: 6"]
+            API_B2["api_batch-2: Single-Worker Uvicorn<br/>• Sliced .chunks(100) chunking<br/>• DB Client Pool: 8, Overflow: 6"]
         end
     end
 
     subgraph MessagingLayer ["3. Driver / Protocol Layer (AMQP & Cache)"]
         RMQ["RabbitMQ Broker (payments.direct)<br/>Queues: critical, default, bulk"]
-        Redis["Redis 7 (Sentinel / Cache)<br/>• Celery canvas chord barriers<br/>• Ingress rate limiting token bucket"]
+        Redis["Redis 7 (Sentinel / Cache)<br/>• Celery canvas chord barriers<br/>• Ingress rate limiting token bucket<br/>• L2 Distributed Cache"]
     end
 
     subgraph ConsumerFleet ["4. Autonomous Celery Worker Fleet"]
@@ -63,11 +63,15 @@ flowchart TD
         WBulk["worker_bulk<br/>• Pool: prefork, -c 2 (Throttled)<br/>• prefetch_multiplier: 4, -O fair<br/>• Consumes .chunks(100), rate_limit: '500/m'"]
     end
 
-    subgraph DatabaseLayer ["5. PostgreSQL Connection Budget (Max: 100)"]
-        PG[("PostgreSQL 16 (payments_db)<br/>• api_instant Fleet: 2 × 20 = 40 max conns<br/>• api_batch Fleet: 2 × 14 = 28 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Budgeted Demand: 68 / 100 (32% Headroom)")]
+    subgraph MultiplexingLayer ["5. Connection Multiplexing Tier (Port 5432)"]
+        PgBouncer["PgBouncer Connection Multiplexer (payment_pgbouncer)<br/>• POOL_MODE = transaction<br/>• DEFAULT_POOL_SIZE = 25 (Server pool)<br/>• MAX_CLIENT_CONN = 1000 (Absorbs horizontal client scaling)<br/>• asyncpg: statement_cache_size = 0"]
     end
 
-    subgraph ExternalBank ["6. Downstream Financial Rails"]
+    subgraph DatabaseLayer ["6. PostgreSQL Durability Tier (Engine Port 5432)"]
+        PG[("PostgreSQL 16 Engine (payment_postgres)<br/>• synchronous_commit = on (Strict Banking Durability: Zero Data Loss)<br/>• Single-query ingestion reduces NVMe fsync overhead<br/>• Physical Connections Capped at 25 - 40 &lt;&lt; 100 limit<br/>• Sustained Load: 300.0 req/s with P99 &le; 83.0ms")]
+    end
+
+    subgraph ExternalBank ["7. Downstream Financial Rails"]
         BankSim["Partner Bank Gateway Simulator (Port 8011)<br/>• Shared keep-alive pool (50 conns)<br/>• FedNow / RTP / ACH Core Rails"]
     end
 
@@ -82,8 +86,11 @@ flowchart TD
     API_I1 & API_I2 -->|"critical tasks dispatch"| RMQ
     API_B1 & API_B2 -->|"bulk chunk tasks dispatch"| RMQ
     API_I1 & API_I2 & API_B1 & API_B2 -->|"TCP Keep-Alive"| Redis
-    API_I1 & API_I2 -->|"Single-row payment insert"| PG
-    API_B1 & API_B2 -->|"Direct SQL insert (5.92ms)"| PG
+    API_I1 & API_I2 -->|"Single-row payment insert"| PgBouncer
+    API_B1 & API_B2 -->|"Direct SQL insert (5.92ms)"| PgBouncer
+
+    %% Multiplexing to Database Engine
+    PgBouncer -->|"25 Multiplexed Server Connections"| PG
 
     %% Broker Dispatches to Workers
     RMQ -->|"critical (priority 10, SLA &lt; 100ms)"| WCrit
@@ -91,7 +98,7 @@ flowchart TD
     RMQ -->|"bulk (sliced .chunks(100))"| WBulk
 
     %% Worker Execution: Database & External Bank
-    WCrit & WDef & WBulk -->|"Transactions & ledger updates"| PG
+    WCrit & WDef & WBulk -->|"Transactions & ledger updates"| PgBouncer
     WCrit -->|"Direct FedNow/RTP clearing"| BankSim
     WBulk -->|"Batched ACH payment clearance"| BankSim
 ```
@@ -223,10 +230,12 @@ When executing bulk payroll disbursements or NACHA batch generation:
 03_routing_and_capacity/
 ├── README.md                      # Executive Hub: Overview, System Diagram, Quickstart
 ├── docker-compose.yml             # Multi-container orchestration (Gateway, 2 API Pools, 3 Workers, Bank Sim, Postgres, RMQ, Redis)
+├── docker-compose.yml             # Multi-container orchestration (Gateway, 2 API Pools, PgBouncer, 3 Workers, Bank Sim, Postgres, RMQ, Redis)
 ├── nginx.conf                     # Nginx Edge Gateway configuration (Semantic Edge Routing, keepalive 64;)
 ├── Dockerfile.api                 # Ingestion Gateway container definition (api_instant & api_batch)
 ├── Dockerfile.postgres            # PostgreSQL container with init.sql entrypoint
 ├── init.sql                       # DDL for accounts, payments, batch_settlements, and disbursements
+├── init.sql                       # DDL for accounts, payments, batch_settlements, and disbursements (partial & deduplicated indexes)
 ├── pytest.ini                     # Pytest configuration and asyncio mode
 ├── .coveragerc                    # Statement coverage configuration (100% target)
 ├── .env.example                   # Environment configuration specimen
@@ -237,14 +246,17 @@ When executing bulk payroll disbursements or NACHA batch generation:
 │   └── settings.json              # Pytest auto-discovery & formatting
 ├── docs/                          # Detailed Architectural Specifications
 │   ├── ARCHITECTURE_AND_STANDARDS.md # AMQP topology, Worker Fleet capacity, Prefetch math, Security, Dual-Layer Observability
+│   ├── ARCHITECTURE_AND_STANDARDS.md # AMQP topology, Worker Fleet capacity, Prefetch math, Security, Dual-Layer Observability, PgBouncer
 │   ├── PRODUCTION_ARCHITECTURE_AND_OPTIMIZATION_REPORT.md # Multi-dimensional empirical capacity matrix & Golden Architecture evaluation
 │   ├── USE_CASES.md               # Detailed narrative & Mermaid sequence diagrams (all 4 execution paths)
 │   ├── TEST_PLAN.md               # 4-layer testing hierarchy, comprehensive test matrix, TDD roadmap
 │   └── CAPACITY_NOTE.md           # Deliverable Evidence: Workload sizing, Little's Law, empirical results
+│   └── CAPACITY_NOTE.md           # Deliverable Evidence: Workload sizing, Little's Law, empirical results, Bisection search, PgBouncer
 ├── app/                           # FastAPI Ingestion Engine (Powers api_instant & api_batch)
 │   ├── __init__.py
 │   ├── config.py                  # Pydantic Settings (DB, RMQ, Redis, Bank API, Rate limits, SERVICE_NAME)
 │   ├── db.py                      # Async SQLAlchemy engine & session factory
+│   ├── db.py                      # Async SQLAlchemy engine & session factory (asyncpg statement_cache_size=0)
 │   ├── dependencies.py            # FastAPI route dependencies (get_db, security, dispatcher)
 │   ├── logging_config.py          # Process-wide pretty & JSON structured logging with ContextVar filter
 │   ├── middlewares/               # Modular 5-layer HTTP middleware package
@@ -257,6 +269,7 @@ When executing bulk payroll disbursements or NACHA batch generation:
 │   ├── main.py                    # Application factory, lifespan management & DB pre-warming
 │   ├── models.py                  # Database models (accounts, payments, disbursements)
 │   ├── routes.py                  # Endpoints (/payments/instant, /disbursements/batch, /health, /metrics)
+│   ├── routes.py                  # Endpoints with L1 memory cache (_ACCOUNT_CACHE) & zero-refresh response generation
 │   ├── schemas.py                 # Pydantic v2 schemas with monetary validation & specimen examples
 │   └── dispatcher.py              # API Producer: payload prep & .chunks(100) slicing
 ├── services/
@@ -280,6 +293,12 @@ When executing bulk payroll disbursements or NACHA batch generation:
 │   ├── seed_data.py               # Generates synthetic enterprise accounts and batch files
 │   ├── load_test_contention.py    # Automated benchmark measuring critical SLA under bulk contention
 │   └── benchmark_ingestion_pools.py # Calibrated dual-layer benchmark harness (Paced vs. Burst with Little's Law)
+│   ├── benchmark_ingestion_pools.py # Calibrated dual-layer benchmark harness (Paced vs. Burst with Little's Law)
+│   ├── benchmark_chunks.py        # Empirical chunk sizing velocity across rate-limit policies
+│   ├── test_nginx_least_conn.py   # Empirical audit of Nginx least-connections upstream balancing
+│   ├── benchmark_capacity_matrix.py # Multi-dimensional replica scaling and connection pool headroom matrix
+│   ├── benchmark_bisection_capacity.py # Automated 2-stage bisection capacity search with PgBouncer integration
+│   └── README.md                  # Comprehensive parameter and operational verification guide
 ├── requests/
 │   └── requests.rest              # Interactive VS Code REST Client test workflows
 └── tests/
@@ -291,6 +310,7 @@ When executing bulk payroll disbursements or NACHA batch generation:
     │   └── test_tasks.py          # Domain task execution logic & rollback tests
     ├── integration/               # Database, API, and broker integration tests
     │   ├── test_api.py            # FastAPI endpoints, health probes, metrics & idempotency tests
+    │   ├── test_api.py            # FastAPI endpoints, health probes, metrics, cache, & idempotency tests
     │   ├── test_middlewares.py    # Correlation, security, 500 shielding & rate limit tests
     │   ├── test_routing.py        # Kombu exchange bindings, routing keys & queue tests
     │   └── test_bank_simulator.py # Bank simulator latency & fault injection tests
@@ -298,6 +318,11 @@ When executing bulk payroll disbursements or NACHA batch generation:
     │   └── test_live_e2e.py       # Live AMQP dispatch, real worker daemons & DB persistence
     └── benchmarks/                # Load & capacity verification
         └── test_capacity_contention.py # 50,000 bulk tasks vs. instant payment SLA benchmark
+
+(Root Tooling)
+scripts/
+├── verify_mermaid.py              # Automated pre-commit Mermaid syntax & render validation runner
+└── verify_mermaid.mjs             # Node.js Mermaid syntax & parse validation engine
 ```
 
 ---
@@ -311,6 +336,10 @@ For comprehensive deep-dive specifications, refer to the documentation suite in 
    * Prefetch multiplier mathematical derivation and buffer sizing.
    * Minor-unit integer cents financial precision engine.
    * The Golden Architecture: Ingestion SLA Container Pools & Semantic Edge Routing.
+   * PgBouncer connection multiplexing tier (`POOL_MODE=transaction`, `connect_args={"statement_cache_size": 0}`).
+   * Multi-tier caching architecture (L1 process-local memory cache + L2 Redis).
+   * Ingestion optimization: pre-generated UUID responses & query minimization ($4 \to 1$).
+   * Index deduplication and partial index architecture.
    * Dual-Layer Observability Architecture: Whitebox (direct port 8000) vs. Blackbox (Nginx port 8010).
    * Enterprise security standards (prefixed API keys, zero-knowledge broker, Nacha/PCI-DSS tokenization).
 2. **[/docs/PRODUCTION_ARCHITECTURE_AND_OPTIMIZATION_REPORT.md](/docs/PRODUCTION_ARCHITECTURE_AND_OPTIMIZATION_REPORT.md)**:
@@ -327,13 +356,16 @@ For comprehensive deep-dive specifications, refer to the documentation suite in 
    * Comprehensive Test Matrix with expected outcomes, invariants, and TDD roadmap.
 5. **[/docs/CAPACITY_NOTE.md](/docs/CAPACITY_NOTE.md)**:
    * Formal capacity calculations, Little's Law queue throughput formulas, and empirical load test results.
+   * Batch chunk sizing optimization ($N=100$ vs $N=250$).
+   * Two-stage bisection capacity search with PgBouncer connection multiplexing ($300.0\text{ req/s}$ sustained).
+   * Strict financial durability analysis: `synchronous_commit = on` vs `synchronous_commit = off`.
 
 ---
 
 ## 7. Quickstart & Local Development
 
 ### 1. Run Complete Multi-Service Stack (Docker Compose)
-Launch the entire system including Nginx Edge Gateway, Ingestion SLA Container Pools, RabbitMQ, PostgreSQL, the Bank Simulator, and all three specialized worker fleets:
+Launch the entire system including Nginx Edge Gateway, Ingestion SLA Container Pools, PgBouncer Connection Multiplexer, RabbitMQ, PostgreSQL, the Bank Simulator, and all three specialized worker fleets:
 
 ```bash
 docker compose up --build -d --scale api_instant=2 --scale api_batch=2
@@ -347,13 +379,14 @@ You will see:
 * `payment_gateway` (`http://localhost:8010` - Nginx Edge Gateway with Semantic Edge Routing)
 * `api_instant` (2 replicas, internal port `8000`, served via `/payments/instant`, `/health/instant/*`, `/metrics/instant`)
 * `api_batch` (2 replicas, internal port `8000`, served via `/disbursements/batch`, `/health/batch/*`, `/metrics/batch`)
+* `payment_pgbouncer` (Host port `6432:5432`, internal port `5432` - Transaction Connection Multiplexer)
+* `payment_postgres` (Host port `5432:5432` - PostgreSQL 16 ACID Durability Tier)
 * `payment_worker_critical` (Consuming `critical`, concurrency: 4, prefetch: 1)
 * `payment_worker_default` (Consuming `default`, concurrency: 2, prefetch: 2)
 * `payment_worker_bulk` (Consuming `bulk`, concurrency: 2, prefetch: 4)
 * `payment_bank_simulator_api` (`http://localhost:8011` - Partner Bank API Simulator)
 * `payment_rabbitmq` (`http://localhost:15672` - Management UI, AMQP port `5672`)
-* `payment_postgres` (Port `5432`)
-* `payment_redis` (Port `6379`)
+* `payment_redis` (`http://localhost:6379` - Sentinel / L2 Cache)
 
 ### 2. Operational & Capacity Benchmarking Scripts
 The repository includes a comprehensive suite of benchmarking and seeding harnesses in `scripts/`. Every script supports zero-parameter execution with sensible defaults. For the complete parameter reference and verification guide, see the [Operational & Benchmark Scripts Guide](scripts/README.md).
@@ -370,13 +403,21 @@ python scripts/test_nginx_least_conn.py
 
 # 4. Run Multi-Dimensional Horizontal Capacity Matrix Runner
 python scripts/benchmark_capacity_matrix.py
+
+# 5. Run Two-Stage Hardware Frontier Bisection Benchmark with PgBouncer Multiplexing
+python scripts/benchmark_bisection_capacity.py --hardware-frontier
 ```
 
-### 3. Run Automated Tests
-Run the comprehensive pytest suite with 100% statement coverage:
+### 3. Run Automated Tests & Pre-Commit Verification
+Run the comprehensive pytest suite with 100% statement and branch coverage:
 
 ```bash
 .venv/bin/pytest --cov=app --cov=services/worker --cov-report=term-missing --cov-fail-under=100
+```
+
+Verify that all documentation Mermaid diagrams are renderable:
+```bash
+python3 scripts/verify_mermaid.py 03_routing_and_capacity/
 ```
 
 ---
@@ -385,6 +426,11 @@ Run the comprehensive pytest suite with 100% statement coverage:
 
 - [x] **The Golden Architecture**: Deployed dedicated Ingestion SLA container pools (`api_instant` and `api_batch`) fronted by Nginx with Semantic Edge Routing, achieving $13.13\text{ ms}$ P95 and $14.23\text{ ms}$ P99 instant payment SLAs under heavy batch load.
 - [x] **Dual-Layer Observability**: Implemented unproxied Whitebox monitoring on internal port 8000 (Prometheus direct scraping) and rail-specific Blackbox monitoring on Nginx port 8010 (`/health/instant`, `/health/batch`).
+- [x] **PgBouncer Connection Multiplexing**: Deployed PgBouncer in transaction pooling mode (`POOL_MODE=transaction`, `DEFAULT_POOL_SIZE=25`, `connect_args={"statement_cache_size": 0}`), multiplexing 250+ client sockets into $\le 26$ physical PostgreSQL connections.
+- [x] **Multi-Tier Caching Architecture**: Implemented L1 process-local in-memory cache (`_ACCOUNT_CACHE`, 300s TTL) for instant sub-microsecond validation, backed by L2 Redis distributed caching.
+- [x] **Zero-Refresh Ingestion Optimization**: Pre-generated primary keys (UUIDv4) and UTC timestamps in memory, slashing database write queries from $4 \to 1$ round-trips.
+- [x] **Index Deduplication & Partial Index Architecture**: Eliminated duplicate B-Tree index on `UNIQUE (idempotency_key)` and deployed partial indexes (`WHERE status IN ('pending', 'processing')`) to eliminate index write amplification on terminal states.
+- [x] **Strict Financial Durability**: Sustained **$300.0\text{ req/s}$** ($P_{99} \le 83.0\text{ ms}$) under strict **`synchronous_commit = on`** with physical NVMe disk syncs on every transaction.
 - [x] **Queue Topology**: Explicitly declared `critical`, `default`, and `bulk` queues with direct exchange and semantic routing keys.
 - [x] **Dedicated Worker Fleets**: Configured separate worker instances with documented pool, concurrency, and prefetch settings.
 - [x] **Prefetch Discipline**: Implemented `prefetch_multiplier=1` and `acks_late=True` on `worker_critical` to guarantee fair dispatch and eliminate task hoarding.
@@ -395,5 +441,7 @@ Run the comprehensive pytest suite with 100% statement coverage:
 - [x] **Time Limits & DLQ**: Implemented `soft_time_limit` and `time_limit` with dead-letter queue routing for expired or rejected tasks.
 - [x] **Contention Load Testing**: Proved via automated benchmarks that instant payment latency remains $< 100\text{ ms}$ while the bulk queue processes 50,000 tasks.
 - [x] **Capacity Note & Optimization Report**: Published `docs/CAPACITY_NOTE.md` and `docs/PRODUCTION_ARCHITECTURE_AND_OPTIMIZATION_REPORT.md` with empirical benchmarks and sizing formulas.
-- [x] **100% Test Coverage**: Verified all API endpoints, tasks, routing configurations, and recovery paths with automated tests (124/124 passed).
+- [x] **100% Test Coverage**: Verified all API endpoints, tasks, routing configurations, and recovery paths with automated tests (125/125 passed, 996 statements, 102 branches, 100% statement and branch coverage).
+- [x] **Mermaid Render Verification**: Automated pre-commit Mermaid verification script (`scripts/verify_mermaid.py`) guaranteeing zero syntax or rendering defects across all documentation.
+
 

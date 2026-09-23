@@ -155,6 +155,10 @@ Empirical verification conducted following the eager singleton initialization an
 
 | Dimension | Metric | Standard Target | Measured Actual | Status |
 | :--- | :--- | :---: | :---: | :---: |
+| **Test Suite Execution** | Total Tests Passed | $100\%$ | **$118 / 118$ passed** | Pass |
+| **Statement Coverage** | Missed Statements | $0$ | **$939 / 939$ ($100.00\%$)** | Pass |
+| **Branch Coverage** | Partial Branches | $0$ | **$96 / 96$ ($100.00\%$)** | Pass |
+| **Execution Duration** | Full Suite Runtime | $< 30\text{ s}$ | **$10.00\text{ s}$** | Pass |
 | **Test Suite Execution** | Total Tests Passed | $100\%$ | **$125 / 125$ passed** | Pass |
 | **Statement Coverage** | Missed Statements | $0$ | **$996 / 996$ ($100.00\%$)** | Pass |
 | **Branch Coverage** | Partial Branches | $0$ | **$102 / 102$ ($100.00\%$)** | Pass |
@@ -344,10 +348,8 @@ flowchart TD
 
     subgraph DataTier["Data & Middleware Tier"]
         Pooler -->|"25 - 50 Multiplexed Server Connections"| RDS[("Amazon RDS PostgreSQL 16<br/>• db.r7g.xlarge Multi-AZ<br/>• 500GB gp3 (6,000 IOPS)<br/>• synchronous_commit = on (Zero Data Loss)")]
-
         Pod_Inst --> RMQ["Amazon MQ (RabbitMQ Clustered)<br/>• payments.direct Exchange<br/>• Active/Standby M5.large"]
         Pod_Batch --> RMQ
-
         Pod_Inst --> Redis[("Amazon ElastiCache Redis 7<br/>• Cluster Mode Enabled<br/>• L2 Distributed Fast-Path Idempotency & Rate Limiting")]
     end
 

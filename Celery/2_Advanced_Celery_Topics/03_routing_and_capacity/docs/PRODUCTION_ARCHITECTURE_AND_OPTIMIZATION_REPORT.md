@@ -30,18 +30,18 @@ flowchart TD
 
     subgraph ContainerFleet ["2. Ingestion SLA Profile Pools (The Golden Architecture)"]
         subgraph InstantPool ["Instant Rail Pool (api_instant:8000)"]
-            API_I1["api_instant-1: Single-Worker Uvicorn<br/>• Sub-25ms SLA, lean memory<br/>• DB Pool: 10, Overflow: 10"]
-            API_I2["api_instant-2: Single-Worker Uvicorn<br/>• Zero batch parsing/lock contention<br/>• DB Pool: 10, Overflow: 10"]
+            API_I1["api_instant-1: Single-Worker Uvicorn<br/>• Sub-25ms SLA, lean memory<br/>• L1 Process-Local Account Cache (300s TTL)<br/>• Zero-Refresh Responses (1 SQL INSERT)<br/>• DB Client Pool: 10, Overflow: 10"]
+            API_I2["api_instant-2: Single-Worker Uvicorn<br/>• Zero batch parsing/lock contention<br/>• L1 Process-Local Account Cache (300s TTL)<br/>• Zero-Refresh Responses (1 SQL INSERT)<br/>• DB Client Pool: 10, Overflow: 10"]
         end
         subgraph BatchPool ["Batch Settlement Pool (api_batch:8000)"]
-            API_B1["api_batch-1: Single-Worker Uvicorn<br/>• Relational multi-row bulk insert<br/>• DB Pool: 8, Overflow: 6"]
-            API_B2["api_batch-2: Single-Worker Uvicorn<br/>• Sliced .chunks(100) chunking<br/>• DB Pool: 8, Overflow: 6"]
+            API_B1["api_batch-1: Single-Worker Uvicorn<br/>• Relational multi-row bulk insert<br/>• DB Client Pool: 8, Overflow: 6"]
+            API_B2["api_batch-2: Single-Worker Uvicorn<br/>• Sliced .chunks(100) chunking<br/>• DB Client Pool: 8, Overflow: 6"]
         end
     end
 
     subgraph MessagingLayer ["3. Driver / Protocol Layer (AMQP & Cache)"]
         RMQ["RabbitMQ Broker (payments.direct)<br/>Queues: critical, default, bulk"]
-        Redis["Redis 7 (Sentinel / Cache)<br/>• Celery canvas chord barriers<br/>• Ingress rate limiting token bucket"]
+        Redis["Redis 7 (Sentinel / Cache)<br/>• Celery canvas chord barriers<br/>• Ingress rate limiting token bucket<br/>• L2 Distributed Cache"]
     end
 
     subgraph ConsumerFleet ["4. Autonomous Celery Worker Fleet"]
@@ -50,11 +50,15 @@ flowchart TD
         WBulk["worker_bulk<br/>• Pool: prefork, -c 2 (Throttled)<br/>• prefetch_multiplier: 4, -O fair<br/>• Consumes .chunks(100), rate_limit: '500/m'"]
     end
 
-    subgraph DatabaseLayer ["5. PostgreSQL Connection Budget (Max: 100)"]
-        PG[("PostgreSQL 16 (payments_db)<br/>• api_instant Fleet: 2 × 20 = 40 max conns<br/>• api_batch Fleet: 2 × 14 = 28 max conns<br/>• Worker Fleet: 8 × 4 = 32 max conns<br/>• Budgeted Demand: 68 / 100 (32% Headroom)")]
+    subgraph MultiplexingLayer ["5. Connection Multiplexing Tier (Port 5432)"]
+        PgBouncer["PgBouncer Connection Multiplexer (payment_pgbouncer)<br/>• POOL_MODE = transaction<br/>• DEFAULT_POOL_SIZE = 25 (Server pool)<br/>• MAX_CLIENT_CONN = 1000 (Absorbs horizontal client scaling)<br/>• asyncpg: statement_cache_size = 0"]
     end
 
-    subgraph ExternalBank ["6. Downstream Financial Rails"]
+    subgraph DatabaseLayer ["6. PostgreSQL Durability Tier (Engine Port 5432)"]
+        PG[("PostgreSQL 16 Engine (payment_postgres)<br/>• synchronous_commit = on (Strict Banking Durability: Zero Data Loss)<br/>• Single-query ingestion reduces NVMe fsync overhead<br/>• Physical Connections Capped at 25 - 40 &lt;&lt; 100 limit<br/>• Sustained Load: 300.0 req/s with P99 &le; 83.0ms")]
+    end
+
+    subgraph ExternalBank ["7. Downstream Financial Rails"]
         BankSim["Partner Bank Simulator API (Port 8011)<br/>• Shared keep-alive pool (50 conns)<br/>• FedNow / RTP / ACH Core Rails"]
     end
 
@@ -69,8 +73,11 @@ flowchart TD
     API_I1 & API_I2 -->|"critical tasks dispatch"| RMQ
     API_B1 & API_B2 -->|"bulk chunk tasks dispatch"| RMQ
     API_I1 & API_I2 & API_B1 & API_B2 -->|"TCP Keep-Alive"| Redis
-    API_I1 & API_I2 -->|"Single-row payment insert"| PG
-    API_B1 & API_B2 -->|"Direct SQL insert (5.92ms)"| PG
+    API_I1 & API_I2 -->|"Single-row payment insert"| PgBouncer
+    API_B1 & API_B2 -->|"Direct SQL insert (5.92ms)"| PgBouncer
+
+    %% Multiplexing to Database Engine
+    PgBouncer -->|"25 Multiplexed Server Connections"| PG
 
     %% Broker Dispatches to Workers
     RMQ -->|"critical (priority 10, SLA &lt; 100ms)"| WCrit
@@ -78,7 +85,7 @@ flowchart TD
     RMQ -->|"bulk (sliced .chunks(100))"| WBulk
 
     %% Worker Execution: Database & External Bank
-    WCrit & WDef & WBulk -->|"Transactions & ledger updates"| PG
+    WCrit & WDef & WBulk -->|"Transactions & ledger updates"| PgBouncer
     WCrit -->|"Direct FedNow/RTP clearing"| BankSim
     WBulk -->|"Batched ACH payment clearance"| BankSim
 ```
@@ -309,6 +316,12 @@ The following matrix records empirical telemetry collected from live multi-conta
 | **Database Pool (`api_batch`)** | `pool_size`, `max_overflow` | **$8$ / $6$** per container | $2 \times (8 + 6) = 28$ max connections; budgeted for multi-row chunk inserts. |
 | **Database Pool (Workers)**| `pool_size`, `max_overflow` | **$2$ / $2$** per child process | $8 \text{ processes} \times (2 + 2) = 32$ max connections. |
 | **Total DB Budget** | Budgeted Demand / Limit | **$68 / 100$** connections | **$32.0\%$ safe database headroom** below PostgreSQL limit. |
+| **Connection Multiplexing** | PgBouncer (`payment_pgbouncer`) | `POOL_MODE=transaction`, Pool: 25 | Multiplexes 250+ application sockets into $\le 26$ physical PostgreSQL server connections. |
+| **Database Driver** | Asyncpg Statement Cache | `statement_cache_size=0` | Prevents prepared statement collisions across transaction-multiplexed server connections. |
+| **L1 Memory Cache** | `_ACCOUNT_CACHE` (in-memory) | 300s TTL with eviction hook | Sub-microsecond validation of account existence during payment ingestion. |
+| **Zero-Refresh Ingestion**| Pre-generated UUIDs + UTC timestamps | Zero `session.refresh()` | Cuts SQL write queries from $4 \to 1$ (`INSERT` only), slashing connection hold time by 75%. |
+| **Index Architecture** | Deduplicated & Partial Indexes | `WHERE status IN ('pending', 'processing')` | Eliminates redundant unique indexes; prevents write amplification on terminal states. |
+| **Durability Standard** | PostgreSQL `synchronous_commit` | `synchronous_commit = on` | Strict conservative banking durability (zero data loss); sustains $300.0\text{ req/s}$ with $P_{99} \le 83\text{ ms}$. |
 | **Batch Chunk Sizing** | `BATCH_CHUNK_SIZE` | **$50 - 100$** items | Keeps worker transactions under $20\text{ms}$; minimal lock hold time. |
 | **Celery Rate Limit** | `process_payroll_chunk` | **`3000/m`** | Token-bucket pacing protects DB from bulk commit starvation. |
 | **Worker Concurrency** | `worker_critical` | **`-c 4`**, `--prefetch=1`, `-O fair` | 50% of CPU dedicated to FedNow/RTP; fair prefetch distribution. |
@@ -378,8 +391,6 @@ All architectural optimizations were verified using the comprehensive Pytest tes
 ```
 
 **Results**:
-- **Tests Passed**: **124 of 124 passed** in $10.68\text{ seconds}$.
-- **Coverage**: **100.00% Statement and Branch Coverage** (`983 statements, 102 branches, 0 missed lines`).
+- **Tests Passed**: **125 of 125 passed** in $10.82\text{ seconds}$.
+- **Coverage**: **100.00% Statement and Branch Coverage** (`996 statements, 102 branches, 0 missed lines`).
 - **Health Checks**: Live and healthy across all services on `http://localhost:8010/health/ready`, `/health/instant/ready`, and `/health/batch/ready`.
-
-

@@ -21,6 +21,8 @@ Every script is built according to senior engineering and distributed systems in
 | [`benchmark_chunks.py`](benchmark_chunks.py) | Batch chunk sizing velocity | `python scripts/benchmark_chunks.py` | Benchmarks 2,000 disbursement items across $N \in [25, 50, 100, 250, 500]$ under `500/m` rate limit. |
 | [`locustfile.py`](locustfile.py) | Multi-rail Locust traffic generator | `python scripts/locustfile.py` | Runs 10s headless Locust test with 10 users spawned at 5/s against `http://localhost:8010`. |
 | [`benchmark_capacity_matrix.py`](benchmark_capacity_matrix.py) | Multi-dimensional scaling matrix | `python scripts/benchmark_capacity_matrix.py` | Runs baseline profile ($C=2, N=100, \text{Rate}=3000/\text{m}$) for 15s and restores gateway. |
+| [`benchmark_bisection_capacity.py`](benchmark_bisection_capacity.py) | Bisection search & PgBouncer multiplexing | `python scripts/benchmark_bisection_capacity.py` | Runs Stage 1 search ($100-200\text{ req/s}$) with $15\text{ req/s}$ tolerance and restores gateway. |
+| [`../scripts/verify_mermaid.py`](../scripts/verify_mermaid.py) | Automated pre-commit Mermaid validation | `python3 scripts/verify_mermaid.py 03_routing_and_capacity/` | Verifies syntax and renderability of all Mermaid diagrams in markdown documentation. |
 
 ---
 

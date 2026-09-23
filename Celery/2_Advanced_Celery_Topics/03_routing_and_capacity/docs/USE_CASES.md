@@ -12,15 +12,16 @@ A gig worker taps "Cash Out Now" to receive funds immediately via FedNow / RTP /
 ### Execution Flow
 1. Client issues `POST /payments/instant` with an `Idempotency-Key` header to the **Nginx Edge Gateway (`payment_gateway` on host port 8010)**.
 2. Nginx evaluates semantic edge routing rules (`location /payments/instant`) and proxies the request to the dedicated real-time ingestion pool (**`api_instant:8000`**) over persistent HTTP/1.1 keep-alives (`keepalive 64;`).
-3. `api_instant` creates an initial payment record in PostgreSQL with status `pending`.
-4. `api_instant` publishes `process_instant_payout` to exchange `payments.direct` with routing key `payment.instant.payout`.
-5. RabbitMQ routes the message directly into the `critical` queue.
-6. `worker_critical` (configured with `prefetch_multiplier=1` and `-O fair`) pulls the task immediately.
-7. The worker acquires a row lock on the user's account, validates available minor-unit integer cents balance, and calls the Partner Bank Gateway.
-8. The partner bank confirms fund clearance in $25\text{ ms}$.
-9. The worker updates the payment status to `settled`, deducts balance, records the ledger entry, commits the database transaction, and acknowledges the AMQP message.
-10. An asynchronous receipt task `send_payment_receipt` is published to the `default` queue so notification I/O does not block the real-time rail.
-11. The client polls `GET /payments/{id}` via Nginx Edge Gateway or receives a websocket event confirming `settled` within $45\text{ ms}$ total elapsed time.
+3. `api_instant` validates the account in its local L1 memory cache (`_ACCOUNT_CACHE`, sub-microsecond), pre-generates the UUIDv4 primary key and UTC timestamp in memory, and issues a single SQL `INSERT` via **PgBouncer** without redundant `SELECT` or `await session.refresh()`.
+4. PostgreSQL commits the payment record with status `pending` under strict `synchronous_commit = on` (requiring only 1 physical disk `fsync`).
+5. `api_instant` publishes `process_instant_payout` to exchange `payments.direct` with routing key `payment.instant.payout`.
+6. RabbitMQ routes the message directly into the `critical` queue.
+7. `worker_critical` (configured with `prefetch_multiplier=1` and `-O fair`) pulls the task immediately.
+8. The worker acquires a row lock on the user's account, validates available minor-unit integer cents balance, and calls the Partner Bank Gateway.
+9. The partner bank confirms fund clearance in $25\text{ ms}$.
+10. The worker updates the payment status to `settled`, deducts balance, records the ledger entry, commits the database transaction, and acknowledges the AMQP message.
+11. An asynchronous receipt task `send_payment_receipt` is published to the `default` queue so notification I/O does not block the real-time rail.
+12. The client polls `GET /payments/{id}` via Nginx Edge Gateway or receives a websocket event confirming `settled` within $45\text{ ms}$ total elapsed time.
 
 ```mermaid
 sequenceDiagram
@@ -28,7 +29,8 @@ sequenceDiagram
     participant C as Client
     participant GW as Nginx Edge Gateway (Port 8010)
     participant API as FastAPI Instant Pool (api_instant:8000)
-    participant DB as PostgreSQL
+    participant PB as PgBouncer Multiplexer
+    participant DB as PostgreSQL 16 (synchronous_commit=on)
     participant B as RabbitMQ (payments.direct)
     participant WC as Worker Critical (-Q critical)
     participant Bank as Partner Bank Gateway
@@ -37,19 +39,27 @@ sequenceDiagram
     C->>GW: POST /payments/instant (Idempotency-Key: pay-101, amount: $250.00)
     Note over GW,API: Semantic Edge Routing -> upstream instant_backend
     GW->>API: Proxy via HTTP/1.1 Keep-Alive (X-Upstream-Addr: api_instant:8000)
-    API->>DB: Insert payment (status: pending, amount: 25000 cents)
-    DB-->>API: Commit payment record
+    Note over API: 1. Validate account in L1 _ACCOUNT_CACHE (sub-microsecond)<br/>2. Pre-generate UUIDv4 & UTC timestamp (zero-refresh)
+    API->>PB: Single SQL INSERT payment (status: pending, amount: 25000 cents)
+    PB->>DB: Forward INSERT on pooled server connection
+    DB-->>PB: Commit payment record (1 NVMe fsync)
+    PB-->>API: Transaction committed
     API->>B: Publish process_instant_payout (queue: critical, priority: 9)
     API-->>GW: 202 Accepted (payment_id: UUID, status: pending)
     GW-->>C: 202 Accepted (X-Response-Time-Ms: 5.2)
 
     Note over B,WC: Dedicated Worker Pool (prefetch=1, SLA < 100ms)
     B->>WC: Deliver process_instant_payout
-    WC->>DB: SELECT account FOR UPDATE (Lock & verify balance)
+    WC->>PB: SELECT account FOR UPDATE (Lock & verify balance)
+    PB->>DB: Forward query
+    DB-->>PB: Account locked & balance returned
+    PB-->>WC: Account locked & balance returned
     WC->>Bank: POST /v1/rails/rtp/transfers (instant clearing)
     Bank-->>WC: 200 OK (clearing_reference: "RTP-99412")
-    WC->>DB: Update payment (status: settled) & balance update
-    DB-->>WC: Commit transaction
+    WC->>PB: Update payment (status: settled) & balance update
+    PB->>DB: Commit transaction
+    DB-->>PB: Committed
+    PB-->>WC: Committed
     WC->>B: Publish send_payment_receipt (queue: default)
     WC-->>B: Acknowledge AMQP message (ACK)
 
@@ -61,8 +71,10 @@ sequenceDiagram
 
     C->>GW: GET /payments/{id}
     GW->>API: Proxy to api_instant
-    API->>DB: Read payment status
-    DB-->>API: Status: settled (latency: 42ms)
+    API->>PB: Read payment status
+    PB->>DB: SELECT payment status
+    DB-->>PB: Status: settled (latency: 42ms)
+    PB-->>API: Status: settled
     API-->>GW: 200 OK (status: settled, clearing_reference: RTP-99412)
     GW-->>C: 200 OK
 ```
