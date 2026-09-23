@@ -8,18 +8,14 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-import logging
-import time
 from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
 from fastapi import APIRouter, Depends, HTTPException, status
 from kombu import Connection
 from sqlalchemy import insert, select, text
 
 from app.config import Settings, get_settings
-from app.db import get_engine, get_session
 from app.db import get_engine
 from app.dependencies import AuthenticatedUser, DbSession
 from app.dispatcher import PaymentDispatcher
@@ -49,7 +45,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Payment Orchestration"])
 dispatcher = PaymentDispatcher()
 
-from app.cache import clear_account_cache, get_account_cache
 from app.cache import clear_account_cache, get_account_cache  # noqa: F401
 
 # Hybrid L1+L2 Cache Manager for enterprise funding account validation.
@@ -272,7 +267,6 @@ async def submit_batch_disbursement(
         total_amount=from_cents(batch.total_amount_cents),
         total_amount_cents=batch.total_amount_cents,
         processed_items=batch.processed_items,
-        status=batch.status,
         status=BatchStatus(batch.status),
         created_at=batch.created_at,
     )
@@ -307,7 +301,6 @@ async def get_batch_status(
         total_amount=from_cents(batch.total_amount_cents),
         total_amount_cents=batch.total_amount_cents,
         processed_items=batch.processed_items,
-        status=batch.status,
         status=BatchStatus(batch.status),
         created_at=batch.created_at,
     )
@@ -417,16 +410,9 @@ async def get_service_metrics(
                         )
                     )
                 except Exception:
-                    metric_list.append(
-                        QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-                    )
                     metric_list.append(QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0))
     except Exception as exc:
         logger.warning("service_metrics_broker_error", extra={"error": str(exc)})
-        metric_list = [
-            QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-            for q in queues
-        ]
         metric_list = [QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0) for q in queues]
 
     # 3. Assemble and return service metrics
@@ -469,17 +455,10 @@ async def get_queue_metrics(
                     )
                     total_ready += ready
                 except Exception:
-                    metric_list.append(
-                        QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-                    )
                     metric_list.append(QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0))
     except Exception as exc:
         logger.warning("queue_metrics_fetch_error", extra={"error": str(exc)})
         # Return graceful zeros if broker unreachable
-        metric_list = [
-            QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0)
-            for q in queues
-        ]
         metric_list = [QueueMetric(name=q, messages_ready=0, messages_unacknowledged=0, consumers=0) for q in queues]
 
     return QueueMetricsResponse(queues=metric_list, total_ready=total_ready)
@@ -501,7 +480,6 @@ async def redrive_dlq_messages(
     try:
         with Connection(settings.rabbitmq_url) as conn:
             channel = conn.channel()
-            for _ in range(payload.max_messages):
             for _msg_idx in range(payload.max_messages):
                 msg = channel.basic_get(queue=payload.source_queue, no_ack=False)
                 if not msg:
@@ -510,7 +488,6 @@ async def redrive_dlq_messages(
                 channel.basic_publish(
                     msg.message,
                     exchange="payments.direct",
-                    routing_key="payment.instant.payout" if payload.destination_queue == "critical" else "payment.standard.default",
                     routing_key="payment.instant.payout"
                     if payload.destination_queue == "critical"
                     else "payment.standard.default",
@@ -634,4 +611,3 @@ async def health_ready(
         rabbitmq=rmq_status,
         redis=redis_status,
     )
-
