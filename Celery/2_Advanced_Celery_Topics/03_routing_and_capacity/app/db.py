@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
+import logging
+from typing import Any
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -75,6 +77,8 @@ def _create_engine_and_factory(
 
 
 # Eagerly initialize module-level engine and sessionmaker at load time to eliminate first-call warm time
+_engine: AsyncEngine | None
+_session_factory: async_sessionmaker[AsyncSession] | None
 _engine, _session_factory = _create_engine_and_factory(is_worker=False)
 
 
@@ -167,3 +171,4 @@ async def close_db() -> None:
         await _engine.dispose()
         _engine = None
         _session_factory = None
+

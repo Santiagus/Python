@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import threading
+from typing import Any, Coroutine, TypeVar
 from typing import Any, Coroutine, TypeVar, cast
 
 T = TypeVar("T")
@@ -95,8 +96,11 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     # 2. When invoked inside an active loop (e.g. pytest-asyncio), reuse the shared thread pool
     if is_running:
         executor = get_sync_executor()
+        return executor.submit(run_sync, coro).result()
         return cast(T, executor.submit(cast(Any, run_sync), coro).result())
 
     # 3. In synchronous worker processes, reuse the persistent thread-local loop
     loop = get_worker_loop()
     return loop.run_until_complete(coro)
+
+
