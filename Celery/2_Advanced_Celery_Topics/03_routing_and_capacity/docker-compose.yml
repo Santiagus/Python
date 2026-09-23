@@ -48,6 +48,8 @@ services:
       RESERVE_POOL_SIZE: 5
       SERVER_RESET_QUERY: "DISCARD ALL"
       AUTH_TYPE: scram-sha-256
+      STATS_USERS: postgres
+      ADMIN_USERS: postgres
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,6 +58,21 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
+
+  # PgBouncer Connection Pool Telemetry Exporter (Prometheus Metrics)
+  pgbouncer_exporter:
+    image: prometheuscommunity/pgbouncer-exporter:latest
+    container_name: payment_pgbouncer_exporter
+    ports:
+      - "9127:9127"
+    environment:
+      PGBOUNCER_EXPORTER_HOST: pgbouncer
+      PGBOUNCER_EXPORTER_PORT: 5432
+      PGBOUNCER_USER: postgres
+      PGBOUNCER_PASS: postgres
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -290,4 +307,20 @@ services:
       rabbitmq:
         condition: service_healthy
       bank_simulator_api:
+        condition: service_healthy
+
+  # =============================================================================
+  # Real-Time Visual Celery Worker & Task Telemetry Dashboard
+  # =============================================================================
+  flower:
+    image: mher/flower:latest
+    container_name: payment_flower
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      FLOWER_BASIC_AUTH: admin:admin123
+      FLOWER_PORT: 5555
+    depends_on:
+      rabbitmq:
         condition: service_healthy

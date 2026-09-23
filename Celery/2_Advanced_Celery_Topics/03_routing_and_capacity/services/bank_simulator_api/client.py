@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 
+from app.circuit_breaker import CircuitBreakerOpenError, get_circuit_breaker
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -103,17 +104,25 @@ class BankSimulatorClient:
             "destination_routing_number": destination_routing_number,
         }
 
+        # Check rail circuit breaker before making outbound network call
+        cb = get_circuit_breaker(rail)
+        if not cb.can_execute():
+            raise CircuitBreakerOpenError(rail=rail, message=f"Partner bank clearing circuit for rail '{rail}' is OPEN")
+
         client = self._client
         try:
             response = await client.post(url, json=payload, headers=headers, timeout=self.timeout)
             if response.status_code != 200:
+                cb.record_failure()
                 raise BankClearingError(
                     f"Partner bank rejected payment with status {response.status_code}: {response.text}",
                     status_code=response.status_code,
                     response_body=response.text,
                 )
+            cb.record_success()
             return response.json()
         except (httpx.TimeoutException, httpx.NetworkError) as exc:
+            cb.record_failure()
             logger.error(
                 "bank_network_timeout",
                 extra={"payment_id": payment_id, "error": str(exc)},

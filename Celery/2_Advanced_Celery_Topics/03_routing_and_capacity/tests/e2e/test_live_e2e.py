@@ -96,8 +96,12 @@ def live_celery_worker(
         result_backend=None,
     )
 
+    from pathlib import Path
+    project_dir = Path(__file__).resolve().parent.parent.parent
+
     worker_env = {
         **os.environ,
+        "PYTHONPATH": f"{project_dir}:{os.environ.get('PYTHONPATH', '')}",
         "DATABASE_URL": test_database_url,
         "RABBITMQ_URL": rabbitmq_service_url,
         "REDIS_URL": "",
@@ -121,6 +125,7 @@ def live_celery_worker(
             "-Q",
             "critical,default,bulk",
         ],
+        cwd=str(project_dir),
         env=worker_env,
         stdout=open("/tmp/live_celery_worker.log", "w"),
         stderr=subprocess.STDOUT,

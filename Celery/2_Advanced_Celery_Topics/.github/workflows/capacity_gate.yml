@@ -1,0 +1,70 @@
+name: CI/CD Capacity & Contention Regression Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality_and_capacity_gate:
+    name: Quality Checks & Capacity Regression Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node.js 20 (for Mermaid Validation)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Development Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r 03_routing_and_capacity/requirements_dev.txt
+          cd scripts && npm install && cd ..
+
+      - name: Pre-Commit Mermaid Diagram Syntax & Render Validation
+        run: |
+          python3 scripts/verify_mermaid.py .
+
+      - name: Pytest Suite (100% Coverage Gate)
+        run: |
+          pytest 03_routing_and_capacity/tests/ \
+            --cov=03_routing_and_capacity/app \
+            --cov=03_routing_and_capacity/services/worker \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+
+      - name: Launch Ephemeral Multi-Service Stack (Docker Compose)
+        run: |
+          docker compose -f 03_routing_and_capacity/docker-compose.yml up -d --build --scale api_instant=2 --scale api_batch=2
+
+      - name: Await Gateway & Container Healthchecks
+        run: |
+          timeout 60s bash -c 'until curl -sf http://localhost:8010/health/ready; do sleep 2; done'
+          echo "All services healthy and ready for traffic."
+
+      - name: Execute Automated Contention Regression Gate (150 req/s SLA)
+        run: |
+          python 03_routing_and_capacity/scripts/ci_contention_gate.py \
+            --rate 150 \
+            --duration 20 \
+            --p99-threshold 100.0 \
+            --baseline-p99 83.0 \
+            --max-degradation 15.0 \
+            --max-db-conns 26
+
+      - name: Teardown Docker Compose Fleet
+        if: always()
+        run: |
+          docker compose -f 03_routing_and_capacity/docker-compose.yml down -v
+

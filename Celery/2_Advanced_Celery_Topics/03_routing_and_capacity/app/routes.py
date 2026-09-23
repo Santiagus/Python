@@ -45,21 +45,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Payment Orchestration"])
 dispatcher = PaymentDispatcher()
 
-# Process-local in-memory cache for validated enterprise funding account existence.
+from app.cache import clear_account_cache, get_account_cache
+
+# Hybrid L1+L2 Cache Manager for enterprise funding account validation.
 # Eliminates redundant SELECT queries to PostgreSQL/PgBouncer on high-concurrency ingestion.
-_ACCOUNT_CACHE: dict[UUID, float] = {}
+_account_cache_mgr = get_account_cache()
+_ACCOUNT_CACHE = _account_cache_mgr._local_cache
 _ACCOUNT_CACHE_TTL_SECONDS = 300.0
 
 
-def clear_account_cache() -> None:
-    """Clear the process-local account validation cache (used in test isolation)."""
-    _ACCOUNT_CACHE.clear()
-
-
 async def validate_account_exists(session: DbSession, account_id: UUID) -> None:
-    """Validate that source account exists using process-local in-memory TTL caching."""
-    now_ts = time.monotonic()
-    if account_id in _ACCOUNT_CACHE and _ACCOUNT_CACHE[account_id] > now_ts:
+    """Validate that source account exists using hybrid L1+L2 caching."""
+    cache = get_account_cache()
+    if cache.is_cached(account_id):
         return
 
     account_stmt = select(Account.account_id).where(Account.account_id == account_id)
@@ -69,7 +67,7 @@ async def validate_account_exists(session: DbSession, account_id: UUID) -> None:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Source account '{account_id}' not found",
         )
-    _ACCOUNT_CACHE[account_id] = now_ts + _ACCOUNT_CACHE_TTL_SECONDS
+    cache.put(account_id, _ACCOUNT_CACHE_TTL_SECONDS)
 
 
 # =============================================================================
@@ -338,6 +336,26 @@ async def get_account_details(
         balance_cents=account.balance_cents,
         currency=account.currency,
     )
+
+
+@router.post(
+    "/accounts/{account_id}/invalidate-cache",
+    status_code=status.HTTP_200_OK,
+    summary="Invalidate account cache cluster-wide via Redis Pub/Sub",
+    description="Evicts account record from local process L1 memory and broadcasts invalidation across all horizontal replicas.",
+)
+async def invalidate_account_cache(
+    account_id: UUID,
+    _: AuthenticatedUser,
+) -> dict[str, Any]:
+    """Evict account entry from local cache and broadcast Redis Pub/Sub invalidation event."""
+    cache = get_account_cache()
+    await cache.invalidate(account_id)
+    return {
+        "status": "ok",
+        "account_id": str(account_id),
+        "message": "Account cache invalidated cluster-wide",
+    }
 
 
 # =============================================================================

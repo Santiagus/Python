@@ -144,6 +144,17 @@ class TestDatabaseAndLifecycle:
                  patch("app.main.close_db", new_callable=AsyncMock):
                 async with lifespan(app):
                     pass
+
+            # Cache listener startup failure handles gracefully
+            mock_cache_mgr = MagicMock()
+            mock_cache_mgr.start_listener = AsyncMock(side_effect=RuntimeError("redis pubsub down"))
+            mock_cache_mgr.stop_listener = AsyncMock()
+            with patch("app.main.get_engine", return_value=mock_engine), \
+                 patch("app.cache.get_account_cache", return_value=mock_cache_mgr), \
+                 patch("app.main.close_bank_client", new_callable=AsyncMock), \
+                 patch("app.main.close_db", new_callable=AsyncMock):
+                async with lifespan(app):
+                    pass
         finally:
             settings.environment = original_env
 

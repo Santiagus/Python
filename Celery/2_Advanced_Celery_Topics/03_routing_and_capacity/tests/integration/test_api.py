@@ -540,3 +540,24 @@ class TestOperationalEndpoints:
             assert res.status_code == 503
             assert "unhealthy" in res.json()["detail"]["database"]
             assert res.json()["detail"]["service"] == "api"
+
+    @pytest.mark.asyncio
+    async def test_invalidate_account_cache_endpoint(
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Invalidate account cache endpoint broadcasts invalidation across cluster."""
+        from unittest.mock import AsyncMock
+        aid = uuid4()
+        with patch("app.routes.get_account_cache") as mock_get_cache:
+            mock_cache = MagicMock()
+            mock_cache.invalidate = AsyncMock()
+            mock_get_cache.return_value = mock_cache
+
+            res = await async_client.post(f"/accounts/{aid}/invalidate-cache", headers=auth_headers)
+            assert res.status_code == 200
+            assert res.json()["status"] == "ok"
+            assert res.json()["account_id"] == str(aid)
+            mock_cache.invalidate.assert_awaited_once_with(aid)
+

@@ -263,3 +263,23 @@ class TestBankSimulatorClient:
         await close_bank_client()
         # Re-initialize for subsequent tests
         init_bank_client()
+
+    @pytest.mark.asyncio
+    async def test_client_clear_instant_circuit_breaker_open(self) -> None:
+        """When rail circuit is open, clear_instant_payment fails fast with CircuitBreakerOpenError."""
+        from app.circuit_breaker import CircuitBreakerOpenError, get_circuit_breaker
+        cb = get_circuit_breaker("rtp")
+        cb._trip(now=time.monotonic())
+        client = BankSimulatorClient(base_url="http://testbank")
+        try:
+            with pytest.raises(CircuitBreakerOpenError) as exc:
+                await client.clear_instant_payment(
+                    payment_id=str(uuid4()),
+                    amount_cents=1000,
+                    rail="rtp",
+                    destination_account_number="123",
+                    destination_routing_number="021000021",
+                )
+            assert exc.value.rail == "rtp"
+        finally:
+            cb.reset()

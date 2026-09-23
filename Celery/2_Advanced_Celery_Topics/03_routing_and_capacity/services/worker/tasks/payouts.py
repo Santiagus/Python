@@ -15,6 +15,7 @@ from uuid import UUID
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select
 
+from app.circuit_breaker import CircuitBreakerOpenError, get_fallback_rail
 from app.db import get_session_factory
 from app.models import Account, Payment
 from services.bank_simulator_api.client import BankClearingError, BankSimulatorClient
@@ -99,6 +100,29 @@ async def _execute_instant_payout(payment_id_str: str) -> dict[str, Any]:
         )
         clearing_reference = clearing_res.get("clearing_reference")
         bank_success = True
+    except CircuitBreakerOpenError as cb_err:
+        fallback = get_fallback_rail(rail)
+        if fallback:
+            logger.warning(
+                "circuit_breaker_rail_failover",
+                extra={"payment_id": payment_id_str, "primary_rail": rail, "fallback_rail": fallback},
+            )
+            try:
+                clearing_res = await bank_client.clear_instant_payment(
+                    payment_id=payment_id_str,
+                    amount_cents=amount_cents,
+                    rail=fallback,
+                    destination_account_number=destination_account,
+                    destination_routing_number=destination_routing,
+                )
+                clearing_reference = clearing_res.get("clearing_reference")
+                bank_success = True
+            except Exception as fb_exc:
+                failure_reason = f"Fallback rail {fallback} failed: {fb_exc}"
+                logger.error("failover_clearing_failed", extra={"payment_id": payment_id_str, "error": failure_reason})
+        else:
+            failure_reason = f"Circuit breaker OPEN for rail {rail} and no healthy fallback available"
+            logger.error("circuit_breaker_fast_fail", extra={"payment_id": payment_id_str, "rail": rail})
     except SoftTimeLimitExceeded:
         raise
     except (BankClearingError, Exception) as exc:

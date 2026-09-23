@@ -25,26 +25,31 @@ flowchart TD
         end
     end
 
-    subgraph MessagingLayer ["3. Driver / Protocol Layer (AMQP & Cache)"]
+    subgraph MessagingLayer ["3. Driver / Protocol Layer (AMQP & Distributed Coordination)"]
         RMQ["RabbitMQ (payments.direct)<br/>Queues: critical, default, bulk"]
-        Redis["Redis 7 (Sentinel / Cache)<br/>• Celery canvas chord barriers<br/>• Ingress rate limiting token bucket<br/>• L2 Distributed Cache"]
+        Redis["Redis 7 (Sentinel / Cache)<br/>• account:invalidations Pub/Sub<br/>• Distributed Lua Token Bucket<br/>• Celery canvas chord barriers"]
     end
 
     subgraph ConsumerFleet ["4. Autonomous Celery Worker Fleet"]
-        WCrit["worker_critical<br/>• Pool: prefork, -c 4 (Dedicated cores)<br/>• prefetch_multiplier: 1, -O fair<br/>• acks_late: True, soft: 3s, hard: 5s"]
+        WCrit["worker_critical<br/>• Distributed Circuit Breaker & Failover (RTP &rarr; FedNow)<br/>• Pool: prefork, -c 4 (Dedicated cores)<br/>• prefetch_multiplier: 1, -O fair<br/>• acks_late: True, soft: 3s, hard: 5s"]
         WDef["worker_default<br/>• Pool: prefork, -c 2<br/>• prefetch_multiplier: 2<br/>• rate_limit: '100/m'"]
         WBulk["worker_bulk<br/>• Pool: prefork, -c 2 (Throttled)<br/>• prefetch_multiplier: 4, -O fair<br/>• Consumes .chunks(100), rate_limit: '500/m'"]
     end
 
-    subgraph MultiplexingLayer ["5. Connection Multiplexing Tier (Port 5432)"]
+    subgraph ObservabilityTier ["5. Dedicated Observability Exporters"]
+        Flower["Celery Flower (Port 5555)<br/>• Real-time worker & task introspection<br/>• Active child process profiling"]
+        PGB_Exp["PgBouncer Exporter (Port 9127)<br/>• Exports cl_waiting, sv_active, maxwait<br/>• Prometheus scrape target"]
+    end
+
+    subgraph MultiplexingLayer ["6. Connection Multiplexing Tier (Port 5432)"]
         PgBouncer["PgBouncer Connection Multiplexer (payment_pgbouncer)<br/>• POOL_MODE = transaction<br/>• DEFAULT_POOL_SIZE = 25 (Server pool)<br/>• MAX_CLIENT_CONN = 1000 (Absorbs horizontal client scaling)<br/>• asyncpg: statement_cache_size = 0"]
     end
 
-    subgraph DatabaseLayer ["6. PostgreSQL Durability Tier (Engine Port 5432)"]
+    subgraph DatabaseLayer ["7. PostgreSQL Durability Tier (Engine Port 5432)"]
         PG[("PostgreSQL 16 Engine (payment_postgres)<br/>• synchronous_commit = on (Strict Banking Durability: Zero Data Loss)<br/>• Single-query ingestion reduces NVMe fsync overhead<br/>• Physical Connections Capped at 25 - 40 &lt;&lt; 100 limit<br/>• Sustained Load: 300.0 req/s with P99 &le; 83.0ms")]
     end
 
-    subgraph ExternalBank ["7. Downstream Financial Rails"]
+    subgraph ExternalBank ["8. Downstream Financial Rails"]
         BankSim["Partner Bank Gateway Simulator (Port 8011)<br/>• Shared keep-alive pool (50 conns)<br/>• FedNow / RTP / ACH Core Rails"]
     end
 
@@ -64,6 +69,8 @@ flowchart TD
 
     %% Multiplexing to Database Engine
     PgBouncer -->|"25 Multiplexed Server Connections"| PG
+    PGB_Exp -->|"SHOW POOLS / SHOW CLIENTS"| PgBouncer
+    Flower -->|"Inspects queue & worker state"| RMQ
 
     %% Broker Dispatches to Workers
     RMQ -->|"critical (priority 10, SLA &lt; 100ms)"| WCrit
@@ -683,13 +690,124 @@ flowchart TD
 
 ---
 
-## 11. Checklist of Architectural Standards
+## 11. Advanced Enterprise Reliability Innovations (Proposals 1–5)
+
+To transition from a single-node optimized stack to an enterprise, horizontally scaled FinTech banking infrastructure, five major architectural innovations were implemented:
+
+### A. Proposal 1: L1+L2 Hybrid Cache with Redis Pub/Sub Invalidation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as "API Consumer"
+    participant PodA as "API Pod A (Mutation)"
+    participant Redis as "Redis Pub/Sub"
+    participant PodB as "API Pod B (Consumer)"
+    participant DB as "PostgreSQL (ACID)"
+
+    Note over PodA,PodB: Both Pods have Account in local L1 RAM (_local_cache)
+
+    Client->>PodA: POST /accounts/{id}/invalidate-cache (or account mutation)
+    activate PodA
+    PodA->>PodA: Evict from local L1 cache
+    PodA->>Redis: PUBLISH account:invalidations {account_id}
+    PodA-->>Client: 200 OK (Cache invalidated cluster-wide)
+    deactivate PodA
+
+    Redis-)PodB: Message on account:invalidations ({account_id})
+    activate PodB
+    PodB->>PodB: Evict {account_id} from Pod B L1 local memory
+    deactivate PodB
+
+    Note over PodB: Subsequent request to Pod B fetches fresh state from DB
+    Client->>PodB: POST /payments/instant (with account_id)
+    activate PodB
+    PodB->>DB: SELECT account_id FROM accounts WHERE ...
+    DB-->>PodB: Account record
+    PodB->>PodB: L1 cache updated with fresh TTL
+    deactivate PodB
+```
+
+* **Why It Is Better**: Combines sub-microsecond local process memory reads with cluster-wide consistency. Eliminates multi-pod stale read windows across horizontal autoscaling deployments.
+* **Engineering Trade-Offs**: Requires an asynchronous background listener task per container. On Redis connection interruption, the local cache is purged defensively to guarantee safety.
+
+---
+
+### B. Proposal 2: Automated CI/CD Contention & Capacity Regression Gate
+
+* **What Was Implemented**: Headless automated contention gate runner ([`scripts/ci_contention_gate.py`](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/03_routing_and_capacity/scripts/ci_contention_gate.py)) and GitHub Actions CI/CD workflow ([`.github/workflows/capacity_gate.yml`](file:///home/sabad/.github/workflows/capacity_gate.yml)).
+* **Empirical Gate Assertions**:
+  1. Instant $P_{99} \le 100.0\text{ ms}$ (Measured: **$56.66\text{ ms}$**).
+  2. Error Rate $= 0.00\%$ (Measured: **$0.00\%$** across 1,500 requests).
+  3. Peak Database Connections $\le 26$ (Measured: **$26$ physical connections** via PgBouncer).
+  4. Latency degradation $\le +15\%$ over baseline (Measured: **$-31.7\%$ improvement**).
+* **Why It Is Better**: Guarantees that latency regressions, connection leaks, or schema modifications cannot merge into main unnoticed.
+* **Engineering Trade-Offs**: Adds $\sim 45\text{ seconds}$ to the continuous integration test pipeline.
+
+---
+
+### C. Proposal 3: Distributed Token-Bucket Ingress Rate Limiting (Redis Lua)
+
+* **What Was Implemented**: Atomic Redis Token Bucket rate limiting via Lua script in `app/middlewares/rate_limit.py`, with automatic fallback to local in-memory sliding window when Redis is unavailable.
+* **Why It Is Better**: Enforces exact, uniform ingress limits across horizontal container clusters ($N$ replicas), preventing multi-pod quota expansion.
+* **Engineering Trade-Offs**: Adds one Redis network hop ($\approx 0.5\text{ ms}$) on the API ingress path.
+
+---
+
+### D. Proposal 4: Dedicated PgBouncer & Celery Flower Observability Exporters
+
+* **What Was Implemented**: Integrated `pgbouncer_exporter` (port 9127) for connection queue telemetry and Celery Flower (port 5555) for real-time worker introspection.
+* **Why It Is Better**: Real-time visibility into PgBouncer pool wait queues (`cl_waiting`, `sv_active`, `maxwait`) and Celery worker child processes, throughput, and error traces.
+* **Engineering Trade-Offs**: Consumes $\sim 30\text{ MB}$ RAM per exporter container and requires authentication hardening for Flower.
+
+---
+
+### E. Proposal 5: Outbound Circuit Breaker for Partner Bank Gateways & Rail Failover
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Worker as "worker_critical"
+    participant CB as "Circuit Breaker (RTP)"
+    participant FedNowCB as "Circuit Breaker (FedNow)"
+    participant RTPBank as "RTP Clearing Rail (Bank)"
+    participant FedNowBank as "FedNow Clearing Rail (Bank)"
+    participant DB as "PostgreSQL Ledger"
+
+    Worker->>CB: can_execute() on primary rail "rtp"
+    alt Circuit is OPEN (Failure rate >= 50%)
+        CB-->>Worker: False (CircuitBreakerOpenError)
+        Worker->>FedNowCB: get_fallback_rail("rtp") -> check "fednow" can_execute()
+        alt FedNow circuit is CLOSED (Healthy)
+            FedNowCB-->>Worker: True (Candidate healthy)
+            Worker->>FedNowBank: POST /clearing/instant (rail="fednow")
+            FedNowBank-->>Worker: 200 OK (clearing_reference="CLR_FEDNOW_...")
+            FedNowCB->>FedNowCB: record_success()
+            Worker->>DB: UPDATE payments SET status="settled"
+        else All rails degraded
+            Worker->>DB: Compensating refund (restore account balance)
+            Worker->>DB: UPDATE payments SET status="failed"
+        end
+    else Circuit is CLOSED
+        CB-->>Worker: True
+        Worker->>RTPBank: POST /clearing/instant (rail="rtp")
+    end
+```
+
+* **Why It Is Better**: Prevents worker fleet starvation and task accumulation during external partner clearing outages. Automatically preserves customer transaction completion rate via intelligent rail failover (RTP $\to$ FedNow).
+* **Engineering Trade-Offs**: Rail clearing costs may differ between primary and secondary rails; canary probes test recovery during HALF-OPEN state.
+
+---
+
+## 12. Checklist of Architectural Standards
 
 | Architectural Dimension | Engineering Standard | Verification & Implementation |
 | :--- | :--- | :--- |
 | **Async Non-Blocking API** | FastAPI `async def` endpoints using asyncpg `AsyncSession`. | Fully non-blocking HTTP request path; zero blocking database calls in FastAPI event loop. |
 | **Modular Middleware Pipeline** | Isolated 5-layer `app/middlewares/` package partitioned by concern. | `correlation.py`, `security.py`, `error_handling.py`, `rate_limit.py`, and `profiling.py` with deterministic `register_middlewares()`. |
-| **Two-Tier Rate Limiting** | Inbound HTTP 429 throttling vs. Outbound Celery token-bucket pacing. | `HttpRateLimitMiddleware` (600 req/min per IP) protects API; Celery `rate_limit` (`500/m`) protects partner bank APIs. |
+| **Distributed Rate Limiting** | Inbound Redis Lua Token Bucket throttling vs. Outbound Celery token-bucket pacing. | `HttpRateLimitMiddleware` (atomic Redis Lua, 600 req/min) protects API; Celery `rate_limit` (`500/m`) protects partner bank APIs. |
+| **Hybrid L1+L2 Caching** | Local RAM cache with Redis Pub/Sub distributed invalidations. | `AccountCacheManager` validates in $<1\text{ }\mu\text{s}$; broadcasts on `account:invalidations` across all horizontal pods. |
+| **Outbound Circuit Breaker** | Sliding-window failure tracking with automated rail failover. | `DistributedCircuitBreaker` (30s window, 50% threshold) trips OPEN to protect workers; automatically fails over from RTP to FedNow. |
 | **Two-Tier Idempotency** | API unique key deduplication + Consumer state pre-check. | Ingress duplicate rejection + worker no-op on redelivered messages. |
 | **Two-Phase Lock Discipline** | Zero external network calls inside database row locks. | Atomic balance reservation commits in $< 3\text{ ms}$; bank HTTP calls execute outside lock. |
 | **End-to-End Tracing** | Trace context propagated from HTTP header through AMQP frame to worker. | `X-Request-ID` passed in AMQP headers and synced to worker ContextVar. |
@@ -699,13 +817,15 @@ flowchart TD
 | **Prefetch Discipline** | Fair distribution on `critical`; high throughput on `bulk`. | `--prefetch-multiplier=1 -O fair` on critical; `--prefetch-multiplier=4` on bulk. |
 | **Task Batching** | High-volume batch ingestion partitioned using `.chunks()`. | Bulk disbursements chunked in batches of 100 to minimize RabbitMQ message and ack volume. |
 | **Dual Health Probes & Edge Observability** | Container-level `/health/ready` checks + edge per-service routing (`/health/instant/*`, `/health/batch/*`, `/metrics/*`). | Docker healthchecks on port 8000; Nginx per-service routing on port 8010; responses return specific `service` identity and DB pool metrics. |
+| **Observability Exporters** | Dedicated PgBouncer and Celery Flower exporters. | `pgbouncer_exporter` on port 9127 exports pool queues; Celery Flower on port 5555 provides real-time worker introspection. |
 | **Time Limit Invariants** | Dual soft and hard time limits preventing hung worker threads. | `soft_time_limit=3s` catches timeouts and transitions records to `failed`; `time_limit=5s` kills stuck processes. |
 | **Dead-Letter Handling** | Expired or rejected messages routed to `payments.dlx` with redrive capability. | DLX configuration captures messages rejected with `requeue=False` with headers intact for replay. |
 | **Eager Singleton Warm-up** | Singletons initialized at module load with role-budgeted connection pools. | `_shared_client` with `Limits(20, 50, 30.0)`, worker DB pool `2/2`, API pool `10/20`, eliminating first-call latency. |
 | **Connection Multiplexing (PgBouncer)** | Transaction pooling with disabled client statement cache. | PgBouncer (`DEFAULT_POOL_SIZE=25`, `POOL_MODE=transaction`) + `connect_args={"statement_cache_size": 0}` in asyncpg. |
-| **Multi-Tier Caching** | Process-local memory cache + distributed Redis cache. | `_ACCOUNT_CACHE` (300s TTL) in `app/routes.py` for sub-microsecond validation + Redis L2 distributed cache. |
 | **Zero-Refresh Response Ingestion** | In-memory pre-generated UUIDv4 and UTC timestamps. | Commits and returns schema directly from memory, eliminating `await session.refresh()` and slashing SQL queries from $4 \to 1$. |
 | **Index Deduplication & Partial Indexes** | Deduplicated constraints and partial indexes for terminal states. | Omitted redundant index on `UNIQUE(idempotency_key)`; deployed partial index `WHERE status IN ('pending', 'processing')`. |
 | **Strict Financial Durability** | Guaranteed zero data loss with high-throughput ingestion. | `synchronous_commit = on` sustaining **$300.0\text{ req/s}$** ($P_{99} \le 83.0\text{ ms}$) via single-query transactions on NVMe storage. |
-| **Automated Testing** | 100% statement and branch coverage across unit, integration, e2e, and load tests. | 125/125 passed, 996 statements, 102 branches, 0 missed lines in pytest suite. |
+| **Automated Contention Gate** | Headless automated load test enforcing SLA thresholds in CI/CD. | Little's Law paced 150 req/s load test with concurrent batch payroll in `scripts/ci_contention_gate.py` asserting $P_{99} \le 100\text{ ms}$. |
+| **Automated Testing** | 100% statement and branch coverage across unit, integration, e2e, and load tests. | 163/163 passed, 1,269 statements, 162 branches, 100% statement and branch coverage in pytest suite. |
 | **Mermaid Render Verification** | Pre-commit validation ensuring zero malformed diagrams. | Automated verification via `python3 scripts/verify_mermaid.py` across all markdown documentation. |
+

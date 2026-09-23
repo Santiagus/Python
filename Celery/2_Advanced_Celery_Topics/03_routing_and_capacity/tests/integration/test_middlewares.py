@@ -164,3 +164,124 @@ class TestMiddlewarePipeline:
             assert res.headers["X-RateLimit-Limit"] == "unlimited"
             assert res.headers["X-RateLimit-Remaining"] == "unlimited"
 
+    @pytest.mark.asyncio
+    async def test_rate_limit_redis_token_bucket_allowed(self) -> None:
+        """When Redis Lua script permits request, 200 is returned with remaining quota."""
+        from unittest.mock import AsyncMock, patch
+        from app.middlewares.rate_limit import RateLimitMiddleware
+        app = FastAPI()
+
+        mock_redis = AsyncMock()
+        mock_redis.eval = AsyncMock(return_value=[1, 55, 0])
+        app.add_middleware(RateLimitMiddleware, requests_per_minute=60, redis_client=mock_redis)
+
+        @app.get("/test/redis-rate")
+        async def rate_route():
+            return {"status": "ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            res = await client.get("/test/redis-rate")
+            assert res.status_code == 200
+            assert res.headers["X-RateLimit-Limit"] == "60"
+            assert res.headers["X-RateLimit-Remaining"] == "55"
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_redis_token_bucket_exceeded(self) -> None:
+        """When Redis Lua script rejects request, HTTP 429 with Retry-After is returned."""
+        from unittest.mock import AsyncMock
+        from app.middlewares.rate_limit import RateLimitMiddleware
+        app = FastAPI()
+
+        mock_redis = AsyncMock()
+        mock_redis.eval = AsyncMock(return_value=[0, 0, 42])
+        app.add_middleware(RateLimitMiddleware, requests_per_minute=60, redis_client=mock_redis)
+
+        @app.get("/test/redis-exceeded")
+        async def rate_route():
+            return {"status": "ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            res = await client.get("/test/redis-exceeded")
+            assert res.status_code == 429
+            assert res.headers["Retry-After"] == "42"
+            assert res.json()["detail"] == "Rate limit exceeded"
+            assert res.json()["retry_after"] == 42
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_redis_eval_exception_falls_back_to_in_memory(self) -> None:
+        """When Redis eval throws an exception, rate limiter falls back to in-memory window."""
+        from unittest.mock import AsyncMock
+        from app.middlewares.rate_limit import RateLimitMiddleware
+        app = FastAPI()
+
+        mock_redis = AsyncMock()
+        mock_redis.eval = AsyncMock(side_effect=ConnectionError("Redis cluster unreachable"))
+        app.add_middleware(RateLimitMiddleware, requests_per_minute=10, redis_client=mock_redis)
+
+        @app.get("/test/redis-fallback")
+        async def rate_route():
+            return {"status": "fallback_ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            res = await client.get("/test/redis-fallback")
+            assert res.status_code == 200
+            assert res.json()["status"] == "fallback_ok"
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_in_memory_exceeded(self) -> None:
+        """Process-local in-memory sliding window enforces quota when Redis is unavailable."""
+        app = FastAPI()
+        register_middlewares(app, requests_per_minute=2)
+
+        @app.get("/test/in-memory-cap")
+        async def cap_route():
+            return {"status": "ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            r1 = await client.get("/test/in-memory-cap")
+            assert r1.status_code == 200
+            r2 = await client.get("/test/in-memory-cap")
+            assert r2.status_code == 200
+            r3 = await client.get("/test/in-memory-cap")
+            assert r3.status_code == 429
+            assert r3.headers["Retry-After"] == "60"
+
+    def test_rate_limit_get_redis_production_initialization(self) -> None:
+        """Verify _get_redis initialization logic in production and failure handling."""
+        from unittest.mock import MagicMock, patch
+        from app.config import get_settings
+        from app.middlewares.rate_limit import RateLimitMiddleware
+
+        settings = get_settings()
+        orig_env = settings.environment
+
+        dummy_app = FastAPI()
+        middleware = RateLimitMiddleware(dummy_app, requests_per_minute=10, redis_url="redis://localhost:6379/0")
+
+        try:
+            settings.environment = "production"
+
+            # 1. Successful initialization
+            with patch("redis.asyncio.from_url") as mock_from_url:
+                mock_client = MagicMock()
+                mock_from_url.return_value = mock_client
+                client = middleware._get_redis()
+                assert client is mock_client
+                # Subsequent call returns cached client
+                assert middleware._get_redis() is mock_client
+
+            # 2. Failed initialization
+            middleware2 = RateLimitMiddleware(dummy_app, requests_per_minute=10, redis_url="redis://localhost:6379/0")
+            with patch("redis.asyncio.from_url", side_effect=RuntimeError("Cannot connect")):
+                assert middleware2._get_redis() is None
+                assert middleware2._use_redis is False
+                # Disabled flag bypasses redis immediately
+                assert middleware2._get_redis() is None
+
+        finally:
+            settings.environment = orig_env
+

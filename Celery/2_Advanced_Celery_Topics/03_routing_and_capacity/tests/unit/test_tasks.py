@@ -205,6 +205,153 @@ class TestPayoutTasks:
             assert mock_account_p3.balance_cents == 50000  # Refunded
             assert mock_payment_p3.status == "failed"
 
+    @pytest.mark.asyncio
+    async def test_instant_payout_circuit_breaker_rail_failover_success(self) -> None:
+        """When primary rail circuit is OPEN, payment fails over to healthy secondary rail."""
+        from app.circuit_breaker import CircuitBreakerOpenError
+        pid = str(uuid4())
+        source_id = uuid4()
+
+        mock_payment = MagicMock(status="pending", amount_cents=10000, source_account_id=source_id,
+                                 destination_account_number="1234", destination_routing_number="021000021",
+                                 rail="rtp")
+        mock_account = MagicMock(balance_cents=50000)
+
+        session_p1 = _create_mock_session()
+        r1, r2 = MagicMock(), MagicMock()
+        r1.scalar_one_or_none.return_value = mock_payment
+        r2.scalar_one_or_none.return_value = mock_account
+        session_p1.execute.side_effect = [r1, r2]
+
+        mock_payment_p3 = MagicMock()
+        session_p3 = _create_mock_session()
+        r3 = MagicMock()
+        r3.scalar_one.return_value = mock_payment_p3
+        session_p3.execute.return_value = r3
+
+        factory = _create_mock_factory([session_p1, session_p3])
+
+        mock_bank_client = AsyncMock()
+        mock_bank_client.clear_instant_payment.side_effect = [
+            CircuitBreakerOpenError(rail="rtp"),
+            {"status": "settled", "clearing_reference": "CLR_FEDNOW_FAILOVER_999"},
+        ]
+
+        with patch("services.worker.tasks.payouts.get_session_factory", return_value=factory), \
+             patch("services.worker.tasks.payouts.BankSimulatorClient", return_value=mock_bank_client), \
+             patch("services.worker.tasks.payouts.get_fallback_rail", return_value="fednow"), \
+             patch("services.worker.tasks.payouts.send_payment_receipt.si"):
+
+            res = await _execute_instant_payout(pid)
+            assert res["status"] == "ok"
+            assert res["clearing_reference"] == "CLR_FEDNOW_FAILOVER_999"
+            assert mock_payment_p3.status == "settled"
+
+    @pytest.mark.asyncio
+    async def test_instant_payout_circuit_breaker_rail_failover_failure(self) -> None:
+        """When primary rail circuit is OPEN and secondary rail clearance also fails, compensation occurs."""
+        from app.circuit_breaker import CircuitBreakerOpenError
+        pid = str(uuid4())
+        source_id = uuid4()
+
+        mock_payment = MagicMock(status="pending", amount_cents=10000, source_account_id=source_id,
+                                 destination_account_number="1234", destination_routing_number="021000021",
+                                 rail="rtp")
+        mock_account = MagicMock(balance_cents=50000)
+
+        session_p1 = _create_mock_session()
+        r1, r2 = MagicMock(), MagicMock()
+        r1.scalar_one_or_none.return_value = mock_payment
+        r2.scalar_one_or_none.return_value = mock_account
+        session_p1.execute.side_effect = [r1, r2]
+
+        mock_payment_p3 = MagicMock()
+        mock_account_p3 = MagicMock(balance_cents=40000)
+        session_p3 = _create_mock_session()
+        r3, r4 = MagicMock(), MagicMock()
+        r3.scalar_one.return_value = mock_payment_p3
+        r4.scalar_one.return_value = mock_account_p3
+        session_p3.execute.side_effect = [r3, r4]
+
+        factory = _create_mock_factory([session_p1, session_p3])
+
+        mock_bank_client = AsyncMock()
+        mock_bank_client.clear_instant_payment.side_effect = [
+            CircuitBreakerOpenError(rail="rtp"),
+            RuntimeError("FedNow clearing rail rejected"),
+        ]
+
+        with patch("services.worker.tasks.payouts.get_session_factory", return_value=factory), \
+             patch("services.worker.tasks.payouts.BankSimulatorClient", return_value=mock_bank_client), \
+             patch("services.worker.tasks.payouts.get_fallback_rail", return_value="fednow"):
+
+            res = await _execute_instant_payout(pid)
+            assert res["status"] == "failed"
+            assert "Fallback rail fednow failed" in res["error"]
+            assert mock_account_p3.balance_cents == 50000  # Refunded
+
+    @pytest.mark.asyncio
+    async def test_instant_payout_circuit_breaker_fast_fail_no_fallback(self) -> None:
+        """When circuit is OPEN and no fallback rail is available, fast-fails immediately."""
+        from app.circuit_breaker import CircuitBreakerOpenError
+        pid = str(uuid4())
+        source_id = uuid4()
+
+        mock_payment = MagicMock(status="pending", amount_cents=10000, source_account_id=source_id,
+                                 destination_account_number="1234", destination_routing_number="021000021",
+                                 rail="rtp")
+        mock_account = MagicMock(balance_cents=50000)
+
+        session_p1 = _create_mock_session()
+        r1, r2 = MagicMock(), MagicMock()
+        r1.scalar_one_or_none.return_value = mock_payment
+        r2.scalar_one_or_none.return_value = mock_account
+        session_p1.execute.side_effect = [r1, r2]
+
+        mock_payment_p3 = MagicMock()
+        mock_account_p3 = MagicMock(balance_cents=40000)
+        session_p3 = _create_mock_session()
+        r3, r4 = MagicMock(), MagicMock()
+        r3.scalar_one.return_value = mock_payment_p3
+        r4.scalar_one.return_value = mock_account_p3
+        session_p3.execute.side_effect = [r3, r4]
+
+        factory = _create_mock_factory([session_p1, session_p3])
+
+        mock_bank_client = AsyncMock()
+        mock_bank_client.clear_instant_payment.side_effect = CircuitBreakerOpenError(rail="rtp")
+
+        with patch("services.worker.tasks.payouts.get_session_factory", return_value=factory), \
+             patch("services.worker.tasks.payouts.BankSimulatorClient", return_value=mock_bank_client), \
+             patch("services.worker.tasks.payouts.get_fallback_rail", return_value=None):
+
+            res = await _execute_instant_payout(pid)
+            assert res["status"] == "failed"
+            assert "no healthy fallback available" in res["error"]
+            assert mock_account_p3.balance_cents == 50000  # Refunded
+
+    @pytest.mark.asyncio
+    async def test_instant_payout_soft_time_limit_in_bank_call(self) -> None:
+        """When bank client raises SoftTimeLimitExceeded, _execute_instant_payout re-raises."""
+        pid = str(uuid4())
+        source_id = uuid4()
+        mock_payment = MagicMock(status="pending", amount_cents=10000, source_account_id=source_id,
+                                 destination_account_number="1234", destination_routing_number="021000021",
+                                 rail="rtp")
+        mock_account = MagicMock(balance_cents=50000)
+        session = _create_mock_session()
+        r1, r2 = MagicMock(), MagicMock()
+        r1.scalar_one_or_none.return_value = mock_payment
+        r2.scalar_one_or_none.return_value = mock_account
+        session.execute.side_effect = [r1, r2]
+        factory = _create_mock_factory([session])
+        mock_bank_client = AsyncMock()
+        mock_bank_client.clear_instant_payment.side_effect = SoftTimeLimitExceeded
+        with patch("services.worker.tasks.payouts.get_session_factory", return_value=factory), \
+             patch("services.worker.tasks.payouts.BankSimulatorClient", return_value=mock_bank_client):
+            with pytest.raises(SoftTimeLimitExceeded):
+                await _execute_instant_payout(pid)
+
     def test_process_instant_payout_task_wrapper(self) -> None:
         """Verify Celery task synchronous wrapper invokes async function."""
         with patch("services.worker.tasks.payouts._execute_instant_payout", return_value={"status": "ok"}):
@@ -213,9 +360,41 @@ class TestPayoutTasks:
 
     def test_process_instant_payout_soft_time_limit_handling(self) -> None:
         """Verify SoftTimeLimitExceeded triggers compensating refund and re-raises."""
-        with patch("services.worker.tasks.payouts._execute_instant_payout", side_effect=SoftTimeLimitExceeded):
+        pid = str(uuid4())
+        source_id = uuid4()
+        mock_payment = MagicMock(status="processing", amount_cents=15000, source_account_id=source_id)
+        mock_account = MagicMock(balance_cents=35000)
+
+        session = _create_mock_session()
+        r1, r2 = MagicMock(), MagicMock()
+        r1.scalar_one_or_none.return_value = mock_payment
+        r2.scalar_one.return_value = mock_account
+        session.execute.side_effect = [r1, r2]
+        factory = _create_mock_factory([session])
+
+        with patch("services.worker.tasks.payouts._execute_instant_payout", side_effect=SoftTimeLimitExceeded), \
+             patch("services.worker.tasks.payouts.get_session_factory", return_value=factory):
             with pytest.raises(SoftTimeLimitExceeded):
-                process_instant_payout(str(uuid4()))
+                process_instant_payout(pid)
+
+            assert mock_account.balance_cents == 50000
+            assert mock_payment.status == "failed"
+            assert "3s soft time limit" in mock_payment.error_detail
+
+    def test_process_instant_payout_timeout_when_not_processing(self) -> None:
+        """When payment is not in processing state during timeout, compensation is skipped."""
+        pid = str(uuid4())
+        mock_payment = MagicMock(status="settled")
+        session = _create_mock_session()
+        r1 = MagicMock()
+        r1.scalar_one_or_none.return_value = mock_payment
+        session.execute.return_value = r1
+        factory = _create_mock_factory([session])
+
+        with patch("services.worker.tasks.payouts._execute_instant_payout", side_effect=SoftTimeLimitExceeded), \
+             patch("services.worker.tasks.payouts.get_session_factory", return_value=factory):
+            with pytest.raises(SoftTimeLimitExceeded):
+                process_instant_payout(pid)
 
     def test_process_instant_payout_timeout_compensation_failure(self) -> None:
         """When compensation fails during soft time limit handling, it logs and re-raises SoftTimeLimitExceeded."""

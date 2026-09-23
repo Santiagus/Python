@@ -27,14 +27,15 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan context manager managing startup and shutdown hooks."""
-    # 1. Startup: Warm database connection pool
-    # 1. Startup: Warm database connection pool and verify connectivity
+    # 1. Startup: Warm database connection pool and start hybrid cache listener
     logger.info(
         "starting_payment_orchestrator_gateway",
         extra={"environment": settings.environment, "log_level": settings.log_level},
     )
-    get_engine()
     engine = get_engine()
+    from app.cache import get_account_cache
+    cache_mgr = get_account_cache()
+
     if settings.environment not in ("test", "testing"):
         try:
             from sqlalchemy import text
@@ -51,11 +52,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         except Exception as exc:
             logger.warning("broker_warmup_failed", extra={"error": str(exc)})
 
+        # Start Redis Pub/Sub cache invalidation listener
+        try:
+            await cache_mgr.start_listener()
+        except Exception as exc:
+            logger.warning("cache_listener_start_failed", extra={"error": str(exc)})
+
     yield
 
-    # 2. Shutdown: Gracefully dispose database connection pool
-    # 2. Shutdown: Gracefully dispose database connection pool and shared HTTP client
+    # 2. Shutdown: Gracefully dispose cache listener, database pool, and shared HTTP client
     logger.info("shutting_down_payment_orchestrator_gateway")
+    await cache_mgr.stop_listener()
     await close_bank_client()
     await close_db()
 
