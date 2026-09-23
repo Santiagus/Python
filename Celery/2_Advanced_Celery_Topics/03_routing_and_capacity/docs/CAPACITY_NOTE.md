@@ -155,10 +155,10 @@ Empirical verification conducted following the eager singleton initialization an
 
 | Dimension | Metric | Standard Target | Measured Actual | Status |
 | :--- | :--- | :---: | :---: | :---: |
-| **Test Suite Execution** | Total Tests Passed | $100\%$ | **$118 / 118$ passed** | Pass |
-| **Statement Coverage** | Missed Statements | $0$ | **$939 / 939$ ($100.00\%$)** | Pass |
-| **Branch Coverage** | Partial Branches | $0$ | **$96 / 96$ ($100.00\%$)** | Pass |
-| **Execution Duration** | Full Suite Runtime | $< 30\text{ s}$ | **$10.00\text{ s}$** | Pass |
+| **Test Suite Execution** | Total Tests Passed | $100\%$ | **$125 / 125$ passed** | Pass |
+| **Statement Coverage** | Missed Statements | $0$ | **$996 / 996$ ($100.00\%$)** | Pass |
+| **Branch Coverage** | Partial Branches | $0$ | **$102 / 102$ ($100.00\%$)** | Pass |
+| **Execution Duration** | Full Suite Runtime | $< 30\text{ s}$ | **$13.41\text{ s}$** | Pass |
 
 ### D. Queue Contention Benchmark Metrics (`scripts/load_test_contention.py`)
 
@@ -218,6 +218,9 @@ With Celery fixed at $8\text{ processes} \times (2\text{ pool} + 2\text{ overflo
 | **$W = 4$** ⭐ | **$5\text{ pool} + 10\text{ ov}$** | **$60$** | **$32$** | **$92$** | **$8\%$** | **$\sim 450\text{ req/s}$** | **Pareto Sweet Spot**: Sub-$25\text{ms}$ P99, zero core oversubscription. |
 | **$W = 8$** | $3\text{ pool} + 4\text{ ov}$ | $56$ | $32$ | **$88$** | $12\%$ | $\sim 750\text{ req/s}$ | SMT contention; each worker has only 3 pool slots (DB checkout wait). |
 | **$W = 12$** | $2\text{ pool} + 3\text{ ov}$ | $60$ | $32$ | **$92$** | $8\%$ | $\sim 900\text{ req/s}$ | **Oversubscription penalty**: $23$ total processes for $12$ physical cores; CPU cache thrashing degrades P99 tail latency. |
+
+> [!NOTE]
+> **Evolution to Connection Multiplexing**: The formula and table above govern **direct TCP connections** to PostgreSQL. When scaling out horizontally ($C \ge 8$ containers), connection constriction is eliminated by introducing **PgBouncer** (Section 9.G): individual containers allocate generous local budgets (`pool=15, overflow=10` = 25 sockets), while PgBouncer multiplexes active transactions into a compact backend pool ($\le 26$ PostgreSQL server connections), maintaining $>74\%$ safe database headroom.
 
 ### C. Golden Pareto Optimal Balance & Operating Ratio
 
@@ -318,7 +321,7 @@ By introducing **Nginx Semantic Edge Routing** fronting **Dedicated Ingestion SL
 
 ## 7. Cloud Migration & AWS Production Sizing Architecture
 
-When migrating the multi-rail payment engine from a single-host bare-metal machine (AMD Ryzen 9 7900) to AWS, the system transitions from a **core-constrained monolithic environment** to a **horizontally scalable, decoupled cloud topology**.
+When migrating the multi-rail payment engine from a single-host bare-metal machine (AMD Ryzen 9 7900) to AWS, the system transitions from a **core-constrained single-host environment** to a **horizontally scalable, decoupled cloud topology** backed by multi-tier caching and database connection multiplexing.
 
 ### A. AWS Target Architecture & Component Inventory
 
@@ -326,37 +329,36 @@ When migrating the multi-rail payment engine from a single-host bare-metal machi
 flowchart TD
     subgraph Edge["Edge Tier"]
         Route53["Amazon Route 53 (DNS / Anycast)"] --> CloudFront["AWS CloudFront (DDoS Shield / WAF)"]
-        CloudFront --> ALB["AWS Application Load Balancer<br/>• HTTP/2 Keep-Alive<br/>• Round-Robin Target Group"]
+        CloudFront --> ALB["AWS Application Load Balancer<br/>• HTTP/2 Keep-Alive<br/>• Semantic Path Routing (/payments/instant vs /settlements/batch)"]
     end
 
     subgraph Compute["Application Tier (AWS ECS Fargate / EKS)"]
-        ALB --> Pod1["API Pod 1 (c7g.xlarge)<br/>Uvicorn W=4"]
-        ALB --> Pod2["API Pod 2 (c7g.xlarge)<br/>Uvicorn W=4"]
-        ALB --> PodN["API Pod N (Auto-scaling 2 -> 10)"]
+        ALB -->|"Path: /payments/instant"| Pod_Inst["ECS Service: api_instant (Auto-scaling 2 -> 10)<br/>• L1 Process-Local Account Cache (300s TTL)<br/>• Zero-Refresh Pre-Generated UUID Responses<br/>• Client Pool: pool=15, overflow=10 (25 sockets)"]
+        ALB -->|"Path: /settlements/batch"| Pod_Batch["ECS Service: api_batch (Auto-scaling 1 -> 4)<br/>• Chunk Slicing (.chunks(100))<br/>• Client Pool: pool=8, overflow=6 (14 sockets)"]
+    end
+
+    subgraph MultiplexingTier["Database Connection Multiplexing Tier"]
+        Pod_Inst --> Pooler["Connection Multiplexing Tier<br/>• Option A: AWS RDS Proxy (Managed)<br/>• Option B: Containerized PgBouncer (ECS Service / Sidecar)<br/>• POOL_MODE = transaction<br/>• asyncpg: statement_cache_size = 0"]
+        Pod_Batch --> Pooler
     end
 
     subgraph DataTier["Data & Middleware Tier"]
-        Pod1 --> RDSProxy["AWS RDS Proxy<br/>• Connection Multiplexing<br/>• Zero Pool Starvation"]
-        Pod2 --> RDSProxy
-        PodN --> RDSProxy
+        Pooler -->|"25 - 50 Multiplexed Server Connections"| RDS[("Amazon RDS PostgreSQL 16<br/>• db.r7g.xlarge Multi-AZ<br/>• 500GB gp3 (6,000 IOPS)<br/>• synchronous_commit = on (Zero Data Loss)")]
 
-        RDSProxy --> RDS[("Amazon RDS PostgreSQL 16<br/>• db.r7g.2xlarge Multi-AZ<br/>• Storage: gp3 / io2 Provisioned IOPS")]
+        Pod_Inst --> RMQ["Amazon MQ (RabbitMQ Clustered)<br/>• payments.direct Exchange<br/>• Active/Standby M5.large"]
+        Pod_Batch --> RMQ
 
-        Pod1 --> RMQ["Amazon MQ (RabbitMQ Clustered)<br/>• payments.direct Exchange<br/>• Active/Standby M5.large"]
-        Pod2 --> RMQ
-        PodN --> RMQ
-
-        Pod1 --> Redis[("Amazon ElastiCache Redis 7<br/>• Cluster Mode Enabled")]
+        Pod_Inst --> Redis[("Amazon ElastiCache Redis 7<br/>• Cluster Mode Enabled<br/>• L2 Distributed Fast-Path Idempotency & Rate Limiting")]
     end
 
     subgraph WorkerFleet["Asynchronous Worker Fleets (EC2 Auto Scaling Groups)"]
-        RMQ -->|"critical"| ASG_Crit["Worker Fleet: Critical<br/>• c7g.large instances (Dedicated CPU)<br/>• Target Tracking: Queue Backlog &gt; 10"]
+        RMQ -->|"critical"| ASG_Crit["Worker Fleet: Critical<br/>• c7g.large instances (Dedicated CPU)<br/>• Target Tracking: Queue Backlog > 10"]
         RMQ -->|"default"| ASG_Def["Worker Fleet: Default<br/>• c7g.medium instances"]
         RMQ -->|"bulk"| ASG_Bulk["Worker Fleet: Bulk<br/>• Spot Instances c7g.xlarge<br/>• Scheduled Scaling for NACHA Cut-Off"]
 
-        ASG_Crit --> RDSProxy
-        ASG_Def --> RDSProxy
-        ASG_Bulk --> RDSProxy
+        ASG_Crit --> Pooler
+        ASG_Def --> Pooler
+        ASG_Bulk --> Pooler
     end
 ```
 
@@ -364,37 +366,52 @@ flowchart TD
 
 | Architectural Metric | Single Bare-Metal Host (Ryzen 9 7900) | AWS Production Cloud Architecture | Engineering Trade-Off & Mechanics |
 | :--- | :---: | :---: | :--- |
-| **Minimum P50 Latency** | **$9.29\text{ ms} - 12.0\text{ ms}$** | **$16.0\text{ ms} - 25.0\text{ ms}$** | **Physics of Network Hops**: Local memory-mapped loopback ($0.03\text{ ms}$) vs multi-hop VPC transit (ALB $\to$ API $\to$ RDS Proxy $\to$ Postgres Multi-AZ replication adds $2\text{--}5\text{ ms}$). |
-| **Max Ingestion Throughput** | $83.9\text{ req/s}$ (Capped by 12-core CPU contention) | **$2,500\text{--}10,000+\text{ req/s}$** | **Zero Core Contention**: Independent compute tiers scale horizontally across availability zones. |
-| **Tail Latency under Burst (P99)** | $320.0\text{ ms} - 420.0\text{ ms}$ | **$< 45.0\text{ ms}$** | **Edge Buffering**: AWS ALB absorbs socket backlogs and distributes concurrent connections across target instances. |
-| **Database Connection Ceiling** | Capped at $100$ connections ($92$ max demand) | **$10,000+$ client connections** | **RDS Proxy Multiplexing**: Thousands of API processes share a warm backend pool of 50 physical Postgres connections. |
-| **Single-Thread Burst Speed** | **$5.4\text{ GHz}$ (Zen 4 Desktop)** | $3.5\text{--}3.8\text{ GHz}$ (AWS Graviton 3 / AMD EPYC) | Bare-metal desktop core has higher clock frequency; cloud delivers superior aggregate parallel core counts. |
-| **Storage Write Latency** | Local PCIe 4.0 NVMe ($0.02\text{ ms}$) | Network EBS gp3 ($1.0\text{--}2.5\text{ ms}$) | High-throughput batch inserts require EBS Provisioned IOPS (`io2`) or Aurora PostgreSQL distributed storage. |
+| **Minimum P50 Latency** | **$11.09\text{ ms} - 16.0\text{ ms}$** | **$18.0\text{ ms} - 28.0\text{ ms}$** | **Physics of Network Hops**: Local memory-mapped loopback ($0.03\text{ ms}$) vs multi-hop VPC transit (ALB $\to$ API $\to$ Proxy $\to$ Postgres Multi-AZ replication adds $2\text{--}5\text{ ms}$). |
+| **Max Ingestion Throughput** | **$300.0\text{ req/s}$** ($300.3\text{ total RPS}$) | **$2,500\text{--}10,000+\text{ req/s}$** | **Zero Core Contention**: Independent compute tiers scale horizontally across availability zones without host process thrashing. |
+| **Tail Latency under Burst (P99)** | **$83.0\text{ ms}$** (strict `fsync`) / **$73.0\text{ ms}$** (`async`) | **$< 35.0\text{ ms}$** | **Edge Buffering & Scale**: Multi-AZ ALB absorbs socket backlogs; distributed ECS pods prevent host CPU scheduling stalls. |
+| **Database Connection Ceiling** | Capped at **$26\text{ physical connections}$** via PgBouncer | **$10,000+\text{ client connections}$** | **Connection Multiplexing**: Thousands of API/worker processes share a warm backend pool of 30–50 physical Postgres connections. |
+| **Single-Thread Burst Speed** | **$5.4\text{ GHz}$ (Zen 4 Desktop)** | $3.5\text{--}3.8\text{ GHz}$ (AWS Graviton 3 / AMD EPYC) | Bare-metal desktop core has higher peak clock speed; cloud delivers massive aggregate core counts. |
+| **Storage Write Durability** | Local PCIe 4.0 NVMe ($0.02\text{ ms}$) | Network EBS gp3 ($1.0\text{--}2.5\text{ ms}$) | **Single-Query Ingestion**: Dropping SQL queries from $4 \to 1$ makes `synchronous_commit = on` negligible even on standard `gp3`, guaranteeing zero data loss. |
 
 ### C. Recommended AWS Sizing & Cost-Optimized Specification
 
 ```text
-1. API Ingestion Tier:
-   • Compute: AWS ECS on AWS Graviton 3 (c7g.xlarge: 4 vCPU, 8 GB RAM)
-   • Concurrency: W = 4 Uvicorn workers per task (1 task per 4 vCPUs)
-   • Auto-scaling: Min 2 tasks, Max 10 tasks (Target Tracking on ALB RequestCountPerTarget = 150 req/s)
+1. API Ingestion Tier (Dedicated SLA Container Pools):
+   • Compute: AWS ECS Fargate or EKS on AWS Graviton 3 (c7g.xlarge: 4 vCPU, 8 GB RAM)
+   • Segmentation:
+     - api_instant: Min 2 tasks, Max 10 tasks (Target Tracking on ALB RequestCountPerTarget = 150 req/s)
+     - api_batch:   Min 1 task, Max 4 tasks (Isolated event loop for multi-row chunk dispatching)
+   • Ingestion Invariants:
+     - L1 Process-Local Cache: _ACCOUNT_CACHE with 300s TTL (nanosecond memory validation)
+     - Zero-Refresh Responses: Pre-generated UUIDv4 and UTC timestamps (1 SQL query per request)
+     - Client Connection Pool: pool_size=15, max_overflow=10 (25 client sockets per task)
 
-2. Connection Multiplexing Tier:
-   • Service: AWS RDS Proxy attached to PostgreSQL 16
-   • Max Idle Connections: 20%
-   • Connection Borrow Timeout: 120s
-   • Impact: Guarantees zero "FATAL: remaining connection slots reserved" errors regardless of task scaling.
+2. Connection Multiplexing Tier (AWS RDS Proxy vs. Containerized PgBouncer):
+   • Strategy Selection:
+     - Option A (AWS RDS Proxy): Fully managed, automatic Multi-AZ failover target tracking, IAM auth.
+       Configuration: max_idle_connections = 20%, borrow_timeout = 120s.
+     - Option B (Self-Hosted PgBouncer on ECS/EKS): Exactly replicates proven local Docker stack (edoburu/pgbouncer:latest).
+       Configuration: POOL_MODE = transaction, DEFAULT_POOL_SIZE = 25 - 40, MAX_CLIENT_CONN = 2,000.
+       Advantage: Sub-millisecond multiplexing latency and eliminates per-vCPU AWS proxy surcharges.
+   • Mandatory Driver Invariant:
+     - SQLAlchemy asyncpg connect_args={"statement_cache_size": 0} (strictly prevents prepared statement collision across transactions).
+   • Multiplexing Ratio:
+     - 10 ECS tasks × 25 client pool slots = 250 client sockets multiplexed into 25–40 RDS backend server connections.
 
-3. Persistence & Middleware:
-   • Database: Amazon RDS PostgreSQL 16 (db.r7g.xlarge, Multi-AZ)
-   • Storage: 500 GB gp3 with 6,000 IOPS and 250 MB/s throughput
-   • Broker: Amazon MQ for RabbitMQ (Cluster deployment across 3 AZs)
-   • Cache / Idempotency: Amazon ElastiCache Redis 7 (cache.r7g.large, Cluster Mode Enabled)
+3. Persistence & Durability Tier:
+   • Database: Amazon RDS PostgreSQL 16 (db.r7g.xlarge Multi-AZ)
+   • Storage: 500 GB gp3 with 6,000 Provisioned IOPS and 250 MB/s throughput
+   • Durability Standard: synchronous_commit = on (Strict conservative banking compliance: zero data loss on instance power cut)
+   • Engine Parameters: shared_buffers = 8GB (25% RAM), wal_buffers = 16MB, max_wal_size = 8GB, random_page_cost = 1.1
 
-4. Celery Worker Fleets:
-   • worker_critical: 2 x c7g.large instances (4 dedicated vCPUs for instant FedNow/RTP settlement)
-   • worker_default:  1 x c7g.medium instance
-   • worker_bulk:     EC2 Auto Scaling Group using Spot c7g.xlarge, scheduled to scale up 30 minutes before NACHA cutoff (17:00 EST)
+4. Messaging & Distributed Caching:
+   • Broker: Amazon MQ for RabbitMQ (Cluster deployment across 3 AZs, payments.direct exchange)
+   • L2 Distributed Cache: Amazon ElastiCache Redis 7 (cache.r7g.large Cluster Mode Enabled) for fast-path idempotency, rate limiting, and canvas chord synchronization.
+
+5. Celery Worker Fleets:
+   • worker_critical: 2 x c7g.large instances (4 dedicated vCPUs, prefetch=1, -O fair, FedNow/RTP)
+   • worker_default:  1 x c7g.medium instance (prefetch=2)
+   • worker_bulk:     EC2 Auto Scaling Group using Spot c7g.xlarge (prefetch=4, .chunks(100), scheduled scale-up before NACHA cutoff)
 ```
 
 ---
@@ -517,7 +534,7 @@ Total 5,000-Item Compute Demand (50 chunks): 1.36 seconds
 
 ---
 
-## 8. The 4-Phase Empirical Bisection Benchmark: Maximizing Instant Capacity While Preserving Bulk Processing
+## 9. The 4-Phase Empirical Bisection Benchmark: Maximizing Instant Capacity While Preserving Bulk Processing
 
 This section establishes the empirical methodology and mathematical formulation to answer the core operational question: **How many `api_instant`, `api_batch`, and Celery worker processes can be scheduled to maximize instant payment throughput ($\lambda_{\max}$) while strictly preserving the minimum required capacity for bulk processing?**
 
@@ -621,9 +638,13 @@ $$W_{\text{critical}} = \left\lceil \Lambda \cdot T_{\text{bank}} \right\rceil =
 $$W_{\text{bulk}} = \left\lceil \frac{M / N}{T_{\text{deadline}} \times 4} \right\rceil$$
 *(Where $M$ is total disbursements, $N=100$ is chunk size, and $T_{\text{deadline}}$ is clearing window in seconds).*
 
-#### 4. PostgreSQL Connection Pool Formula:
-$$\text{Demand}_{\text{total}} = \left(C_{\text{instant}} \times (\text{pool}_{\text{inst}} + \text{ov}_{\text{inst}})\right) + \left(C_{\text{batch}} \times (\text{pool}_{\text{batch}} + \text{ov}_{\text{batch}})\right) + \sum (W \times \text{pool}_W) \le 90$$
-*(If total containers exceed 10, deploy **PgBouncer** or **AWS RDS Proxy** for transaction multiplexing to avoid exhausting PostgreSQL `max_connections`).*
+#### 4. PostgreSQL Connection Pool Budgeting & Multiplexing:
+* **Direct Connection Model** ($C \le 4$ containers):
+  $$\text{Demand}_{\text{total}} = \sum \left(C_i \times (\text{pool}_i + \text{ov}_i)\right) + \sum (W \times \text{pool}_W) \le 90$$
+* **Multiplexed Model with PgBouncer / RDS Proxy** ($C \ge 8$ containers):
+  $$\text{Client Sockets} = \sum (C_i \times 25) \le \text{MAX\_CLIENT\_CONN} \quad (1,000\text{ to }2,000)$$
+  $$\text{Physical PostgreSQL Connections} = \text{DEFAULT\_POOL\_SIZE} \le 25\text{ to }40 \ll \text{max\_connections} \quad (100)$$
+  *(Guarantees that horizontally scaling API containers never starves or crashes the database engine).*
 
 ---
 
@@ -782,14 +803,3 @@ To address conservative banking requirements where **zero transaction or record 
 
 #### 4. Final Production Takeaway
 Because our application-level optimizations (in-memory account existence cache + pre-generated UUID responses + index deduplication) reduced database queries from 4 down to 1 (`INSERT`), PostgreSQL only executes **one single physical `fsync` per transaction**. As a result, the system sustains **300.0 req/s** with $P_{99} = 83.0\text{ ms}$ even with **`synchronous_commit = on`**, achieving enterprise banking durability with zero compromise on throughput or SLA compliance.
-
-
-
-
-
-
-
-
-
-
-
