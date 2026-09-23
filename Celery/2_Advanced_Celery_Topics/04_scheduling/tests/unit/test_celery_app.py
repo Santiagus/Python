@@ -108,3 +108,22 @@ def test_task_prerun_and_postrun_signals() -> None:
         state="SUCCESS",
     )
     assert current_request_id.get() is None
+
+
+@pytest.mark.unit
+def test_task_postrun_without_prerun_token() -> None:
+    """Verify task postrun handles task_id without registered token gracefully."""
+    mock_task = MagicMock()
+    mock_task.name = "test_task"
+
+    # Call postrun directly with an unregistered task_id
+    handle_task_postrun(
+        sender=None,
+        task_id="unregistered_task_id",
+        task=mock_task,
+        args=(),
+        kwargs={},
+        retval=None,
+        state="FAILURE",
+    )
+    assert current_request_id.get() is None

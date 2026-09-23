@@ -47,10 +47,20 @@ def test_sync_executor_lifecycle() -> None:
     assert executor is not None
 
     shutdown_sync_executor()
+    # Calling shutdown again when already shut down covers not _sync_executor._shutdown False branch
+    shutdown_sync_executor()
+
     # Re-acquisition must create a new executor if previous was shut down
     executor2 = get_sync_executor()
     assert executor2 is not None
     assert not executor2._shutdown
+
+    # When _sync_executor is None
+    import services.worker.tasks.utils as utils_mod
+
+    utils_mod._sync_executor = None
+    utils_mod._sync_executor = None  # type: ignore[assignment]
+    shutdown_sync_executor()
 
 
 @pytest.mark.unit
@@ -61,6 +71,14 @@ def test_worker_loop_lifecycle() -> None:
     assert loop1 is loop2
 
     reset_worker_loop()
+    # Calling reset_worker_loop when loop is already None
+    reset_worker_loop()
+
+    # Calling reset_worker_loop when loop is not None but already closed
+    loop_closed = get_worker_loop()
+    loop_closed.close()
+    reset_worker_loop()
+
     loop3 = get_worker_loop()
     assert loop3 is not None
     assert not loop3.is_closed()

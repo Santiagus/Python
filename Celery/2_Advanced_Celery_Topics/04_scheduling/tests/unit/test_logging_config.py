@@ -34,6 +34,8 @@ def test_request_context_filter_with_contextvar() -> None:
         assert filter_.filter(record) is True
         assert record.request_id == "12345678-abcd-ef01-2345-6789abcdef01"
         assert record.req_id_short == "12345678"
+        assert getattr(record, "request_id") == "12345678-abcd-ef01-2345-6789abcdef01"
+        assert getattr(record, "req_id_short") == "12345678"
     finally:
         current_request_id.reset(token)
 
@@ -54,6 +56,8 @@ def test_request_context_filter_default() -> None:
     assert filter_.filter(record) is True
     assert record.request_id == "-"
     assert record.req_id_short == "-"
+    assert getattr(record, "request_id") == "-"
+    assert getattr(record, "req_id_short") == "-"
 
 
 @pytest.mark.unit
@@ -104,6 +108,31 @@ def test_pretty_dev_formatter_with_exception() -> None:
     formatted = formatter.format(record)
     assert "ValueError: Simulated financial calculation fault" in formatted
     assert "[err12345]" in formatted
+
+
+@pytest.mark.unit
+def test_pretty_dev_formatter_with_existing_exc_text() -> None:
+    """Verify PrettyDevFormatter uses existing exc_text when already populated."""
+    formatter = PrettyDevFormatter()
+    try:
+        raise ValueError("Pre-formatted fault")
+    except ValueError:
+        exc_info = sys.exc_info()
+
+    record = logging.LogRecord(
+        name="services.worker.tasks",
+        level=logging.ERROR,
+        pathname=__file__,
+        lineno=50,
+        msg="Failed execution with cached text",
+        args=(),
+        exc_info=exc_info,
+    )
+    record.req_id_short = "errcached"
+    record.exc_text = "Pre-formatted exception traceback"
+
+    formatted = formatter.format(record)
+    assert "Pre-formatted exception traceback" in formatted
 
 
 @pytest.mark.unit

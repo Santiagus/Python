@@ -13,6 +13,7 @@ from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -84,6 +85,7 @@ async def test_database_url(postgres_container: PostgresContainer | None) -> str
         try:
             async with engine.begin() as conn:
                 raw_conn = await conn.get_raw_connection()
+                assert raw_conn.driver_connection is not None
                 await raw_conn.driver_connection.execute(ddl)
         except Exception as exc:
             if "already exists" not in str(exc):
@@ -115,7 +117,7 @@ async def db_session(test_database_url: str) -> AsyncGenerator[AsyncSession, Non
 
 
 @pytest.fixture(autouse=True)
-async def cleanup_tables_after_test(db_session: AsyncSession) -> None:
+async def cleanup_tables_after_test(db_session: AsyncSession) -> AsyncGenerator[None, None]:
     """Clean tables between test runs while preserving seed data."""
     yield
     # Truncate tables between tests
@@ -126,3 +128,15 @@ async def cleanup_tables_after_test(db_session: AsyncSession) -> None:
         await db_session.commit()
     except Exception:
         await db_session.rollback()
+
+
+@pytest.fixture
+async def api_client(test_database_url: str) -> AsyncGenerator[AsyncClient, None]:
+    """Yield an HTTPX AsyncClient bound to the FastAPI application."""
+    from app.main import app
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        yield client
