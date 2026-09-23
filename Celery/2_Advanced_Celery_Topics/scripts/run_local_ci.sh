@@ -63,26 +63,28 @@ echo -e "\n${CYAN}▶ Stage 1: Mermaid Diagram Syntax & Render Validation${NC}"
 "${PYTHON_BIN}" "${SCRIPT_DIR}/verify_mermaid.py" "${MODULE_DIR}"
 echo -e "${GREEN}✅ Stage 1 Passed: All Mermaid diagrams valid.${NC}"
 
+# Set working directory to REPO_ROOT (VS Code workspace root) so paths match workspace links
+cd "${REPO_ROOT}"
+
 # ------------------------------------------------------------------------------
 # Stage 2: Code Style & Formatting Check (Ruff Format)
 # ------------------------------------------------------------------------------
 echo -e "\n${CYAN}▶ Stage 2: Code Style & Formatting Check (Ruff Format)${NC}"
-cd "${MODULE_DIR}"
-"${RUFF_BIN}" format --check app services/worker
+"${RUFF_BIN}" format --check --config "${MODULE_DIR}/pyproject.toml" 03_routing_and_capacity/app 03_routing_and_capacity/services/worker
 echo -e "${GREEN}✅ Stage 2 Passed: Code formatting adheres to PEP 8 standards.${NC}"
 
 # ------------------------------------------------------------------------------
 # Stage 3: Linting & Code Hygiene (Ruff Check)
 # ------------------------------------------------------------------------------
 echo -e "\n${CYAN}▶ Stage 3: Linting & Code Hygiene (Ruff Check)${NC}"
-"${RUFF_BIN}" check app services/worker
+"${RUFF_BIN}" check --config "${MODULE_DIR}/pyproject.toml" 03_routing_and_capacity/app 03_routing_and_capacity/services/worker
 echo -e "${GREEN}✅ Stage 3 Passed: Zero linter errors or warnings.${NC}"
 
 # ------------------------------------------------------------------------------
 # Stage 4: Static Type Checking (Mypy)
 # ------------------------------------------------------------------------------
 echo -e "\n${CYAN}▶ Stage 4: Static Type Checking (Mypy)${NC}"
-"${MYPY_BIN}" app services/worker --ignore-missing-imports
+"${MYPY_BIN}" --config-file "${MODULE_DIR}/pyproject.toml" 03_routing_and_capacity/app 03_routing_and_capacity/services/worker --ignore-missing-imports
 echo -e "${GREEN}✅ Stage 4 Passed: Type checking verified with zero errors.${NC}"
 
 # ------------------------------------------------------------------------------
@@ -100,7 +102,7 @@ if docker ps --format '{{.Names}}' | grep -q "^payment_gateway$"; then
 fi
 
 # 5c. Settings / .env validation
-"${PYTHON_BIN}" -c "from app.config import get_settings; get_settings()"
+PYTHONPATH="${MODULE_DIR}:${PYTHONPATH:-}" "${PYTHON_BIN}" -c "from app.config import get_settings; get_settings()"
 echo -e "  • Pydantic Settings:     ${GREEN}Valid${NC}"
 echo -e "${GREEN}✅ Stage 5 Passed: All configuration schemas verified.${NC}"
 
@@ -108,7 +110,7 @@ echo -e "${GREEN}✅ Stage 5 Passed: All configuration schemas verified.${NC}"
 # Stage 6: Fast Unit Tests
 # ------------------------------------------------------------------------------
 echo -e "\n${CYAN}▶ Stage 6: Fast Unit Tests (In-Memory Isolation)${NC}"
-"${PYTEST_BIN}" tests/unit/ -q
+PYTHONPATH="${MODULE_DIR}:${PYTHONPATH:-}" "${PYTEST_BIN}" -c "${MODULE_DIR}/pytest.ini" "${MODULE_DIR}/tests/unit" -q
 echo -e "${GREEN}✅ Stage 6 Passed: All unit tests succeeded.${NC}"
 
 # ------------------------------------------------------------------------------

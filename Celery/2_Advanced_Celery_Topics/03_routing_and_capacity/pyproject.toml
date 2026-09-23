@@ -14,6 +14,9 @@ ignore = [
     "E402", # module level import not at top of file (used after settings initialization)
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app", "services"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
