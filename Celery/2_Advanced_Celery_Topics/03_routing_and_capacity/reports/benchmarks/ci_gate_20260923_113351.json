@@ -1,5 +1,5 @@
 {
-  "timestamp": "20260923_113442",
+  "timestamp": "20260923_113351",
   "target_rate": 150.0,
   "achieved_rps": 150.0,
   "duration_seconds": 10.0,
@@ -7,16 +7,16 @@
   "successful_requests": 1500,
   "failed_requests": 0,
   "error_rate_pct": 0.0,
-  "p50_ms": 12.45740349895641,
-  "p95_ms": 34.739385000648326,
-  "p99_ms": 61.06942699989304,
+  "p50_ms": 15.001994000158447,
+  "p95_ms": 617.7890020007908,
+  "p99_ms": 864.5525550000457,
   "baseline_p99_ms": 83.0,
   "max_allowable_p99_ms": 95.44999999999999,
   "peak_db_connections": 0,
   "batches_submitted": 7,
-  "gate_p99_pass": true,
+  "gate_p99_pass": false,
   "gate_error_pass": true,
   "gate_db_pass": true,
-  "gate_regression_pass": true,
-  "overall_pass": true
+  "gate_regression_pass": false,
+  "overall_pass": false
 }

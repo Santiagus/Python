@@ -107,10 +107,13 @@ echo -e "  • Pydantic Settings:     ${GREEN}Valid${NC}"
 echo -e "${GREEN}✅ Stage 5 Passed: All configuration schemas verified.${NC}"
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Stage 6: Fast Unit Tests
 # ------------------------------------------------------------------------------
 echo -e "\n${CYAN}▶ Stage 6: Fast Unit Tests (In-Memory Isolation)${NC}"
-PYTHONPATH="${MODULE_DIR}:${PYTHONPATH:-}" "${PYTEST_BIN}" -c "${MODULE_DIR}/pytest.ini" "${MODULE_DIR}/tests/unit" -q
+cd "${MODULE_DIR}"
+"${PYTEST_BIN}" -c pytest.ini tests/unit/ -q
+cd "${REPO_ROOT}"
 echo -e "${GREEN}✅ Stage 6 Passed: All unit tests succeeded.${NC}"
 
 # ------------------------------------------------------------------------------
@@ -131,7 +134,9 @@ echo -e "\n${BLUE}--- Entering Full Verification Mode (Coverage & Contention Gat
 
 # Stage 7: Pytest Suite with 100% Statement & Branch Coverage Gate
 echo -e "\n${CYAN}▶ Stage 7: Full Pytest Suite (100% Statement & Branch Coverage Gate)${NC}"
-"${PYTEST_BIN}" --cov=app --cov=services/worker --cov-report=term-missing --cov-fail-under=100
+cd "${MODULE_DIR}"
+"${PYTEST_BIN}" -c pytest.ini tests --cov=app --cov=services/worker --cov-report=term-missing --cov-fail-under=100
+cd "${REPO_ROOT}"
 echo -e "${GREEN}✅ Stage 7 Passed: 100% statement and branch coverage verified.${NC}"
 
 # Stage 8: Live Docker Compose Stack Readiness Check
