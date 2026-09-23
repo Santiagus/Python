@@ -55,6 +55,7 @@ flowchart TD
 | **`TC-API-02`** | Integration (`test_api.py`) | Get Report by Date | `GET /reconciliations/2026-09-23` | Returns single report details and verification hash. | HTTP 200 OK with matching report. |
 | **`TC-API-03`** | Integration (`test_api.py`) | Manual Reconciliation Trigger | `POST /reconciliations/trigger` | Dispatches Celery task; returns task ID and accepted status. | HTTP 202 Accepted. |
 | **`TC-API-04`** | Integration (`test_api.py`) | Query Missing Gaps | `GET /reconciliations/gaps` | Scans for unclosed past business days; returns date list. | HTTP 200 OK with gap array. |
+| **`TC-API-05`** | Integration (`test_api.py`) | On-Demand Gap Backfill | `POST /reconciliations/backfill` | Enqueues backfill task; validates date boundaries (`start <= end`). | HTTP 202 Accepted. |
 | **`TC-E2E-01`** | Live E2E (`test_live_e2e.py`) | Full Distributed Stack Verification | Live containers (API + Worker + Beat + DB + Redis + RMQ) | Seed entries $\to$ trigger cut-off $\to$ assert report created in DB. | Report successfully generated end-to-end. |
 
 ---

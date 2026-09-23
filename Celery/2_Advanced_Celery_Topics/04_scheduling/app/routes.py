@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db import get_session
-from app.dispatcher import dispatch_reconciliation_cutoff
+from app.dispatcher import dispatch_gap_backfill, dispatch_reconciliation_cutoff
 from app.models import Account, LedgerEntry, ReconciliationReport
 from app.schemas import (
     GapAuditResponse,
@@ -27,6 +27,8 @@ from app.schemas import (
     ReconciliationReportItem,
     SeedLedgerRequest,
     SeedLedgerResponse,
+    TriggerBackfillRequest,
+    TriggerBackfillResponse,
     TriggerReconciliationRequest,
     TriggerReconciliationResponse,
 )
@@ -276,6 +278,57 @@ async def trigger_reconciliation(
         period_date=date_str,
         status="queued",
         message=f"Reconciliation job queued for period {date_str}",
+    )
+
+
+@router.post(
+    "/reconciliations/backfill",
+    response_model=TriggerBackfillResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Trigger Historical Gap Backfill Job",
+    description="Dispatches an asynchronous Celery task to scan for unclosed business periods and backfill them sequentially.",
+)
+async def trigger_backfill(
+    payload: TriggerBackfillRequest | None = None,
+) -> TriggerBackfillResponse:
+    """Enqueue an asynchronous historical gap backfill task.
+
+    Args:
+        payload: Optional parameters specifying start and end dates for the audit window.
+
+    Returns:
+        TriggerBackfillResponse: 202 Accepted status with Celery task ID.
+
+    Raises:
+        HTTPException: 400 Bad Request if start_date is strictly greater than end_date.
+    """
+    start_str: str | None = None
+    end_str: str | None = None
+
+    if payload is not None:
+        if payload.start_date is not None and payload.end_date is not None:
+            if payload.start_date > payload.end_date:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"start_date ({payload.start_date}) cannot be after end_date ({payload.end_date})",
+                )
+        if payload.start_date is not None:
+            start_str = payload.start_date.isoformat()
+        if payload.end_date is not None:
+            end_str = payload.end_date.isoformat()
+
+    # 1. Dispatch task to RabbitMQ broker via producer dispatcher
+    task_id = dispatch_gap_backfill(
+        start_date_str=start_str,
+        end_date_str=end_str,
+    )
+
+    return TriggerBackfillResponse(
+        task_id=task_id,
+        status="queued",
+        message="Historical gap backfill task dispatched to queue 'reconciliation'",
+        scan_range_start=start_str,
+        scan_range_end=end_str,
     )
 
 

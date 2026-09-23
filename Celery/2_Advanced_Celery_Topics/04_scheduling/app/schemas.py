@@ -264,6 +264,76 @@ class TriggerReconciliationResponse(BaseModel):
     )
 
 
+class TriggerBackfillRequest(BaseModel):
+    """Request payload to manually trigger historical gap detection and backfill."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "start_date": "2026-09-01",
+                    "end_date": "2026-09-22",
+                }
+            ]
+        }
+    )
+
+    start_date: date | None = Field(
+        default=None,
+        description="Optional beginning of the gap scan range (defaults to earliest ledger activity or 30 days ago)",
+        examples=["2026-09-01"],
+    )
+    end_date: date | None = Field(
+        default=None,
+        description="Optional end of the gap scan range (defaults to yesterday)",
+        examples=["2026-09-22"],
+    )
+
+
+class TriggerBackfillResponse(BaseModel):
+    """Response payload confirming dispatch of the gap backfill task."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "task_id": "c0000000-0000-0000-0000-000000000001",
+                    "status": "queued",
+                    "message": "Historical gap backfill task dispatched to queue 'reconciliation'",
+                    "scan_range_start": "2026-09-01",
+                    "scan_range_end": "2026-09-22",
+                }
+            ]
+        }
+    )
+
+    task_id: str = Field(
+        ...,
+        description="Celery task identifier assigned to the backfill execution",
+        examples=["c0000000-0000-0000-0000-000000000001"],
+    )
+    status: str = Field(
+        default="queued",
+        description="Current dispatch status",
+        examples=["queued"],
+    )
+    message: str = Field(
+        ...,
+        description="Human-readable status confirmation",
+        examples=["Historical gap backfill task dispatched to queue 'reconciliation'"],
+    )
+    scan_range_start: str | None = Field(
+        default=None,
+        description="Audited scan range start date ('YYYY-MM-DD')",
+        examples=["2026-09-01"],
+    )
+    scan_range_end: str | None = Field(
+        default=None,
+        description="Audited scan range end date ('YYYY-MM-DD')",
+        examples=["2026-09-22"],
+    )
+
+
 class GapAuditResponse(BaseModel):
     """Audit response identifying unclosed historical business-day gaps."""
 

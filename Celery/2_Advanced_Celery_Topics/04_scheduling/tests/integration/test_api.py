@@ -149,6 +149,69 @@ async def test_trigger_reconciliation(api_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_trigger_backfill_default(api_client: AsyncClient) -> None:
+    """Validate POST /reconciliations/backfill with empty JSON triggers full gap scan."""
+    with patch("app.routes.dispatch_gap_backfill", return_value="backfill-task-uuid-111") as mock_dispatch:
+        response = await api_client.post("/api/v1/reconciliations/backfill", json={})
+        assert response.status_code == 202
+        data = response.json()
+        assert data["task_id"] == "backfill-task-uuid-111"
+        assert data["status"] == "queued"
+        assert data["scan_range_start"] is None
+        assert data["scan_range_end"] is None
+        mock_dispatch.assert_called_once_with(
+            start_date_str=None,
+            end_date_str=None,
+        )
+
+
+@pytest.mark.asyncio
+async def test_trigger_backfill_no_body(api_client: AsyncClient) -> None:
+    """Validate POST /reconciliations/backfill with empty body triggers full gap scan."""
+    with patch("app.routes.dispatch_gap_backfill", return_value="backfill-task-uuid-222") as mock_dispatch:
+        response = await api_client.post("/api/v1/reconciliations/backfill")
+        assert response.status_code == 202
+        data = response.json()
+        assert data["task_id"] == "backfill-task-uuid-222"
+        mock_dispatch.assert_called_once_with(
+            start_date_str=None,
+            end_date_str=None,
+        )
+
+
+@pytest.mark.asyncio
+async def test_trigger_backfill_custom_range(api_client: AsyncClient) -> None:
+    """Validate POST /reconciliations/backfill with custom date range."""
+    payload = {
+        "start_date": "2026-09-01",
+        "end_date": "2026-09-15",
+    }
+    with patch("app.routes.dispatch_gap_backfill", return_value="backfill-task-uuid-333") as mock_dispatch:
+        response = await api_client.post("/api/v1/reconciliations/backfill", json=payload)
+        assert response.status_code == 202
+        data = response.json()
+        assert data["task_id"] == "backfill-task-uuid-333"
+        assert data["scan_range_start"] == "2026-09-01"
+        assert data["scan_range_end"] == "2026-09-15"
+        mock_dispatch.assert_called_once_with(
+            start_date_str="2026-09-01",
+            end_date_str="2026-09-15",
+        )
+
+
+@pytest.mark.asyncio
+async def test_trigger_backfill_invalid_range(api_client: AsyncClient) -> None:
+    """Validate POST /reconciliations/backfill rejects start_date > end_date with 400 Bad Request."""
+    payload = {
+        "start_date": "2026-09-20",
+        "end_date": "2026-09-10",
+    }
+    response = await api_client.post("/api/v1/reconciliations/backfill", json=payload)
+    assert response.status_code == 400
+    assert "start_date" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_get_reconciliation_by_date(api_client: AsyncClient, db_session: AsyncSession) -> None:
     """Validate GET /reconciliations/{period_date} returns single report or 404."""
     # 1. Insert report directly into DB
@@ -329,6 +392,28 @@ async def test_dispatcher_unit() -> None:
         args, kwargs = mock_send.call_args
         assert args[0] == "services.worker.tasks.reconciliation.reconcile_eod_cutoff"
         assert kwargs["args"] == ["2026-09-23", 1000]
+        assert kwargs["queue"] == "reconciliation"
+        assert kwargs["headers"]["source"] == "api_gateway"
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_gap_backfill() -> None:
+    """Validate dispatch_gap_backfill sets correlation headers and AMQP options."""
+    from app.dispatcher import dispatch_gap_backfill
+
+    mock_task_res = MagicMock()
+    mock_task_res.id = "backfill-dispatched-uuid-888"
+
+    with patch("app.dispatcher.celery_app.send_task", return_value=mock_task_res) as mock_send:
+        task_id = dispatch_gap_backfill(
+            start_date_str="2026-09-01",
+            end_date_str="2026-09-15",
+        )
+        assert task_id == "backfill-dispatched-uuid-888"
+        mock_send.assert_called_once()
+        args, kwargs = mock_send.call_args
+        assert args[0] == "services.worker.tasks.backfill.detect_and_backfill_gaps"
+        assert kwargs["args"] == ["2026-09-01", "2026-09-15"]
         assert kwargs["queue"] == "reconciliation"
         assert kwargs["headers"]["source"] == "api_gateway"
 

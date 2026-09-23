@@ -12,6 +12,7 @@ from contextvars import Token
 from typing import Any
 
 from celery import Celery, signals
+from celery.schedules import crontab
 from kombu import Exchange, Queue
 
 from app.config import get_settings
@@ -57,12 +58,43 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone=settings.celery_timezone,
     enable_utc=True,
+    beat_scheduler="services.worker.beat_lock.LeaderElectedScheduler",
+    beat_schedule={
+        "eod-banking-cutoff": {
+            "task": "services.worker.tasks.reconciliation.reconcile_eod_cutoff",
+            "schedule": crontab(hour=17, minute=0, day_of_week="mon-fri"),
+            "options": {
+                "queue": "reconciliation",
+                "routing_key": "scheduling.reconciliation",
+            },
+        },
+        "hourly-gap-detector": {
+            "task": "services.worker.tasks.backfill.detect_and_backfill_gaps",
+            "schedule": crontab(minute=30),
+            "options": {
+                "queue": "reconciliation",
+                "routing_key": "scheduling.reconciliation",
+            },
+        },
+        "nightly-idempotency-cleanup": {
+            "task": "services.worker.tasks.cleanup.purge_expired_records",
+            "schedule": crontab(hour=2, minute=0),
+            "options": {
+                "queue": "cleanup",
+                "routing_key": "scheduling.cleanup",
+            },
+        },
+    },
     task_queues=queues,
     task_default_queue="reconciliation",
     task_default_exchange="scheduling.direct",
     task_default_routing_key="scheduling.reconciliation",
     task_routes={
         "services.worker.tasks.reconciliation.*": {
+            "queue": "reconciliation",
+            "routing_key": "scheduling.reconciliation",
+        },
+        "services.worker.tasks.backfill.*": {
             "queue": "reconciliation",
             "routing_key": "scheduling.reconciliation",
         },
