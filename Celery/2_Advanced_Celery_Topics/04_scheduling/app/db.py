@@ -145,4 +145,3 @@ async def close_db_engine() -> None:
         _engine = None
         _session_factory = None
         logger.info("Database engine connection pool disposed")
-

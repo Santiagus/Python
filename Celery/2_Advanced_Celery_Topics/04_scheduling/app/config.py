@@ -94,4 +94,3 @@ def get_settings() -> Settings:
         Settings: Validated configuration settings instance.
     """
     return Settings()
-
