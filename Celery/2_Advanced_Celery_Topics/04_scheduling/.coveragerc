@@ -1,0 +1,19 @@
+[run]
+source =
+    app
+    services/worker
+branch = True
+omit =
+    tests/*
+    */__pycache__/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    if __name__ == .__main__.:
+show_missing = True
+fail_under = 100
+
