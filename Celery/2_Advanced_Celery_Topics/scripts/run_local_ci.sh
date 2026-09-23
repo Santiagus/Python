@@ -119,7 +119,7 @@ echo -e "${GREEN}✅ Stage 6 Passed: All unit tests succeeded.${NC}"
 if [ "${MODE}" = "quick" ]; then
     echo -e "\n${GREEN}======================================================================${NC}"
     echo -e "${GREEN}🎉 ALL QUICK CHECKS PASSED (< 3s)! Clean to commit.${NC}"
-    echo -e "${YELLOW}💡 Tip: Run './scripts/run_local_ci.sh --full' before pushing to remote.${NC}"
+    echo -e "${YELLOW}💡 Tip: Run '$0 --full' before pushing to remote.${NC}"
     echo -e "${GREEN}======================================================================${NC}"
     exit 0
 fi
