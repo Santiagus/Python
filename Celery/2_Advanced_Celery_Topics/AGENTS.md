@@ -14,6 +14,8 @@ This project enforces strict backend engineering, distributed task execution, an
   - Pydantic v2 schemas with `Field` validation constraints and `ConfigDict`.
   - Strict `Decimal` for all monetary and calculated financial fields (stored as `NUMERIC(14, 2)` and processed internally in minor-unit integer cents).
   - Realistic specimen defaults and examples (`examples=[...]`) across all schemas so Swagger UI (`/docs`) "Try it out" executes cleanly without $422$ errors.
+  - **Zero-Refresh Response Generation**: Pre-generate primary keys (`uuid.uuid4()`) and UTC timestamps in the application layer. Never call `await session.refresh()` in high-throughput write endpoints.
+  - **Atomic Idempotency via Unique Constraints**: Enforce idempotency via database `UNIQUE` constraints and catch `IntegrityError` instead of issuing speculative `SELECT` queries before `INSERT`.
 * **Documentation & Readability**:
   - `docs/TEST_PLAN.md`, `docs/ARCHITECTURE_AND_STANDARDS.md`, and Mermaid `flowchart` and `sequenceDiagram` diagrams covering all execution paths.
   - Mandatory Google-style docstrings for **every** method and function.
@@ -36,13 +38,20 @@ This project enforces strict backend engineering, distributed task execution, an
   - **Eager Singleton Initialization at Module Load**: Initialize all shared client, connection, and thread pool singletons (`_shared_client`, `_engine`, `_session_factory`, `_sync_executor`) at module load time to eliminate first-call cold-start/warm-up latency. Never defer initialization lazily to the first transaction.
   - **Shared Client Connection Factories**: Outgoing network clients (`BankSimulatorClient`) must share a process-level client instance with explicit connection pooling (`httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=30.0)`). Tasks reuse persistent TCP keep-alive sockets rather than opening and tearing down ephemeral sockets per request, preventing socket pileup in `TIME_WAIT`.
   - **Role-Based Database Connection Pool Budgeting**: In prefork multi-process architectures, single-threaded worker child processes execute strictly one task at a time and must be budgeted with lightweight pools (`pool_size=2, max_overflow=2`), while the API gateway allocates higher capacity (`pool_size=10, max_overflow=20`). This prevents exhausting PostgreSQL's `max_connections` ($N \times 30$ vs budgeted total $< 30$).
+  - **Connection Multiplexing (PgBouncer Invariant)**: In distributed multi-container deployments, deploy PgBouncer in transaction pooling mode (`POOL_MODE=transaction`) to decouple application scale from PostgreSQL connection ceilings. Always configure `connect_args={"statement_cache_size": 0}` in asyncpg to eliminate prepared statement collisions across multiplexed connections.
+  - **Multi-Tier Caching Architecture**:
+    - *L1 Process-Local Memory Cache*: Cache read-heavy, low-churn reference data (e.g., `_ACCOUNT_CACHE` with TTL) in Python process memory for instant sub-microsecond validation without network or database round-trips. Always provide clean eviction hooks (`clear_*_cache()`) for test isolation.
+    - *L2 Distributed Cache (Redis)*: Fast-path idempotency checks (`SET NX EX`), distributed rate limiting, and ephemeral coordination. The relational database remains the ultimate ACID source of truth.
   - **Shared Process Thread Pool for Sync-in-Async Bridging**: In `run_sync()`, reuse an eagerly-initialized module-level `ThreadPoolExecutor(max_workers=4)` rather than constructing and tearing down ephemeral executors on every call.
   - **Kombu AMQP Broker Pooling**: Always configure `broker_pool_limit=10` and `broker_connection_retry_on_startup=True` in Celery.
   - **Eager Boot Warm-Up (`@signals.worker_process_init` & FastAPI `lifespan`)**: When Celery child processes fork, immediately re-initialize and warm the event loop, worker-budgeted DB pool, and HTTP client at boot time so the first task executes with sub-25ms P99 latency. In FastAPI `lifespan`, pre-warm database pools on startup with a `SELECT 1` ping.
-
-
-
-
+* **Database Index Architecture & Query Minimization Invariants**:
+  - **Index Deduplication**: Never create an explicit `CREATE INDEX` on a column that already possesses a `UNIQUE` constraint or is a primary key. PostgreSQL automatically provisions a B-Tree index for unique constraints; duplicate indexes double write amplification, disk waste, and WAL volume.
+  - **Partial Indexes for State Machines**: Ban full-table indexes on low-cardinality status columns (`status VARCHAR(20)`) where 95%+ of rows reach terminal states (`settled`, `completed`). Mandate partial B-Tree indexes (`WHERE status IN ('pending', 'processing')`) to keep index working set in CPU L3 cache and eliminate write amplification on settled transactions.
+  - **Database Query Minimization**: Minimize SQL queries per request cycle ($4 \to 1$ round-trips), cutting database load by 75% and eliminating connection holding latency.
+* **PostgreSQL Engine Tuning & Financial Durability**:
+  - Modern NVMe engine settings: `shared_buffers = 512MB` (or 25-40% RAM), `wal_buffers = 16MB`, `max_wal_size = 4GB`, `random_page_cost = 1.1`.
+  - Strict financial durability: Default to `synchronous_commit = on` in banking/financial ledgers to guarantee zero data loss on power failure. Single-query transactions keep physical NVMe `fsync` overhead negligible ($P_{99} \le 83\text{ ms}$ at 300 req/s). Reserve `synchronous_commit = off` strictly for non-critical telemetry or transient queues.
 * **Continuous Benchmark Profiling & Performance History Invariants**:
   - **Structured JSON Benchmark Persistence**: All capacity and contention benchmarks (`scripts/load_test_*.py`) must persist structured execution metrics to disk under `reports/benchmarks/benchmark_<YYYYMMDD_HHMMSS>.json` and update `reports/benchmarks/latest.json`.
   - **Dual-Layer Profiling**: Separate and measure both API Ingestion Latency (under background queue saturation) and Worker End-to-End Clearing SLA (`cleared_at - created_at`).

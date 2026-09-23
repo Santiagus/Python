@@ -115,6 +115,12 @@ Every API implementation must adhere to strict asynchronous and robustness patte
 6. **Interactive OpenAPI / Swagger Docs (`/docs`)**:
    * All Pydantic models, request bodies, query parameters, and path variables must define **valid, realistic specimen examples and defaults** using `Field(..., examples=[...])` or `model_config = ConfigDict(json_schema_extra={"examples": [...]})`.
    * When inspecting `/docs` (Swagger UI), clicking **"Try it out" -> "Execute"** must work immediately out of the box with realistic specimen data, without requiring manual JSON editing or triggering $422$ Unprocessable Entity validation errors.
+7. **Ingestion Optimization & Zero-Refresh Response Generation**:
+   * In high-throughput write endpoints (`POST /payments/instant`, `POST /transfers`), never invoke `await session.refresh(instance)`. Synchronous database refreshes trigger a redundant `SELECT` query over the network just to reload server-generated defaults.
+   * Pre-generate primary keys (`uuid.uuid4()`) and UTC timestamps (`datetime.now(timezone.utc)`) in the application layer prior to instantiating the ORM model, commit the transaction, and construct the response Pydantic schema directly from known memory state. Alternatively, execute atomic `INSERT ... RETURNING` if database-generated sequences are mandatory.
+8. **Atomic Idempotency via Storage Constraints**:
+   * Avoid speculative `SELECT` queries to verify idempotency keys before inserting. Under high concurrency, speculative reads suffer from race conditions and double database query overhead.
+   * Enforce idempotency at the storage engine level with a `UNIQUE` constraint (or index). Attempt the `INSERT` directly within an atomic transaction savepoint or session block; intercept `sqlalchemy.exc.IntegrityError`, roll back the local transaction, and fetch or return the existing idempotent resource.
 
 ---
 
@@ -239,6 +245,15 @@ Every distributed backend system must enforce rigorous connection pooling, threa
    * Immediately upon process boot (`@signals.worker_process_init`), child processes must re-bind and pre-warm their thread-local event loop (`get_worker_loop()`), worker-budgeted DB pool (`init_worker_db()`), and process-local HTTP client (`init_bank_client()`).
    * When the first task arrives from RabbitMQ, all connections are pre-warmed, delivering instant sub-25ms P99 execution.
 
+7. **Connection Multiplexing via PgBouncer (Transaction Pooling)**:
+   * When horizontally scaling API containers ($N \ge 4$), application-level connection pools ($N \times \text{pool\_size}$) quickly overwhelm PostgreSQL's maximum connection ceiling (`max_connections = 100`), resulting in connection starvation and context-switch thrashing.
+   * Deploy PgBouncer as a dedicated middleware proxy between application instances and PostgreSQL operating in `POOL_MODE=transaction`. Application instances maintain generous client pools to PgBouncer (e.g. 8 containers $\times$ 25 connections = 200 client connections), while PgBouncer multiplexes active transactions into a compact, fixed backend pool to PostgreSQL (`default_pool_size = 20` to `25`).
+   * **Driver Invariant (`statement_cache_size=0`)**: When connecting through PgBouncer transaction pooling with SQLAlchemy `asyncpg`, always set `connect_args={"statement_cache_size": 0}` (or `prepared_statement_cache_size=0`). Because PgBouncer reallocates server connections across transactions while asyncpg caches prepared statements by client session name, prepared statement reuse will cause `DuplicatePreparedStatementError`.
+
+8. **Multi-Tier Caching Architecture (L1 Memory & L2 Redis)**:
+   * **L1 Process-Local In-Memory Cache**: Cache read-heavy, low-churn reference entities (such as account existence, configuration flags, or tenant status) in process memory with TTL (e.g., `_ACCOUNT_CACHE: dict[UUID, float]` with 300s TTL). Eliminates database queries entirely for static validations, executing in $< 0.001\text{ ms}$ (nanosecond memory lookups). Always provide an explicit cache eviction hook (`clear_*_cache()`) for clean test isolation and runtime invalidation.
+   * **L2 Distributed Cache (Redis)**: Use Redis for fast-path idempotency checks (`SET NX EX`), distributed sliding-window rate limiters, and real-time canvas coordination barriers. The relational database remains the ultimate ACID source of truth.
+
 ---
 
 ## 9. Continuous Benchmark Profiling & Performance History Invariants
@@ -263,3 +278,46 @@ Capacity contention benchmarks (`scripts/load_test_contention.py`) and performan
 4. **CI/CD Regression Tracking & Historical Audits**:
    * Version-controlled or CI-archived `reports/benchmarks/*.json` files serve as an audit trail for performance evolution across commits, refactors, and dependency upgrades.
    * Allows automated regression gates in CI to fail builds if P99 latency exceeds defined SLA thresholds ($> 100\text{ ms}$).
+
+---
+
+## 10. Database Index Architecture & Query Minimization Invariants
+Every schema and query path must be optimized to eliminate redundant B-Tree traversals, write amplification, and unnecessary round-trips:
+
+1. **Index Deduplication Invariant**:
+   * Never define an explicit index (`CREATE INDEX idx_table_column ON table(column)`) on a column that already has a `UNIQUE` constraint or is a primary key (`id UUID PRIMARY KEY`, `idempotency_key VARCHAR UNIQUE`).
+   * PostgreSQL automatically creates a backing B-Tree index for every `UNIQUE` and `PRIMARY KEY` constraint. Manually adding an index creates duplicate B-Trees on identical columns, doubling write amplification, inflating disk usage, and doubling WAL generation on every `INSERT` and `UPDATE`.
+
+2. **Partial Indexes for Asynchronous State Machines**:
+   * In distributed event-driven systems, entities undergo state transitions from transient states (`pending`, `processing`) to terminal states (`settled`, `completed`, `failed`). Over time, 95%–99% of table rows reside in terminal states.
+   * **Anti-Pattern**: A full-table B-Tree index on `(status)` indexes millions of historical completed records, bloating to hundreds of megabytes, falling out of CPU L3 cache, and slowing down every write.
+   * **Production Pattern**: Mandate Partial B-Tree Indexes with filter predicates targeting strictly active records:
+     ```sql
+     CREATE INDEX idx_payments_pending ON payments (id)
+     WHERE status IN ('pending', 'processing');
+     ```
+   * Partial indexes remain microscopically small (fitting in CPU L3 cache), index only rows that require worker polling or supervisor reconciliation, and incur zero write or WAL overhead when rows are updated to terminal states.
+
+3. **Database Transaction Minimization (The 4-to-1 Reduction Rule)**:
+   * Profile the exact SQL query count executed in critical HTTP request cycles. Every extra query adds network transit, query parsing, lock acquisition, and connection holding time.
+   * Eliminate pre-check queries (use L1/L2 caches for reference validation), eliminate pre-read idempotency queries (use DB unique constraints), and eliminate post-insert refreshes (pre-generate UUIDs and timestamps). Dropping query count from 4 queries to 1 query reduces database traffic by 75% and raises sustainable throughput by $> 2\times$.
+
+---
+
+## 11. PostgreSQL Engine Tuning & Financial Durability Invariants
+High-throughput distributed systems handling financial assets must balance hardware utilization with non-negotiable ACID durability:
+
+1. **NVMe Storage Optimization**:
+   * Modern containerized and cloud databases run on NVMe flash storage with random I/O latency comparable to sequential reads.
+   * Configure PostgreSQL parameters in `docker-compose.yml` or `postgresql.conf`:
+     - `random_page_cost = 1.1` (reduces planner bias against index scans compared to the magnetic disk default `4.0`).
+     - `shared_buffers = 512MB` (or 25%–40% of host RAM).
+     - `wal_buffers = 16MB` (buffers full WAL page writes).
+     - `max_wal_size = 4GB` (prevents checkpoint thrashing during high-volume batch ingestion).
+     - `checkpoint_completion_target = 0.9` (smooths I/O across checkpoint intervals).
+
+2. **Financial Durability Invariant (`synchronous_commit = on` vs `off`)**:
+   * **The Strict Financial Standard**: In banking, ledger accounting, and payment processing, `synchronous_commit = on` is mandatory. Every committed transaction must be physically flushed to non-volatile disk via WAL `fsync` before acknowledging the client, guaranteeing zero data loss even on total power loss.
+   * **The Single-Query Performance Reality**: Benchmarks prove that when ingestion paths are optimized to a single query per request, physical NVMe `fsync` overhead is negligible ($P_{99} = 83\text{ ms}$ at 300 req/s under `synchronous_commit = on` vs $P_{99} = 73\text{ ms}$ under `synchronous_commit = off`). Financial systems do NOT need to sacrifice ACID durability to achieve sub-100ms P99 SLAs.
+   * **Permissible Exceptions for `synchronous_commit = off`**: Asynchronous WAL flushing (up to 3x `wal_writer_delay`, ~60ms loss window on sudden power cut) may be used strictly for non-critical, reproducible workloads: ephemeral ingestion queues, high-volume clickstream metrics, or debug telemetry where broker replays or idempotency can recover lost records.
+
