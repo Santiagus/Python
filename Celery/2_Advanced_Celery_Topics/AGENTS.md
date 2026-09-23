@@ -10,6 +10,9 @@ This project enforces strict backend engineering, distributed task execution, an
   - **Progressive Debug Config Generation**: In `.vscode/launch.json`, generate debug configurations strictly for services and entry points that currently exist and are suitable to be debugged at that point in development. Never generate dangling or speculative configurations pointing to non-existent applications, files, or entry points (e.g., do not add FastAPI configs before the app exists).
   - **Compound Multi-Service Configurations**: When several services or architectural layers (e.g., FastAPI gateway, Celery worker, Celery beat, mock simulators) are complete and should be run together, generate a compound debug configuration (`compounds` with `"stopAll": true`) to launch and debug them all concurrently.
   - **Interactive REST Scenarios**: Self-contained test scenarios in `requests/requests.rest` (generated concurrently with endpoints and tests).
+* **Atomic & Granular Commit Strategy**:
+  - **Minimal Cohesive Commits**: Keep git commits as small, focused, and granular as possible (partitioned by logical unit: domain task, data model/schema, API route, middleware, scheduler/worker component, developer tooling, or documentation). Avoid monolithic multi-feature or multi-layer commits.
+  - **Zero-Broken-Execution Invariant**: Every individual commit must be functionally self-contained, syntactically clean, and working. Never commit intermediate broken states, unresolved imports, failing tests, or invalid type annotations. Each commit in a sequence must pass syntax, type checking, and automated tests independently.
 * **FastAPI Standards**:
   - `async def` endpoints as default.
   - Development logger with pretty formatter (`datefmt="%H:%M:%S"`, truncated 8-character UUID `req_id[:8]`, no headers for standard HTTP fields).

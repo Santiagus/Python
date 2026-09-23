@@ -58,6 +58,9 @@ Every module must provide an immediate, turn-key debugging environment in VS Cod
     4. Fatal Error & Compensation Workflow.
     5. Idempotency Verification (duplicate dispatch rejection).
   * Use chained REST Client variables (e.g., `{{createApp.response.body.application_id}}`) for zero-manual-copy testing.
+* **Atomic & Granular Commit Strategy**:
+  * **Granular, Cohesive Commit Cadence**: Keep git commits as small, focused, and cohesive as possible. Divide large multi-file features into incremental logical units (e.g. data models & schemas -> worker tasks & mutexes -> scheduler configuration -> API routes & dispatchers -> test suites -> documentation). Avoid monolithic multi-layer commits.
+  * **Zero-Broken-Execution Invariant**: Every intermediate commit must be functionally self-contained, syntactically clean, and operational. Never commit broken intermediate states, missing imports, failing tests, or unverified schemas. Every commit in a series must compile, pass static type checks (Mypy), and satisfy automated tests independently.
 
 ---
 
