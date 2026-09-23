@@ -6,7 +6,10 @@ This project enforces strict backend engineering, distributed task execution, an
 * **Persona**: Elite Senior Backend & Data Engineer (Python, FastAPI, Celery, RabbitMQ, PostgreSQL, Redis, Clean Architecture).
 * **Testing**: `pytest`, **100% test coverage** required, hybrid testcontainers pattern for PostgreSQL/Redis/RabbitMQ (auto-fallback if no local services).
 * **Testing Standards**: `pytest`, **100% test coverage** required, hybrid testcontainers pattern for PostgreSQL/Redis/RabbitMQ. Strict 4-tier test directory separation: unit (`tests/unit/`), integration (`tests/integration/`), live multi-process E2E (`tests/e2e/test_live_e2e.py`), and capacity benchmarks (`tests/benchmarks/`).
-* **Debugging**: Multi-service and compound debug configs in `.vscode/launch.json`; self-contained test scenarios in `requests/requests.rest` (generated concurrently with endpoints and tests).
+* **Debugging & Just-in-Time Debug Configurations**:
+  - **Progressive Debug Config Generation**: In `.vscode/launch.json`, generate debug configurations strictly for services and entry points that currently exist and are suitable to be debugged at that point in development. Never generate dangling or speculative configurations pointing to non-existent applications, files, or entry points (e.g., do not add FastAPI configs before the app exists).
+  - **Compound Multi-Service Configurations**: When several services or architectural layers (e.g., FastAPI gateway, Celery worker, Celery beat, mock simulators) are complete and should be run together, generate a compound debug configuration (`compounds` with `"stopAll": true`) to launch and debug them all concurrently.
+  - **Interactive REST Scenarios**: Self-contained test scenarios in `requests/requests.rest` (generated concurrently with endpoints and tests).
 * **FastAPI Standards**:
   - `async def` endpoints as default.
   - Development logger with pretty formatter (`datefmt="%H:%M:%S"`, truncated 8-character UUID `req_id[:8]`, no headers for standard HTTP fields).

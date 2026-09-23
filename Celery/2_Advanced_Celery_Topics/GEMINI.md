@@ -38,11 +38,17 @@ Every project module must maintain enterprise-grade automated testing with a har
 Every module must provide an immediate, turn-key debugging environment in VS Code and interactive HTTP client workflows.
 
 * **Multi-Service Debugging (`.vscode/launch.json`)**:
-  * Individual launch configurations for each service:
-    * **FastAPI**: `uvicorn app.main:app --reload --port <PORT>` with `justMyCode: true`.
-    * **Celery Worker**: `celery -A services.worker.celery_app:celery_app worker --loglevel=DEBUG -P solo` with `subProcess: true`.
-    * **Celery Beat** (when applicable): `celery -A ... beat --loglevel=DEBUG`.
-  * **Compound Configuration**: A compound profile (e.g., `"FastAPI + Celery Worker"`) that launches all implied microservices concurrently with `"stopAll": true`.
+  * **Progressive Just-in-Time Generation Invariant**:
+    * Generate debug configurations strictly for services, workers, and entry points that currently exist and are suitable to be debugged at that specific stage of development.
+    * Never generate dangling or speculative configurations pointing to non-existent applications, modules, or entry points (e.g., do not add a FastAPI launch profile pointing to `app.main:app` if the web service has not yet been built or is not part of the active layer).
+  * **Individual Service Configurations**:
+    * **FastAPI**: `uvicorn app.main:app --reload --port <PORT>` with `justMyCode: true` (only once the FastAPI application entry point exists).
+    * **Celery Worker**: `celery -A services.worker.celery_app:celery_app worker --loglevel=DEBUG -P solo` with `subProcess: true` (only once the worker module exists).
+    * **Celery Beat** (when applicable): `celery -A services.worker.celery_app:celery_app beat --loglevel=DEBUG` (only once beat configuration/schedules exist).
+    * **Mock / Partner Simulator APIs** (when applicable): Dedicated launch profile for standalone mock services (e.g., `services/bank_simulator_api/`).
+  * **Compound Configurations for Multi-Service Workflows**:
+    * When several services, workers, or architectural layers are complete and should be run together (e.g., FastAPI + Celery Worker + Celery Beat, or Worker + Partner Mock API), generate a compound debug configuration profile (`compounds` with `"stopAll": true`) that launches all active services concurrently.
+    * Progressively update or expand compound configurations as additional services and background daemons are completed.
 * **REST Client Workflow (`requests/requests.rest`)**:
   * **Concurrent Generation Mandate**: `requests/requests.rest` must be authored and kept in sync **at the exact same time** endpoints and test suites are developed (never deferred).
   * An interactive file for the VS Code REST Client extension organized into **self-contained test workflows** covering:

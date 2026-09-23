@@ -16,7 +16,12 @@ When working with individual project folders (such as `03_routing_and_capacity`,
 
 ## 1. VS Code Debugging (`.vscode/launch.json`)
 
-Place this file at `<module_folder>/.vscode/launch.json`. Adjust module paths and environment ports as needed:
+Place this file at `<module_folder>/.vscode/launch.json`. Adjust module paths and environment ports as needed.
+
+> [!IMPORTANT]
+> **Progressive Just-in-Time Generation**:
+> Only include launch configurations for services and entry points that actually exist and are suitable to be debugged at that stage of development. Do not generate dangling debug configurations pointing to non-existent applications (e.g., omit the FastAPI configuration if the module does not have or has not yet implemented the FastAPI app).
+> When several services/layers (e.g., API gateway, Celery worker, Celery beat, simulator APIs) are complete and intended to be run together, generate a compound debug configuration (`compounds` with `"stopAll": true`) to launch and debug them all concurrently.
 
 ```json
 {
