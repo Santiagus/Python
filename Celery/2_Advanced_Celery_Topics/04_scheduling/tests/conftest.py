@@ -1,7 +1,7 @@
 """Global Pytest fixtures and hybrid Testcontainers configuration for 04_scheduling.
 
 Supports hybrid infrastructure: connects to local PostgreSQL/Redis if running,
-or automatically spins up ephemeral Testcontainers.
+or automatically spins up ephemeral Testcontainers for integration test runs.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 from testcontainers.community.postgres import PostgresContainer
+from testcontainers.community.redis import RedisContainer
 
 # Disable Ryuk for socket resilience in container / WSL environments
 os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
@@ -66,6 +67,22 @@ def postgres_container() -> Generator[PostgresContainer | None, None, None]:
 
 
 @pytest.fixture(scope="session")
+def redis_container() -> Generator[RedisContainer | None, None, None]:
+    """Launch a Redis 7 testcontainer if no local Redis is active."""
+    if os.getenv("TEST_REDIS_URL") or os.getenv("REDIS_URL"):
+        yield None
+        return
+    if _check_tcp_port("localhost", 6379):
+        yield None
+        return
+    try:
+        with RedisContainer("redis:7-alpine") as container:
+            yield container
+    except Exception:
+        yield None
+
+
+@pytest.fixture(scope="session")
 async def test_database_url(postgres_container: PostgresContainer | None) -> str:
     """Initialize database schema via init.sql and return async database URL."""
     if os.getenv("TEST_DATABASE_URL"):
@@ -103,8 +120,42 @@ async def test_database_url(postgres_container: PostgresContainer | None) -> str
     return db_url
 
 
+@pytest.fixture(scope="session")
+def test_redis_url(redis_container: RedisContainer | None) -> str:
+    """Return active Redis URL and configure application settings."""
+    if os.getenv("TEST_REDIS_URL"):
+        redis_url = os.environ["TEST_REDIS_URL"]
+    elif os.getenv("REDIS_URL"):
+        redis_url = os.environ["REDIS_URL"]
+    elif redis_container is not None:
+        host = redis_container.get_container_host_ip()
+        port = redis_container.get_exposed_port(6379)
+        redis_url = f"redis://{host}:{port}/0"
+    elif _check_tcp_port("localhost", 6379):
+        redis_url = "redis://localhost:6379/0"
+    else:
+        redis_url = "redis://localhost:6379/0"
+
+    settings = get_settings()
+    settings.redis_url = redis_url
+
+    from services.worker.locks import close_redis_client
+
+    close_redis_client()
+
+    return redis_url
+
+
+@pytest.fixture(autouse=True)
+def auto_setup_integration_infrastructure(request: pytest.FixtureRequest) -> None:
+    """Automatically wire database and Redis testcontainers for integration tests."""
+    if request.node.get_closest_marker("integration"):
+        request.getfixturevalue("test_database_url")
+        request.getfixturevalue("test_redis_url")
+
+
 @pytest.fixture
-async def db_session(test_database_url: str) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(test_database_url: str, test_redis_url: str) -> AsyncGenerator[AsyncSession, None]:
     """Yield an isolated, self-rolling-back AsyncSession for database tests."""
     factory = get_session_factory()
 
@@ -115,23 +166,20 @@ async def db_session(test_database_url: str) -> AsyncGenerator[AsyncSession, Non
             await session.rollback()
             await session.close()
 
-
-@pytest.fixture(autouse=True)
-async def cleanup_tables_after_test(db_session: AsyncSession) -> AsyncGenerator[None, None]:
-    """Clean tables between test runs while preserving seed data."""
-    yield
-    # Truncate tables between tests
-    try:
-        await db_session.execute(
-            text("TRUNCATE TABLE idempotency_records, reconciliation_reports, ledger_entries, accounts CASCADE;")
-        )
-        await db_session.commit()
-    except Exception:
-        await db_session.rollback()
+    # Clean tables between tests
+    factory = get_session_factory()
+    async with factory() as session:
+        try:
+            await session.execute(
+                text("TRUNCATE TABLE idempotency_records, reconciliation_reports, ledger_entries, accounts CASCADE;")
+            )
+            await session.commit()
+        except Exception:
+            await session.rollback()
 
 
 @pytest.fixture
-async def api_client(test_database_url: str) -> AsyncGenerator[AsyncClient, None]:
+async def api_client(test_database_url: str, test_redis_url: str) -> AsyncGenerator[AsyncClient, None]:
     """Yield an HTTPX AsyncClient bound to the FastAPI application."""
     from app.main import app
 
