@@ -29,7 +29,10 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # 1. Instantiate Celery Application
-celery_app = Celery("scheduling_platform")
+celery_app = Celery(
+    "scheduling_platform",
+    include=["services.worker.tasks"],
+)
 
 # 2. Driver / Protocol Layer: Kombu Exchanges & Queues
 scheduling_exchange = Exchange("scheduling.direct", type="direct", durable=True)

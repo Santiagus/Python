@@ -50,6 +50,14 @@ def _check_tcp_port(host: str, port: int, timeout: float = 0.5) -> bool:
         return False
 
 
+def _is_integration_or_e2e(request: pytest.FixtureRequest) -> bool:
+    """Return True if the running test is within integration or e2e suites."""
+    fspath = str(request.node.fspath)
+    return "integration" in fspath or "e2e" in fspath or bool(
+        request.node.get_closest_marker("integration") or request.node.get_closest_marker("e2e")
+    )
+
+
 @pytest.fixture(scope="session")
 def postgres_container() -> Generator[PostgresContainer | None, None, None]:
     """Launch a PostgreSQL 16 testcontainer if no local PostgreSQL is active."""
@@ -80,6 +88,44 @@ def redis_container() -> Generator[RedisContainer | None, None, None]:
             yield container
     except Exception:
         yield None
+
+
+@pytest.fixture(scope="session")
+def rabbitmq_service_url() -> Generator[str, None, None]:
+    """Provide RabbitMQ broker URL via existing environment, local port, or dynamic Testcontainer."""
+    if os.getenv("RABBITMQ_URL"):
+        yield os.environ["RABBITMQ_URL"]
+        return
+    if os.getenv("TEST_RABBITMQ_URL"):
+        yield os.environ["TEST_RABBITMQ_URL"]
+        return
+    if _check_tcp_port("localhost", 5672):
+        yield "amqp://guest:guest@localhost:5672//"
+        return
+
+    import time
+
+    import amqp
+    from testcontainers.core.container import DockerContainer
+
+    try:
+        with DockerContainer("rabbitmq:3.13-management-alpine").with_exposed_ports(5672) as rmq_cnt:
+            port = rmq_cnt.get_exposed_port(5672)
+            ready = False
+            for _ in range(30):
+                try:
+                    conn = amqp.Connection(host=f"localhost:{port}", userid="guest", password="guest", timeout=1)
+                    conn.connect()
+                    conn.close()
+                    ready = True
+                    break
+                except Exception:
+                    time.sleep(1)
+            if not ready:
+                pytest.skip("RabbitMQ Testcontainer timed out waiting for AMQP readiness")
+            yield f"amqp://guest:guest@localhost:{port}//"
+    except Exception as exc:
+        pytest.skip(f"RabbitMQ not available locally and Testcontainer failed: {exc}")
 
 
 @pytest.fixture(scope="session")
@@ -148,10 +194,29 @@ def test_redis_url(redis_container: RedisContainer | None) -> str:
 
 @pytest.fixture(autouse=True)
 def auto_setup_integration_infrastructure(request: pytest.FixtureRequest) -> None:
-    """Automatically wire database and Redis testcontainers for integration tests."""
-    if request.node.get_closest_marker("integration"):
+    """Automatically wire database and Redis testcontainers for integration and e2e tests."""
+    if _is_integration_or_e2e(request):
         request.getfixturevalue("test_database_url")
         request.getfixturevalue("test_redis_url")
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_tables_after_test(request: pytest.FixtureRequest) -> AsyncGenerator[None, None]:
+    """Clean tables between test runs for integration and e2e tests while keeping unit tests fast."""
+    yield
+    if _is_integration_or_e2e(request):
+        factory = get_session_factory()
+        if factory is not None:
+            try:
+                async with factory() as session:
+                    await session.execute(
+                        text(
+                            "TRUNCATE TABLE idempotency_records, reconciliation_reports, ledger_entries, accounts CASCADE;"
+                        )
+                    )
+                    await session.commit()
+            except Exception:
+                pass
 
 
 @pytest.fixture
@@ -165,17 +230,6 @@ async def db_session(test_database_url: str, test_redis_url: str) -> AsyncGenera
         finally:
             await session.rollback()
             await session.close()
-
-    # Clean tables between tests
-    factory = get_session_factory()
-    async with factory() as session:
-        try:
-            await session.execute(
-                text("TRUNCATE TABLE idempotency_records, reconciliation_reports, ledger_entries, accounts CASCADE;")
-            )
-            await session.commit()
-        except Exception:
-            await session.rollback()
 
 
 @pytest.fixture
