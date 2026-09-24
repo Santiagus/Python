@@ -292,14 +292,14 @@ In containerized and orchestrated environments (e.g. Kubernetes, Docker Compose)
 
 ## Completion Checklist
 
-- [ ] Celery Beat crontab scheduled in `America/New_York` timezone for 17:00 cut-off.
-- [ ] Explicit handling of Daylight Saving Time (EDT vs EST) verified by automated tests.
-- [ ] Database unique constraint `UNIQUE (period_date)` enforces idempotent report generation.
-- [ ] Re-running a completed period performs verification update without duplicate records.
-- [ ] Redis distributed leader lock ensures single-active scheduler across multiple Beat instances.
-- [ ] Redis task mutex prevents overlapping executions for the same reporting period.
-- [ ] Gap detection task identifies missing past business days and sequentially triggers backfills.
-- [ ] Nightly scheduled task purges expired idempotency records.
-- [ ] FastAPI control plane exposes endpoints to inspect reports, trigger backfills, and seed test data.
-- [ ] Pytest suite achieves 100% statement and branch coverage with Testcontainers.
-- [ ] All Mermaid architectural diagrams validated with `python3 scripts/verify_mermaid.py`.
+- [x] Celery Beat crontab scheduled in `America/New_York` timezone for 17:00 cut-off.
+- [x] Explicit handling of Daylight Saving Time (EDT vs EST) verified by automated tests.
+- [x] Database unique constraint `UNIQUE (period_date)` enforces idempotent report generation.
+- [x] Re-running a completed period performs verification update without duplicate records.
+- [x] Redis distributed leader lock ensures single-active scheduler across multiple Beat instances.
+- [x] Redis task mutex prevents overlapping executions for the same reporting period.
+- [x] Gap detection task identifies missing past business days and sequentially triggers backfills.
+- [x] Nightly scheduled task purges expired idempotency records.
+- [x] FastAPI control plane exposes endpoints to inspect reports, trigger backfills, and seed test data.
+- [x] Pytest suite achieves 100% statement and branch coverage with Testcontainers.
+- [x] All Mermaid architectural diagrams validated with `python3 scripts/verify_mermaid.py`.

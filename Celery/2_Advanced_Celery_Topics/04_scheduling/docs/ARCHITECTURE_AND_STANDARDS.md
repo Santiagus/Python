@@ -428,14 +428,10 @@ flowchart TD
 ```
 
 ---
+
 ### Milestone 5: Live Multi-Process E2E Testing, Containerized Stack & Benchmarks
 
-### Milestone 5: Live Multi-Process E2E Testing, Containerized Stack & Benchmarks (Roadmap)
-
 #### 1. Key Accomplishments & Objectives
-* **Containerized Deployment Architecture (`docker-compose.yml`)**: Orchestrate autonomous service containers: `api` (FastAPI Gateway), `worker` (Celery Solo Consumer), `beat` (Celery Beat Leader), `postgres` (PostgreSQL 16), `redis` (Redis 7), and `rabbitmq` (RabbitMQ 3).
-* **Live Asynchronous E2E Test Suite (`tests/e2e/test_live_e2e.py`)**: Full end-to-end multi-process verification across live network sockets: synthetic ledger seeding $\to$ Celery Beat crontab trigger $\to$ Celery worker processing $\to$ PostgreSQL report persistence $\to$ API verification polling.
-* **Capacity & Contention Regression Harness (`scripts/load_test_contention.py`)**: Little's Law arrival-rate pacing testing cut-off clearing SLA ($P_{99} \le 500\text{ ms}$) under concurrent background queue load.
 * **Containerized Deployment Architecture (`docker-compose.yml`)**:
   * Orchestrated 7 autonomous service containers: `api` (FastAPI Gateway on port 8000), `worker` (headless Celery Solo consumer on queues `reconciliation`, `cleanup`), `beat` (HA Celery Beat leader with America/New_York timezone evaluation), `postgres` (PostgreSQL 16 NVMe engine tuned with `shared_buffers=512MB` and `synchronous_commit=on`), `redis` (Redis 7), `rabbitmq` (RabbitMQ 3.13), and `flower` (Flower telemetry dashboard on port 5555).
   * Strict service isolation: `Dockerfile.api` (minimal HTTP gateway) and `services/worker/Dockerfile` (headless worker, zero web framework bloat, least privilege).
