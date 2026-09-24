@@ -1,0 +1,150 @@
+version: "3.8"
+
+services:
+  # =============================================================================
+  # Core Infrastructure Services
+  # =============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: scheduling_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: scheduling_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c synchronous_commit=on
+      -c wal_buffers=16MB
+      -c max_wal_size=4GB
+      -c random_page_cost=1.1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d scheduling_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: scheduling_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: scheduling_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # Control Plane & Ingestion Gateway (The Producer)
+  # =============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: scheduling_api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/scheduling_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # =============================================================================
+  # Autonomous Headless Celery Worker (The Consumer)
+  # =============================================================================
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: scheduling_worker
+    command: >
+      celery -A services.worker.celery_app:celery_app worker
+      -P solo
+      -Q reconciliation,cleanup
+      --loglevel=INFO
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/scheduling_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # =============================================================================
+  # High-Availability Celery Beat Scheduler (America/New_York)
+  # =============================================================================
+  beat:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: scheduling_beat
+    command: >
+      celery -A services.worker.celery_app:celery_app beat
+      --loglevel=INFO
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/scheduling_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # =============================================================================
+  # Celery Flower Telemetry Dashboard
+  # =============================================================================
+  flower:
+    image: mher/flower:latest
+    container_name: scheduling_flower
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      FLOWER_PORT: 5555
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
