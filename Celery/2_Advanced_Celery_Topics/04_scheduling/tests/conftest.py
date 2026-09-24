@@ -53,8 +53,10 @@ def _check_tcp_port(host: str, port: int, timeout: float = 0.5) -> bool:
 def _is_integration_or_e2e(request: pytest.FixtureRequest) -> bool:
     """Return True if the running test is within integration or e2e suites."""
     fspath = str(request.node.fspath)
-    return "integration" in fspath or "e2e" in fspath or bool(
-        request.node.get_closest_marker("integration") or request.node.get_closest_marker("e2e")
+    return (
+        "integration" in fspath
+        or "e2e" in fspath
+        or bool(request.node.get_closest_marker("integration") or request.node.get_closest_marker("e2e"))
     )
 
 
@@ -150,6 +152,9 @@ async def test_database_url(postgres_container: PostgresContainer | None) -> str
                 raw_conn = await conn.get_raw_connection()
                 assert raw_conn.driver_connection is not None
                 await raw_conn.driver_connection.execute(ddl)
+                await raw_conn.driver_connection.execute(
+                    "TRUNCATE TABLE idempotency_records, reconciliation_reports, ledger_entries, accounts CASCADE;"
+                )
         except Exception as exc:
             if "already exists" not in str(exc):
                 raise
@@ -202,9 +207,9 @@ def auto_setup_integration_infrastructure(request: pytest.FixtureRequest) -> Non
 
 @pytest.fixture(autouse=True)
 async def cleanup_tables_after_test(request: pytest.FixtureRequest) -> AsyncGenerator[None, None]:
-    """Clean tables between test runs for integration and e2e tests while keeping unit tests fast."""
+    """Clean tables between test runs for tests interacting with the database."""
     yield
-    if _is_integration_or_e2e(request):
+    if _is_integration_or_e2e(request) or "db_session" in request.fixturenames:
         factory = get_session_factory()
         if factory is not None:
             try:

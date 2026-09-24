@@ -57,6 +57,11 @@ flowchart TD
 | **`TC-API-04`** | Integration (`test_api.py`) | Query Missing Gaps | `GET /reconciliations/gaps` | Scans for unclosed past business days; returns date list. | HTTP 200 OK with gap array. |
 | **`TC-API-05`** | Integration (`test_api.py`) | On-Demand Gap Backfill | `POST /reconciliations/backfill` | Enqueues backfill task; validates date boundaries (`start <= end`). | HTTP 202 Accepted. |
 | **`TC-E2E-01`** | Live E2E (`test_live_e2e.py`) | Full Distributed Stack Verification | Live containers (API + Worker + Beat + DB + Redis + RMQ) | Seed entries $\to$ trigger cut-off $\to$ assert report created in DB. | Report successfully generated end-to-end. |
+| **`TC-E2E-01`** | Live E2E (`test_live_e2e.py`) | Full EOD Reconciliation Lifecycle | Live multi-process stack (daemon worker, Postgres, Redis, RMQ) | Seed entries $\to$ trigger cut-off $\to$ assert report created in DB. | Report successfully generated and balanced end-to-end. |
+| **`TC-E2E-02`** | Live E2E (`test_live_e2e.py`) | Historical Gap Backfill Lifecycle | 3 missing business dates in DB | Dispatches backfill $\to$ sequential worker clearing $\to$ database verification. | All missing business dates reconciled with reports. |
+| **`TC-E2E-03`** | Live E2E (`test_live_e2e.py`) | Duplicate Cut-Off Idempotency | Dual concurrent triggers | Asserts exactly 1 row persists in DB (`UNIQUE period_date`). | Database constraint enforces strict idempotency. |
+| **`TC-PERF-01`** | Benchmark (`scripts/load_test_contention.py`) | Paced Contention Benchmark | 100 req/s arrival load with active EOD cut-off | Measures API Ingestion P99 ($\le 100\text{ ms}$) and worker clearing SLA. | Structured JSON persisted to `reports/benchmarks/`. |
+| **`TC-PERF-02`** | Benchmark (`scripts/ci_contention_gate.py`) | Automated CI/CD Regression Gate | 150 req/s Little's Law paced load for 10s | Evaluates 4 gates: P99 $\le 100\text{ ms}$, Error Rate $0\%$, DB conns $\le 26$, regression $\le 15\%$. | All 4 gates PASSED with exit code 0. |
 
 ---
 
@@ -91,6 +96,7 @@ pytest -q 04_scheduling/tests/integration
 
 # Run full coverage gate
 pytest 04_scheduling/tests --cov=04_scheduling/app --cov=04_scheduling/services/worker --cov-report=term-missing --cov-fail-under=100
+pytest 04_scheduling/tests --cov=app --cov=services/worker --cov-report=term-missing --cov-fail-under=100
 ```
 
 ### Running Live E2E Tests
@@ -100,5 +106,15 @@ docker compose -f 04_scheduling/docker-compose.yml up --build -d
 
 # Execute live E2E test
 E2E_BASE_URL=http://localhost:8000 pytest -q 04_scheduling/tests/e2e
+pytest -v 04_scheduling/tests/e2e
+```
+
+### Running Automated Capacity & Contention Benchmarks
+```bash
+# Execute Little's Law paced arrival benchmark (100 req/s)
+python3 04_scheduling/scripts/load_test_contention.py --url http://localhost:8000 --rate 100
+
+# Execute CI/CD automated regression gate (150 req/s with 4 SLA verification gates)
+python3 04_scheduling/scripts/ci_contention_gate.py --rate 150 --duration 10 --p99-threshold 100.0 --baseline-p99 83.0 --max-degradation 15.0 --max-db-conns 26
 ```
 
