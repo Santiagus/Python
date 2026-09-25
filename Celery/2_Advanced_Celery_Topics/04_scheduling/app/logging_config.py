@@ -130,3 +130,4 @@ def configure_logging(log_level: str = "INFO") -> None:
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("kombu").setLevel(logging.WARNING)
+    logging.getLogger("redis").setLevel(logging.INFO)

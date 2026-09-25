@@ -124,6 +124,8 @@ def setup_celery_logger(logger: logging.Logger, **kwargs: object) -> None:
     for handler in logger.handlers:
         handler.addFilter(RequestContextFilter())
         handler.setFormatter(PrettyDevFormatter())
+    logging.getLogger("redis").setLevel(logging.INFO)
+    logging.getLogger("kombu").setLevel(logging.WARNING)
 
 
 @signals.after_setup_task_logger.connect

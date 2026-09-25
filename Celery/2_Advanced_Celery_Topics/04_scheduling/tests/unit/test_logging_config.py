@@ -32,8 +32,6 @@ def test_request_context_filter_with_contextvar() -> None:
             exc_info=None,
         )
         assert filter_.filter(record) is True
-        assert record.request_id == "12345678-abcd-ef01-2345-6789abcdef01"
-        assert record.req_id_short == "12345678"
         assert getattr(record, "request_id") == "12345678-abcd-ef01-2345-6789abcdef01"
         assert getattr(record, "req_id_short") == "12345678"
     finally:
@@ -54,8 +52,6 @@ def test_request_context_filter_default() -> None:
         exc_info=None,
     )
     assert filter_.filter(record) is True
-    assert record.request_id == "-"
-    assert record.req_id_short == "-"
     assert getattr(record, "request_id") == "-"
     assert getattr(record, "req_id_short") == "-"
 
@@ -143,6 +139,8 @@ def test_configure_logging() -> None:
     assert root.level == logging.DEBUG
     assert len(root.handlers) >= 1
     assert any(isinstance(h.formatter, PrettyDevFormatter) for h in root.handlers)
+    assert logging.getLogger("redis").level == logging.INFO
+    assert logging.getLogger("kombu").level == logging.WARNING
 
     # Re-configure to INFO
     configure_logging(log_level="INFO")

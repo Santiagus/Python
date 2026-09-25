@@ -74,6 +74,8 @@ def test_celery_logger_setup_signals() -> None:
 
     setup_celery_logger(test_logger)
     assert len(handler.filters) >= 1
+    assert logging.getLogger("redis").level == logging.INFO
+    assert logging.getLogger("kombu").level == logging.WARNING
 
     task_logger = logging.getLogger("celery.test_task")
     task_logger.handlers.clear()
