@@ -501,3 +501,33 @@ Under continuous background EOD reconciliation cut-off and gap backfill workload
 | **Worker EOD Clearing Duration** | $\le 500.0\text{ ms}$ | $350.0\text{ ms}$ | **$184.0\text{ ms}$** | **PASSED** |
 | **Overall Gate Decision** | **All Gates Pass** | **Pass** | **PASSED (Ready to Merge)** | **PASSED** |
 
+---
+
+### 4. Redis Client Configuration & Cloud Maintenance Notifications
+
+#### Local vs. Cloud Redis Compatibility (`CLIENT MAINT_NOTIFICATIONS`)
+
+In `redis-py` (v5+), connecting over the RESP3 protocol triggers a default handshake probe sending `CLIENT MAINT_NOTIFICATIONS on moving-endpoint-type ...`. This proprietary command is supported exclusively by cloud-managed Redis offerings (e.g., Azure Cache for Redis, AWS ElastiCache) to deliver asynchronous server maintenance and failover notifications to the client.
+
+When running against open-source Redis (such as local Docker `redis:7-alpine` or self-hosted Redis servers), standard Redis responds with:
+```text
+[DEBUG] redis.connection: Failed to enable maintenance notifications: unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+```
+
+#### Protocol-Level Optimization & Configuration Matrix
+
+Rather than merely suppressing driver logs, the engine enforces protocol-level efficiency by passing an explicit `MaintNotificationsConfig` to `redis.from_url()` based on the `REDIS_MAINT_NOTIFICATIONS` environment setting:
+
+| Environment | Target Infrastructure | Setting (`REDIS_MAINT_NOTIFICATIONS`) | `MaintNotificationsConfig(enabled=...)` | Protocol Behavior |
+| :--- | :--- | :--- | :--- | :--- |
+| **Local Dev & Docker** | Local container (`redis:7`) | `false` (default) | `False` | **Zero overhead**: Handshake command is completely omitted; 0 failed round-trips. |
+| **CI / CD Pipeline** | Ephemeral Docker / Testcontainers | `false` (default) | `False` | **Clean test execution**: Zero debug warnings or unsupported command errors. |
+| **Cloud (Azure / AWS)** | Azure Cache for Redis / AWS ElastiCache | `true` | `True` | **Full HA notifications**: Client receives real-time maintenance push events for proactive connection draining. |
+
+#### Deployment Configuration
+To enable maintenance notifications in cloud environments, configure the environment variable:
+```bash
+# In production cloud deployments (Azure/AWS)
+REDIS_MAINT_NOTIFICATIONS=true
+```
+
