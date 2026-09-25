@@ -342,19 +342,3 @@ High-throughput distributed systems handling financial assets must balance hardw
    * **The Single-Query Performance Reality**: Benchmarks prove that when ingestion paths are optimized to a single query per request, physical NVMe `fsync` overhead is negligible ($P_{99} = 83\text{ ms}$ at 300 req/s under `synchronous_commit = on` vs $P_{99} = 73\text{ ms}$ under `synchronous_commit = off`). Financial systems do NOT need to sacrifice ACID durability to achieve sub-100ms P99 SLAs.
    * **Permissible Exceptions for `synchronous_commit = off`**: Asynchronous WAL flushing (up to 3x `wal_writer_delay`, ~60ms loss window on sudden power cut) may be used strictly for non-critical, reproducible workloads: ephemeral ingestion queues, high-volume clickstream metrics, or debug telemetry where broker replays or idempotency can recover lost records.
 
----
-
-## 12. Root-Cause Configuration Over Log Masking (The No-Masking Invariant)
-Every error, protocol rejection, or unexpected driver warning encountered during development, local testing, or CI/CD execution must be addressed at its root cause rather than cosmetically suppressed:
-
-1. **Banning Log-Level Alteration as an Error Resolution**:
-   * Modifying logger levels (such as setting `logging.getLogger("redis").setLevel(logging.INFO)` or suppressing library loggers) to silence errors, warnings, or debug chatter is strictly forbidden as a primary fix.
-   * Suppressing loggers merely masks underlying issues, keeps protocol/version mismatches hidden from developers, and wastes CPU/network round-trips attempting unsupported commands in the background.
-
-2. **Clean Configuration Architecture via `Settings`**:
-   * Whenever a third-party driver, protocol, or broker emits unexpected warnings or command rejections (e.g., Redis `CLIENT MAINT_NOTIFICATIONS` unsupported on open-source instances, or Kombu negotiation mismatches):
-     1. **Identify the Controlling Protocol Option**: Inspect the underlying driver or protocol client library to locate the exact configuration parameter controlling the behavior (e.g., `MaintNotificationsConfig(enabled=False)` in `redis-py`).
-     2. **Expose Explicit Runtime Settings**: Add a dedicated field to Pydantic `Settings` (e.g., `redis_maint_notifications: bool = Field(default=False, description=...)`) with safe, sensible defaults (disabled for local Docker containers/dev, toggleable for cloud platforms).
-     3. **Inject at Singleton Initialization**: Pass the configuration cleanly during eager client/pool factory initialization (`redis.from_url(..., maint_notifications_config=maint_config)`).
-     4. **Document Architectural Compatibility**: Document the rationale, local vs. cloud compatibility matrix, and environment variable toggles in `docs/ARCHITECTURE_AND_STANDARDS.md`.
-
