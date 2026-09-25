@@ -66,6 +66,10 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/0",
         description="Redis connection URL for locks and result backend",
     )
+    redis_maint_notifications: bool = Field(
+        default=False,
+        description="Enable Redis CLIENT MAINT_NOTIFICATIONS for cloud-managed Redis (Azure/AWS)",
+    )
 
     # 4. Scheduling & Timezone Constants
     celery_timezone: str = Field(

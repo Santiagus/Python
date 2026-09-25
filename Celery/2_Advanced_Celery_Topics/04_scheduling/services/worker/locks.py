@@ -12,6 +12,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 import redis
+from redis.maint_notifications import MaintNotificationsConfig
 
 from app.config import get_settings
 
@@ -38,11 +39,13 @@ def get_redis_client() -> redis.Redis:
     global _redis_client
     if _redis_client is None:
         settings = get_settings()
+        maint_config = MaintNotificationsConfig(enabled=settings.redis_maint_notifications)
         _redis_client = redis.from_url(
             settings.redis_url,
             decode_responses=True,
             socket_connect_timeout=2.0,
             socket_keepalive=True,
+            maint_notifications_config=maint_config,
         )
     return _redis_client
 

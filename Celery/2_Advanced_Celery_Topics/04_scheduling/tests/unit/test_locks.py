@@ -7,7 +7,7 @@ using an in-memory mock client to ensure fast, isolated execution.
 from __future__ import annotations
 
 import uuid
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -167,12 +167,18 @@ def test_distributed_lock_default_client() -> None:
 def test_redis_client_singleton_lifecycle() -> None:
     """Verify get_redis_client returns active singleton and close_redis_client closes it."""
     fake = FakeRedisClient()
-    with patch("services.worker.locks.redis.from_url", return_value=fake):
+    with patch("services.worker.locks.redis.from_url", return_value=fake) as mock_from_url:
         close_redis_client()  # Reset any prior state
         client1 = get_redis_client()
         client2 = get_redis_client()
         assert client1 is client2
         assert client1.ping() is True
+
+        # Verify from_url was called with maint_notifications_config disabled by default
+        assert mock_from_url.call_count == 1
+        call_kwargs = mock_from_url.call_args.kwargs
+        assert "maint_notifications_config" in call_kwargs
+        assert call_kwargs["maint_notifications_config"].enabled is False
 
         close_redis_client()
         client3 = get_redis_client()
@@ -180,3 +186,21 @@ def test_redis_client_singleton_lifecycle() -> None:
         close_redis_client()
         # Test no-op second close
         close_redis_client()
+
+
+@pytest.mark.unit
+def test_redis_client_maint_notifications_enabled() -> None:
+    """Verify get_redis_client passes enabled=True when redis_maint_notifications is configured."""
+    fake = FakeRedisClient()
+    mock_settings = MagicMock()
+    mock_settings.redis_url = "redis://localhost:6379/0"
+    mock_settings.redis_maint_notifications = True
+
+    with patch("services.worker.locks.get_settings", return_value=mock_settings):
+        with patch("services.worker.locks.redis.from_url", return_value=fake) as mock_from_url:
+            close_redis_client()
+            client = get_redis_client()
+            assert client is fake
+            call_kwargs = mock_from_url.call_args.kwargs
+            assert call_kwargs["maint_notifications_config"].enabled is True
+            close_redis_client()
