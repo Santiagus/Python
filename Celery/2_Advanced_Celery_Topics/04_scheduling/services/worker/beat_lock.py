@@ -77,21 +77,28 @@ class LeaderElection:
             bool: True if leadership was acquired, False if another instance is leader.
         """
         # 1. Attempt atomic set-if-not-exists with expiration TTL
-        result = self.client.set(
-            self.lease_key,
-            self.instance_id,
-            nx=True,
-            ex=self.ttl_seconds,
-        )
-        acquired = bool(result)
-        if acquired:
-            logger.info(
-                "Acquired Celery Beat leader lease (key=%s, instance_id=%s, ttl=%ss)",
+        try:
+            result = self.client.set(
                 self.lease_key,
                 self.instance_id,
-                self.ttl_seconds,
+                nx=True,
+                ex=self.ttl_seconds,
             )
-        return acquired
+            acquired = bool(result)
+            if acquired:
+                logger.info(
+                    "Acquired Celery Beat leader lease (key=%s, instance_id=%s, ttl=%ss)",
+                    self.lease_key,
+                    self.instance_id,
+                    self.ttl_seconds,
+                )
+            return acquired
+        except Exception as exc:
+            logger.warning(
+                "Exception occurred while acquiring leader lease (Redis unavailable): %s",
+                exc,
+            )
+            return False
 
     def renew_lease(self) -> bool:
         """Atomically renew the leader lease TTL using a Lua script.

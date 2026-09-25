@@ -32,11 +32,15 @@ def test_leader_election_acquire_success() -> None:
 
 @pytest.mark.unit
 def test_leader_election_acquire_failure() -> None:
-    """Verify acquire_lease returns False when Redis SET NX fails (already held)."""
+    """Verify acquire_lease returns False when Redis SET NX fails or raises exception."""
     mock_redis = MagicMock()
     mock_redis.set.return_value = None
 
     election = LeaderElection(client=mock_redis, instance_id="replica-2")
+    assert election.acquire_lease() is False
+
+    # Exception handling when Redis is unavailable
+    mock_redis.set.side_effect = RuntimeError("Redis connection refused")
     assert election.acquire_lease() is False
 
 
