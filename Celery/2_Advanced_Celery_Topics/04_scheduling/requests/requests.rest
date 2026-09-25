@@ -37,6 +37,8 @@ Accept: application/json
 
 ### Step C: Trigger Manual EOD Cut-off Reconciliation
 # @name triggerCutoff
+# NOTE: This endpoint dispatches an ASYNCHRONOUS Celery task and returns HTTP 202 Accepted.
+# Allow 1-2 seconds for the Celery worker to aggregate balances and commit to PostgreSQL before Step D.
 POST {{baseUrl}}/api/v1/reconciliations/trigger HTTP/1.1
 Content-Type: application/json
 Accept: application/json
@@ -49,6 +51,7 @@ Accept: application/json
 
 ### Step D: Inspect Reconciled Report by Period Date
 # @name getReport
+# Query after the Celery worker completes the reconciliation task dispatched in Step C.
 GET {{baseUrl}}/api/v1/reconciliations/{{periodDate}} HTTP/1.1
 Accept: application/json
 
