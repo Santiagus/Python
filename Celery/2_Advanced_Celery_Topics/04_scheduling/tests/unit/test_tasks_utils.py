@@ -58,7 +58,6 @@ def test_sync_executor_lifecycle() -> None:
     # When _sync_executor is None
     import services.worker.tasks.utils as utils_mod
 
-    utils_mod._sync_executor = None
     utils_mod._sync_executor = None  # type: ignore[assignment]
     shutdown_sync_executor()
 
