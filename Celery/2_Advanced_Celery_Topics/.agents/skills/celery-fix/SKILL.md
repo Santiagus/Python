@@ -64,4 +64,5 @@ When applying a fix:
 1. **Preserve Clean Architecture**: Maintain separation between domain logic (pure calculations), persistence (repositories/models), and distributed coordination (Celery tasks).
 2. **Idempotency**: Ensure tasks can safely run more than once without generating duplicate side-effects (e.g., unique constraints, conditional inserts, upserts).
 3. **Verify with Tests**: Add a regression test reproducing the exact failure scenario before confirming the fix, maintaining **100% test coverage**.
+4. **Root-Cause Configuration Over Log Masking**: Never solve third-party driver, protocol, or handshake issues by altering logger levels to hide the messages. Prioritize addressing the root cause via explicit client configuration, environment toggles, and documented architectural compatibility matrices.
 

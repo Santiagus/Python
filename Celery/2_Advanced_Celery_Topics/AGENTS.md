@@ -64,3 +64,11 @@ This project enforces strict backend engineering, distributed task execution, an
   - **Dual-Layer Profiling**: Separate and measure both API Ingestion Latency (under background queue saturation) and Worker End-to-End Clearing SLA (`cleared_at - created_at`).
   - **Arrival Rate Pacing**: Benchmark load harnesses must implement Little's Law arrival-rate pacing (`--rate <req/s>`) rather than unconstrained simultaneous bursts to prevent client-side OS TCP socket backlog serialization from skewing distributed SLA measurements.
   - **Historical Evolution Tracking**: Use saved JSON reports to track latency trends over time, catch performance regressions between commits, and generate empirical capacity tables for production audits.
+* **Root-Cause Configuration Over Log Masking (The No-Masking Invariant)**:
+  - Whenever encountering driver, protocol, broker, or library warnings, errors, or unexpected handshakes (such as third-party probes like Redis `CLIENT MAINT_NOTIFICATIONS` on open-source instances, or AMQP channel negotiation rejections), **strictly prioritize eliminating the root cause via explicit driver/client configuration, connection arguments, or Pydantic `Settings`**.
+  - **Banning Log-Level Alteration as a Fix**: Modifying logger levels (e.g., bumping `setLevel(logging.INFO)` or suppressing library loggers) to silence errors or warnings is strictly forbidden as a primary solution. Silencing loggers merely masks underlying issues, hides protocol mismatches, leaves wasted CPU/network round-trips in place, and prevents operators from diagnosing real failures.
+  - **Clean Configuration Architecture**:
+    1. Identify the driver or protocol flag that controls the offending behavior (e.g., `MaintNotificationsConfig(enabled=False)` in `redis-py`).
+    2. Expose an explicit environment variable in `Settings` (e.g., `redis_maint_notifications: bool = False`) with safe, sensible defaults (disabled for local containers/dev, toggleable for cloud platforms).
+    3. Inject the configuration cleanly at connection initialization.
+    4. Document the architectural rationale, local vs. cloud compatibility matrix, and deployment instructions in `docs/ARCHITECTURE_AND_STANDARDS.md`.
