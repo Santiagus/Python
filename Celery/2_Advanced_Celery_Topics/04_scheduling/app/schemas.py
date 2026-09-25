@@ -235,8 +235,8 @@ class TriggerReconciliationResponse(BaseModel):
                 {
                     "task_id": "c1f72b84-482a-4df6-83cb-6a0dc11ea3d8",
                     "period_date": "2026-09-23",
-                    "status": "queued",
-                    "message": "Reconciliation task dispatched to queue 'reconciliation'",
+                    "status": "processing",
+                    "message": "Reconciliation job queued for period 2026-09-23",
                 }
             ]
         }
@@ -253,14 +253,14 @@ class TriggerReconciliationResponse(BaseModel):
         examples=["2026-09-23"],
     )
     status: str = Field(
-        default="queued",
+        default="processing",
         description="Current dispatch status",
-        examples=["queued"],
+        examples=["processing"],
     )
     message: str = Field(
         ...,
         description="Human-readable status confirmation",
-        examples=["Reconciliation task dispatched to queue 'reconciliation'"],
+        examples=["Reconciliation job queued for period 2026-09-23"],
     )
 
 

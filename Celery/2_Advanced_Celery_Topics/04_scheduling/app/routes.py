@@ -256,18 +256,80 @@ async def get_reconciliation_by_date(
 )
 async def trigger_reconciliation(
     payload: TriggerReconciliationRequest,
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> TriggerReconciliationResponse:
     """Enqueue an asynchronous ledger reconciliation cut-off job.
 
+    Enforces FinTech continuous state visibility by immediately persisting or
+    updating the reconciliation report record with 'processing' status before dispatch,
+    guaranteeing that immediate subsequent queries return 200 OK instead of a 404 black hole.
+
     Args:
-        payload: Parameters specifying period date and simulated clearing variance.
+        payload: Parameters specifying period date, simulated clearing variance, and force flag.
+        session: Active async database session.
 
     Returns:
-        TriggerReconciliationResponse: 202 Accepted status with Celery task ID.
+        TriggerReconciliationResponse: 202 Accepted status with Celery task ID and processing state.
+
+    Raises:
+        HTTPException: 409 Conflict if reconciliation is already in progress or already finalized without force=True.
     """
     date_str = payload.period_date.isoformat()
+    now_utc = datetime.now(timezone.utc)
 
-    # 1. Dispatch task to RabbitMQ broker via producer dispatcher
+    # 1. Inspect if a report already exists for this business date
+    stmt = select(ReconciliationReport).where(ReconciliationReport.period_date == payload.period_date)
+    res = await session.execute(stmt)
+    existing_report = res.scalar_one_or_none()
+
+    if existing_report is not None:
+        if existing_report.status == "processing" and not payload.force:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Reconciliation for period {date_str} is already in progress.",
+            )
+        if existing_report.status in ("balanced", "discrepancy_detected") and not payload.force:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Reconciliation report for period {date_str} already exists with status "
+                    f"'{existing_report.status}'. Set force=True to re-run."
+                ),
+            )
+        # Update existing record to in-flight processing status
+        existing_report.status = "processing"
+        metadata = dict(existing_report.metadata_json or {})
+        metadata.update(
+            {
+                "trigger": "manual_api",
+                "dispatched_at": now_utc.isoformat(),
+                "force": payload.force,
+            }
+        )
+        existing_report.metadata_json = metadata
+    else:
+        # 2. Pre-create in-flight reconciliation record in PostgreSQL
+        new_report = ReconciliationReport(
+            report_id=uuid.uuid4(),
+            period_date=payload.period_date,
+            total_credits_cents=0,
+            total_debits_cents=0,
+            net_movement_cents=0,
+            discrepancy_cents=0,
+            status="processing",
+            verification_hash="",
+            reconciled_at=now_utc,
+            metadata_json={
+                "trigger": "manual_api",
+                "dispatched_at": now_utc.isoformat(),
+                "force": payload.force,
+            },
+        )
+        session.add(new_report)
+
+    await session.commit()
+
+    # 3. Dispatch task to RabbitMQ broker via producer dispatcher
     task_id = dispatch_reconciliation_cutoff(
         period_date_str=date_str,
         clearing_variance_cents=payload.clearing_variance_cents,
@@ -276,7 +338,7 @@ async def trigger_reconciliation(
     return TriggerReconciliationResponse(
         task_id=task_id,
         period_date=date_str,
-        status="queued",
+        status="processing",
         message=f"Reconciliation job queued for period {date_str}",
     )
 

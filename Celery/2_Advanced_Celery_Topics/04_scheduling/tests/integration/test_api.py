@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app, lifespan
@@ -128,7 +129,7 @@ async def test_seed_ledger_balanced_and_discrepancy(api_client: AsyncClient) -> 
 
 @pytest.mark.asyncio
 async def test_trigger_reconciliation(api_client: AsyncClient) -> None:
-    """Validate POST /reconciliations/trigger dispatches Celery task and returns 202."""
+    """Validate POST /reconciliations/trigger pre-creates in-flight report and returns 202."""
     payload = {
         "period_date": "2026-09-23",
         "clearing_variance_cents": 5000,
@@ -141,11 +142,97 @@ async def test_trigger_reconciliation(api_client: AsyncClient) -> None:
         data = response.json()
         assert data["task_id"] == "mock-task-id-123"
         assert data["period_date"] == "2026-09-23"
-        assert data["status"] == "queued"
+        assert data["status"] == "processing"
         mock_dispatch.assert_called_once_with(
             period_date_str="2026-09-23",
             clearing_variance_cents=5000,
         )
+
+        # Immediate GET query returns 200 OK with in-flight processing status (Zero-404 black hole)
+        immediate_res = await api_client.get("/api/v1/reconciliations/2026-09-23")
+        assert immediate_res.status_code == 200
+        imm_data = immediate_res.json()
+        assert imm_data["status"] == "processing"
+        assert imm_data["period_date"] == "2026-09-23"
+        assert imm_data["total_credits_cents"] == 0
+        assert imm_data["total_debits_cents"] == 0
+
+
+@pytest.mark.asyncio
+async def test_trigger_reconciliation_conflicts_and_force(
+    api_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """Validate 409 conflicts on duplicate in-flight / finalized triggers, force=True overrides, and failed retries."""
+    period_d = date(2026, 9, 30)
+    period_str = period_d.isoformat()
+
+    # 1. First trigger creates report with status='processing'
+    with patch("app.routes.dispatch_reconciliation_cutoff", return_value="task-1"):
+        res1 = await api_client.post(
+            "/api/v1/reconciliations/trigger",
+            json={"period_date": period_str, "clearing_variance_cents": 0, "force": False},
+        )
+        assert res1.status_code == 202
+        assert res1.json()["status"] == "processing"
+
+    # 2. Second trigger on active 'processing' period returns 409 Conflict when force=False
+    res_conflict_processing = await api_client.post(
+        "/api/v1/reconciliations/trigger",
+        json={"period_date": period_str, "clearing_variance_cents": 0, "force": False},
+    )
+    assert res_conflict_processing.status_code == 409
+    assert "already in progress" in res_conflict_processing.json()["detail"]
+
+    # 3. Second trigger with force=True succeeds
+    with patch("app.routes.dispatch_reconciliation_cutoff", return_value="task-force-processing"):
+        res_force_processing = await api_client.post(
+            "/api/v1/reconciliations/trigger",
+            json={"period_date": period_str, "clearing_variance_cents": 0, "force": True},
+        )
+        assert res_force_processing.status_code == 202
+        assert res_force_processing.json()["status"] == "processing"
+
+    # 4. Transition report to 'balanced' in database
+    db_session.expire_all()
+    stmt = select(ReconciliationReport).where(ReconciliationReport.period_date == period_d)
+    res_db = await db_session.execute(stmt)
+    report = res_db.scalar_one()
+    report.status = "balanced"
+    await db_session.commit()
+
+    # 5. Triggering on finalized 'balanced' report without force=True returns 409 Conflict
+    res_conflict_final = await api_client.post(
+        "/api/v1/reconciliations/trigger",
+        json={"period_date": period_str, "clearing_variance_cents": 0, "force": False},
+    )
+    assert res_conflict_final.status_code == 409
+    assert "already exists with status 'balanced'" in res_conflict_final.json()["detail"]
+
+    # 6. Triggering on finalized 'balanced' report with force=True transitions back to 'processing'
+    with patch("app.routes.dispatch_reconciliation_cutoff", return_value="task-force-balanced"):
+        res_force_final = await api_client.post(
+            "/api/v1/reconciliations/trigger",
+            json={"period_date": period_str, "clearing_variance_cents": 0, "force": True},
+        )
+        assert res_force_final.status_code == 202
+        assert res_force_final.json()["status"] == "processing"
+
+    # 7. Transition report to 'failed' in database
+    db_session.expire_all()
+    res_db_failed = await db_session.execute(stmt)
+    report_failed = res_db_failed.scalar_one()
+    report_failed.status = "failed"
+    await db_session.commit()
+
+    # 8. Triggering on 'failed' report allows retry even with force=False
+    with patch("app.routes.dispatch_reconciliation_cutoff", return_value="task-retry-failed"):
+        res_retry_failed = await api_client.post(
+            "/api/v1/reconciliations/trigger",
+            json={"period_date": period_str, "clearing_variance_cents": 0, "force": False},
+        )
+        assert res_retry_failed.status_code == 202
+        assert res_retry_failed.json()["status"] == "processing"
 
 
 @pytest.mark.asyncio

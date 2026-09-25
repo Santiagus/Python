@@ -188,11 +188,16 @@ class TestLiveSchedulingE2E:
         )
         assert trigger_res.status_code == 202
         data = trigger_res.json()
-        assert data["status"] == "queued"
+        assert data["status"] == "processing"
         task_id = data["task_id"]
         assert task_id is not None
 
-        # 3. Asynchronously poll GET /api/v1/reconciliations/{period_date} until worker seals report
+        # 3. Immediate in-flight state verification (FinTech zero-404 guarantee)
+        immediate_res = await live_async_client.get(f"/api/v1/reconciliations/{period_str}")
+        assert immediate_res.status_code == 200
+        assert immediate_res.json()["status"] in ("processing", "balanced")
+
+        # 4. Asynchronously poll GET /api/v1/reconciliations/{period_date} until worker seals report
         balanced_report = None
         for _ in range(30):
             await asyncio.sleep(0.5)
