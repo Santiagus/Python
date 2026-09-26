@@ -104,7 +104,7 @@ class ReconciliationReportItem(BaseModel):
     )
     status: str = Field(
         ...,
-        description="Reconciliation status: balanced, discrepancy_detected, pending, failed",
+        description="Reconciliation status: processing, balanced, discrepancy_detected, failed",
         examples=["balanced"],
     )
     verification_hash: str = Field(

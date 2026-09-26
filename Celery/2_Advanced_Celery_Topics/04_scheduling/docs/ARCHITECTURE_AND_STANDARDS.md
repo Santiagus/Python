@@ -107,7 +107,7 @@ Running multiple Celery Beat pods (e.g. in Kubernetes `replicas: 2`) for high av
 Reconciliation of a large transaction volume may occasionally take longer than the scheduled interval (or an operator might accidentally trigger manual reconciliation while an automated run is executing).
 * **The Guard**: Before beginning ledger calculations, the worker attempts to acquire an atomic Redis lock:
   $$\text{Key:}\ \mathtt{lock:reconciliation:\{period\_date\}}\quad (\text{TTL: } 300\text{s})$$
-* **Contention Handling**: If the lock cannot be acquired, the worker logs a warning and exits cleanly without error (`status='skipped_overlap'`).
+* **Contention Handling**: If the lock cannot be acquired, the worker logs a warning and exits cleanly without error (`outcome='skipped_overlap'`).
 
 ### Idempotency via Relational Storage Constraints
 * **Unique Period Constraint**:
@@ -423,14 +423,14 @@ sequenceDiagram
         PG-->>W: Aggregated totals
         Note over W: Evaluate net movement & compute SHA-256 verification hash
         alt New Report
-            W->>PG: INSERT INTO reconciliation_reports (...)
-        else Existing Report
-            W->>PG: UPDATE reconciliation_reports SET ... (re-verified)
+            W->>PG: INSERT INTO reconciliation_reports (status='balanced')
+        else Existing Report (Pre-Created or Re-run)
+            W->>PG: UPDATE reconciliation_reports SET status='balanced' ... (re-verified)
         end
         PG-->>W: Committed
         W->>R: EVAL Lua Script (Release lock if token matches)
         R-->>W: Released (1)
-        Note over W: Return {"outcome": "created"|"verified_existing", ...}
+        Note over W: Return {"outcome": "created"|"completed"|"verified_existing", ...}
     else Lock Held by Another Worker
         R-->>W: Nil (Contention)
         Note over W: Return {"outcome": "skipped_overlap", ...}
@@ -478,6 +478,8 @@ sequenceDiagram
         API->>PG: SELECT * FROM reconciliation_reports ...
         PG-->>API: Result rows
     else Celery Task Dispatch (e.g. POST /reconciliations/trigger)
+        API->>PG: Pre-persist report (status='processing')
+        PG-->>API: Committed
         API->>RMQ: AMQP Basic.Publish (queue='reconciliation', routing_key='scheduling.reconciliation')
         RMQ-->>API: Ack (Task UUID)
     end
