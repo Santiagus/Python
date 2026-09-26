@@ -142,16 +142,32 @@ erDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> pending: Beat triggers 17:00 Cut-Off
-    pending --> processing: Worker acquires lock & seals period
+    [*] --> processing: Cut-Off Triggered (API or Beat)
     processing --> balanced: Credits == Debits (Net Discrepancy = 0)
     processing --> discrepancy_detected: External clearing variance != 0
     processing --> failed: Unhandled database / network error
-    failed --> processing: Manual or automated backfill retry
+    failed --> processing: Manual or automated retry (force=True)
     discrepancy_detected --> manual_review: Escalated to compliance
+    discrepancy_detected --> processing: Re-run with adjustments (force=True)
+    balanced --> processing: Re-verify existing report (force=True)
     balanced --> [*]
     manual_review --> [*]
 ```
+
+### The 8-Phase End-of-Day (EOD) Lifecycle
+
+The financial reconciliation engine executes the end-to-end cut-off cycle across **8 sequential phases**:
+
+1. **Intraday Transaction Posting**: Incoming debits and credits posted in minor-unit integer cents (`amount_cents BIGINT`) bound to banking `period_date` (`idx_ledger_entries_period_status`).
+2. **Cut-Off Window Trigger & In-Flight State**: Triggered at 17:00 America/New_York (Celery Beat) or manually (`POST /api/v1/reconciliations/trigger`). Pre-persists `status="processing"` in PostgreSQL (FinTech continuous state visibility, eliminating 404 black holes).
+3. **Distributed Concurrency Mutex**: Worker acquires atomic Redis lock `lock:reconciliation:{period_date}` (TTL 60s); concurrent runs exit cleanly (`skipped_overlap`).
+4. **Atomic Ledger Sealing & Aggregation**: Single-query conditional SQL aggregation computes total credits, debits, net movement $\Delta$, and clearing variance $\delta$.
+5. **Cryptographic Integrity Hash**: Computes SHA-256 tamper-evident verification checksum over canonized payload.
+6. **Report Finalization & State Transition**: Transitions report state from `processing` $\to$ `balanced` (or `discrepancy_detected`), commits transaction, and releases Redis lock. (On unhandled errors, transactionally transitions to `failed`).
+7. **Historical Gap Auditing & Backfill**: Audits missing business days (`GET /api/v1/reconciliations/gaps`) and sequentially executes chronological backfill (`POST /api/v1/reconciliations/backfill`).
+8. **Nightly Retention Cleanup**: Celery Beat runs at 02:00 UTC to purge expired idempotency keys and stale records (`purge_expired_records`).
+
+*(See [docs/ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/04_scheduling/docs/ARCHITECTURE_AND_STANDARDS.md) for full architectural specifications, mathematical models, and lifecycle diagrams).*
 
 ---
 
@@ -182,8 +198,8 @@ sequenceDiagram
     DB-->>Worker: Aggregated Credits: 1,500,000 | Debits: 1,500,000
 
     Worker->>Worker: Verify Balance: Net Delta = 0 | Discrepancy = 0
-    Worker->>DB: INSERT INTO reconciliation_reports (period_date, status='balanced')
-    DB-->>Worker: Commit report
+    Worker->>DB: Commit report transition: processing -> balanced
+    DB-->>Worker: Committed
 
     Worker->>R_Task: Release lock:reconciliation:2026-09-23
     Worker-->>Broker: Acknowledge task completed
@@ -207,8 +223,8 @@ sequenceDiagram
     DB-->>Worker: Internal: 1,500,000 | Clearinghouse: 1,480,000
     Worker->>Worker: Detect Discrepancy: variance = 20,000 cents ($200.00)
 
-    Worker->>DB: INSERT INTO reconciliation_reports (status='discrepancy_detected', discrepancy_cents=20000)
-    DB-->>Worker: Commit report with audit discrepancy
+    Worker->>DB: Commit report transition: processing -> discrepancy_detected (discrepancy_cents=20000)
+    DB-->>Worker: Committed with audit discrepancy
 
     Worker->>R_Task: Release lock
     Worker-->>Broker: Acknowledge task completed (Flagged for Review)

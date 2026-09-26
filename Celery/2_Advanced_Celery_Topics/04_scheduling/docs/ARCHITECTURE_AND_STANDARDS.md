@@ -128,7 +128,132 @@ Reconciliation of a large transaction volume may occasionally take longer than t
 
 ---
 
-## 5. Missed Work Detection & Historical Gap Backfilling
+## 5. End-of-Day (EOD) Financial Cut-Off & Ledger Reconciliation Lifecycle
+
+In institutional banking, corporate treasury, and clearinghouse settlement engines (e.g., Federal Reserve Fedwire/ACH, Stripe Treasury, Modern Treasury), the **End-of-Day (EOD) Cut-Off** represents a critical financial and operational boundary. Ledger accounts cannot remain open indefinitely; intraday postings must be frozen at a legally designated deadline, balances aggregated in minor-unit precision, verified against external clearing records, cryptographically sealed, and archived.
+
+The complete reconciliation lifecycle comprises **8 sequential phases**, guaranteeing strict mathematical correctness, zero double-processing, continuous state visibility, and resilient disaster recovery:
+
+```mermaid
+flowchart TD
+    subgraph Step1 ["Step 1: Intraday Transaction Posting & Period Assignment"]
+        T1["Incoming Ledger Transactions<br/>• Status: 'posted'<br/>• Minor-Unit Integer Cents (amount_cents)<br/>• Assigned to banking period_date (YYYY-MM-DD)"]
+    end
+
+    subgraph Step2 ["Step 2: Cut-Off Window Trigger & In-Flight State Initiation"]
+        Trig1["Celery Beat Leader<br/>17:00 America/New_York (Mon-Fri)"]
+        Trig2["Operator / Control Plane API<br/>POST /api/v1/reconciliations/trigger"]
+        Trig1 --> InitReport
+        Trig2 --> InitReport
+        InitReport["FinTech Continuous State Visibility<br/>Persist / Update Report in PostgreSQL<br/>status='processing' (Eliminates 404 Black Hole)"]
+    end
+
+    subgraph Step3 ["Step 3: Distributed Concurrency Mutex Acquisition"]
+        WorkerLock["Worker attempts Redis Mutex<br/>SET lock:reconciliation:YYYY-MM-DD NX EX 60"]
+        LockCheck{"Lock Acquired?"}
+        WorkerLock --> LockCheck
+        LockCheck -->|"No (Contention)"| SkipOverlap["Clean Exit: outcome='skipped_overlap'"]
+        LockCheck -->|"Yes"| Step4Box
+    end
+
+    subgraph Step4 ["Step 4: Atomic Ledger Sealing & Minor-Unit Balance Aggregation"]
+        Step4Box["Single-Query Conditional SQL Aggregation<br/>• total_credits = SUM(CASE WHEN direction='credit')<br/>• total_debits = SUM(CASE WHEN direction='debit')<br/>• net_movement = credits - debits<br/>• discrepancy = |clearing_variance|"]
+    end
+
+    subgraph Step5 ["Step 5: Cryptographic Integrity Verification"]
+        HashCalc["Compute SHA-256 Digest<br/>hash(period:credits:debits:net:status:discrepancy)"]
+    end
+
+    subgraph Step6 ["Step 6: Report Finalization & Continuous State Transition"]
+        FinalCheck{"discrepancy == 0?"}
+        FinalCheck -->|"Yes"| StateBalanced["status = 'balanced'"]
+        FinalCheck -->|"No"| StateDisc["status = 'discrepancy_detected'"]
+        StateErr["Exception Handler<br/>status = 'failed'<br/>Records error & re-raises"]
+        CommitReport["Commit Report & Metadata to PostgreSQL<br/>Release Redis Mutex via Lua Script"]
+    end
+
+    subgraph Step7 ["Step 7: Historical Gap Auditing & Chronological Backfill"]
+        GapAudit["Gap Detection (Celery Beat or API)<br/>POST /api/v1/reconciliations/backfill"]
+        SeqDispatch["Sequential Dispatch in Strict Chronological Order<br/>reconcile_eod_cutoff(missing_date)"]
+        GapAudit --> SeqDispatch
+    end
+
+    subgraph Step8 ["Step 8: Nightly Maintenance & Idempotency Cleanup"]
+        NightlyClean["Celery Beat (02:00 UTC)<br/>purge_expired_records(retention_days=30)<br/>DELETE FROM idempotency_records WHERE expires_at < NOW()"]
+    end
+
+    Step1 --> Step2
+    InitReport -->|"AMQP Message via RabbitMQ"| Step3
+    Step4Box --> Step5
+    Step5 --> Step6
+    Step6 -.->|"Post-Closing Audit"| Step7
+    Step6 -.->|"Nightly Purge"| Step8
+```
+
+### Detailed Execution Specifications by Step
+
+#### Step 1: Intraday Transaction Posting & Period Assignment
+* **Ledger Ingestion**: Throughout the active banking day, debits and credits arrive via payment rails and are posted to `ledger_entries`.
+* **Period Assignment**: Each transaction is bound to a banking business date `period_date` (`YYYY-MM-DD`) and marked with `status = 'posted'`.
+* **Minor-Unit Financial Precision**: In strict accordance with Fowler's Money Pattern, amounts are persisted as minor-unit integer cents (`amount_cents BIGINT`), completely avoiding IEEE 754 floating-point drift.
+* **Database Optimization**: Indexed via composite B-tree `idx_ledger_entries_period_status (period_date, status)` to ensure sub-millisecond aggregation even over multi-million row tables.
+
+#### Step 2: Cut-Off Window Trigger & In-Flight State Initiation
+* **Dual Execution Triggers**:
+  1. *Automated Crontab*: Celery Beat evaluates the cut-off schedule `crontab(hour=17, minute=0, day_of_week="mon-fri")` in `America/New_York` timezone, firing at 21:00 UTC in summer (EDT) and 22:00 UTC in winter (EST).
+  2. *Operator Control Plane*: Operations teams can manually initiate cut-off via `POST /api/v1/reconciliations/trigger`.
+* **FinTech Continuous State Visibility Invariant**:
+  - In financial platforms, operations must never execute in an unobservable "black hole" where an accepted asynchronous request (`HTTP 202 ACCEPTED`) returns `HTTP 404 NOT FOUND` while tasks are in flight.
+  - Prior to publishing the AMQP task, the ingestion endpoint immediately creates or updates the database record in `reconciliation_reports` with `status = "processing"`.
+  - Immediate subsequent read operations (`GET /api/v1/reconciliations/{period_date}`) return `HTTP 200 OK` with `status == "processing"`, giving operators and automated dashboards instant visibility into active runs.
+
+#### Step 3: Distributed Concurrency Mutex Acquisition
+* **Mutual Exclusion**: Before computing ledger totals, the Celery consumer acquires a distributed Redis lock:
+  $$\text{Key:}\ \mathtt{lock:reconciliation:\{period\_date\}}\quad (\text{TTL: } 60\text{s})$$
+* **Fencing & Ownership Tokens**: Locks are acquired via atomic `SET lock NX EX 60` with a cryptographically generated UUID ownership token.
+* **Contention Handling**: If another worker or manual run is already processing the same period date, the task skips processing cleanly (`outcome = "skipped_overlap"`) without throwing exceptions or generating poison pill retries.
+
+#### Step 4: Atomic Ledger Sealing & Minor-Unit Balance Aggregation
+* **Single-Query Conditional SQL Aggregation**: Rather than issuing multiple database queries, worker tasks execute conditional aggregation in a single round-trip:
+  ```sql
+  SELECT
+      COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_cents ELSE 0 END), 0) AS total_credits,
+      COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount_cents ELSE 0 END), 0) AS total_debits,
+      COUNT(entry_id) AS entry_count
+  FROM ledger_entries
+  WHERE period_date = :period_date AND status = 'posted';
+  ```
+* **Net Movement & Clearinghouse Discrepancy Evaluation**:
+  - Net ledger movement: $\Delta = \sum \text{Credits} - \sum \text{Debits}$.
+  - Discrepancy: $\delta = |\text{clearing\_variance\_cents}|$ comparing internal aggregates against simulated clearinghouse settlement records.
+
+#### Step 5: Cryptographic Integrity Verification
+* **Tamper-Evident SHA-256 Checksum**: The worker calculates a deterministic 64-character SHA-256 digest over the reconciliation state:
+  $$\text{Payload} = \mathtt{period\_date}:\mathtt{total\_credits}:\mathtt{total\_debits}:\mathtt{net\_movement}:\mathtt{status}:\mathtt{discrepancy}$$
+  $$\text{verification\_hash} = \text{SHA-256}(\text{Payload})$$
+* **Audit Trail**: This cryptographic signature ensures mathematical and audit consistency, proving the report has not been altered post-reconciliation.
+
+#### Step 6: Report Finalization & Continuous State Transition
+* **Terminal State Transition**:
+  - If $\delta = 0$, the report transitions from `processing` $\to$ `balanced`.
+  - If $\delta > 0$, the report transitions from `processing` $\to$ `discrepancy_detected` and is flagged for compliance review.
+* **Fault Handling & Failure State Transition**:
+  - If an unhandled database, network, or worker exception occurs, the current transaction is rolled back.
+  - A dedicated error transaction updates the report to `status = "failed"` with full diagnostic metadata (`error` message and `failed_at` UTC timestamp).
+* **Safe Mutex Release**: The Redis lock is released via an atomic Lua script verifying that the worker's unique token still holds the lock.
+
+#### Step 7: Historical Gap Auditing & Chronological Backfill
+* **Missed Work Detection**: Periodic Celery Beat checks (or operator queries via `GET /api/v1/reconciliations/gaps`) scan the calendar for missing Monday–Friday business days between the earliest recorded transaction and the current date:
+  $$\text{Gaps} = \{ d \in [\text{start\_date}, \text{today}] \mid \text{is\_business\_day}(d) \land d \notin \text{reconciliation\_reports} \}$$
+* **Chronological Backfill**: Calling `POST /api/v1/reconciliations/backfill` (or the scheduled task `detect_and_backfill_gaps`) dispatches reconciliation tasks in strict chronological order, ensuring historical ledgers are sealed sequentially.
+
+#### Step 8: Nightly Maintenance & Idempotency Cleanup
+* **Scheduled Retention Purge**: Scheduled at 02:00 UTC (`crontab(hour=2, minute=0)`), Celery Beat dispatches `purge_expired_records(retention_days=30)`.
+* **Bounded Storage Growth**: Deletes expired distributed idempotency records (`expires_at < NOW()`) from PostgreSQL, preventing table bloat and maintaining optimal B-Tree index cache residency.
+
+---
+
+## 6. Missed Work Detection & Historical Gap Backfilling
 
 If the system experiences extended downtime (e.g. maintenance over a holiday or an infrastructure outage):
 1. **Gap Detection Logic**:
@@ -138,7 +263,7 @@ If the system experiences extended downtime (e.g. maintenance over a holiday or 
 
 ---
 
-## 6. Standards Checklist
+## 7. Standards Checklist
 
 | Dimension | Standard | Implementation in System |
 | :--- | :--- | :--- |
@@ -151,7 +276,7 @@ If the system experiences extended downtime (e.g. maintenance over a holiday or 
 
 ---
 
-## 7. Milestone Progression: Architecture & Key Accomplishments
+## 8. Milestone Progression: Architecture & Key Accomplishments
 
 ### Milestone 0: Specifications, Architecture Standards & Test Plan
 
