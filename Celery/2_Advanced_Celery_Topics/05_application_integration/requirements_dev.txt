@@ -1,0 +1,9 @@
+# Development, Testing, and Capacity Benchmark Requirements
+pytest>=8.1.1
+pytest-asyncio>=0.23.6
+pytest-cov>=4.1.0
+testcontainers>=4.0.0
+httpx>=0.27.0
+psycopg2-binary>=2.9.9
+ruff>=0.8.0
+mypy>=1.13.0
