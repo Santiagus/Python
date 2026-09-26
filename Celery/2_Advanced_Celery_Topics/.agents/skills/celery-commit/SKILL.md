@@ -14,6 +14,11 @@ This skill defines the standards and procedural rules for generating small, atom
 
 ## 1. Core Invariants
 
+0. **Mandatory Review Prior to Commit & Push (Strict Non-Negotiable Invariant)**:
+   - Any code, test, documentation, or configuration change is strictly subject to user review prior to commit.
+   - Running `git commit` or `git push` without explicit user confirmation and authorization is **strictly forbidden** under all circumstances.
+   - Always present the proposed changes, file diffs, and test/lint validation results to the user, and await their explicit instruction before running any commit or push command.
+
 1. **Granular & Cohesive Scope**:
    - Commits must be kept as small as possible, focused on a single cohesive architectural or domain concern.
    - Avoid monolithic commits that bundle models, tasks, API endpoints, configurations, test suites, and documentation all at once.
