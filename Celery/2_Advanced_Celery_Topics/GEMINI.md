@@ -62,6 +62,7 @@ Every module must provide an immediate, turn-key debugging environment in VS Cod
     5. Idempotency Verification (duplicate dispatch rejection).
   * Use chained REST Client variables (e.g., `{{createApp.response.body.application_id}}`) for zero-manual-copy testing.
 * **Atomic & Granular Commit Strategy**:
+  * **Mandatory Review Prior to Commit & Push (Strict Non-Negotiable Invariant)**: Every proposed change (code, tests, configuration, documentation) is subject to explicit user review before committing. Agents are **strictly forbidden** from executing `git commit` or `git push` without prior review, confirmation, and explicit user authorization. Always present the proposed changes, diffs, and verification results to the user, and await their explicit instruction before running any commit or push command.
   * **Granular, Cohesive Commit Cadence**: Keep git commits as small, focused, and cohesive as possible. Divide large multi-file features into incremental logical units (e.g. data models & schemas -> worker tasks & mutexes -> scheduler configuration -> API routes & dispatchers -> test suites -> documentation). Avoid monolithic multi-layer commits.
   * **Zero-Broken-Execution Invariant**: Every intermediate commit must be functionally self-contained, syntactically clean, and operational. Never commit broken intermediate states, missing imports, failing tests, or unverified schemas. Every commit in a series must compile, pass static type checks (Mypy), and satisfy automated tests independently.
 
@@ -70,6 +71,9 @@ Every module must provide an immediate, turn-key debugging environment in VS Cod
 ## 3. Documentation & Architectural Diagrams
 Clear architectural diagrams and execution traces must accompany every module.
 
+* **Project Planning & First Milestone Invariant (Planning & Architecture Specification)**:
+  * **Mandatory Milestone 1 Scope**: The mandatory first milestone for every project module is to update `README.md` with the domain proposal and generate `docs/ARCHITECTURE_AND_STANDARDS.md` defining the complete architecture, data models, state machines, execution paths, sequence diagrams, and a dedicated section defining all subsequent **Project Milestones**.
+  * **Milestone 1 Scope Boundary**: Milestone 1 must focus exclusively on proposal refinement and architectural planning. Committing or introducing Dockerfiles, container manifests, application code, or database scripts in Milestone 1 is strictly forbidden.
 * **Location**: All architectural documentation and test plans reside in `docs/` (e.g., `docs/TEST_PLAN.md` and `docs/ARCHITECTURE_AND_STANDARDS.md`).
 * **Test Plan (`docs/TEST_PLAN.md`)**:
   * Defines the test architecture hierarchy (Layer 1 Unit -> Layer 2 Canvas -> Layer 3 API -> Layer 4 Benchmarks).
