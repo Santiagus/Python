@@ -1,0 +1,21 @@
+# =============================================================================
+# FastAPI Ingestion Gateway Dockerfile (The Producer)
+# =============================================================================
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends     curl     && rm -rf /var/lib/apt/lists/*
+
+COPY requirements_api.txt /workspace/requirements_api.txt
+RUN pip install --no-cache-dir -r /workspace/requirements_api.txt
+
+COPY . /workspace/
+
+ENV PYTHONPATH=/workspace
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8010
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8010"]
