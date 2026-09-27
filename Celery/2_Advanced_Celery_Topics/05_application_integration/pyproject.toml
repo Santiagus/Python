@@ -27,3 +27,18 @@ warn_return_any = false
 warn_unused_configs = true
 ignore_missing_imports = true
 check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "unit: Isolated in-memory unit tests",
+    "integration: Database, Celery, and Redis integration tests",
+    "e2e: Live multi-process end-to-end tests",
+    "contract: AMQP and worker contract tests",
+]
+
