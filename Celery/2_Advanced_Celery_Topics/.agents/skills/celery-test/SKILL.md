@@ -27,19 +27,8 @@ Tests must be partitioned into distinct layers:
 3. **Canvas & Workflow Tests (`tests/test_canvas_workflows.py`, `tests/test_partial_failure.py`)**:
    - Focus: Celery canvas chains, chords, signatures (`.s()` vs `.si()`), errbacks (`link_error`), and Result Envelope handling.
    - Isolation/Execution: Run either with `celery_app.conf.task_always_eager = True` or mock chord barriers to test logic deterministically.
-4. **Live E2E Tests (`tests/e2e/test_live_e2e.py`) & Capacity Benchmarks (`tests/benchmarks/`)**:
-   - Focus: End-to-end multi-process distributed verification across real PostgreSQL, RabbitMQ broker, Celery worker daemons, and partner APIs, followed by load/contention capacity tests.
-   - **Final Steps Invariant**: Live E2E testing and capacity benchmarks must strictly be the final development steps/milestones. They are scheduled and executed only after all underlying application components, schemas, database models, worker tasks, API routes, middlewares, and unit/integration tests are fully implemented and verified.
-
----
-
-## Progressive Pytest Configuration (`pyproject.toml` / `pytest.ini`)
-
-Pytest configuration (`pyproject.toml` with `[tool.pytest.ini_options]` or `pytest.ini`) must be generated or updated to cover the specific tests introduced in each development milestone:
-- **Asyncio Mode**: Configure `asyncio_mode = "auto"` so async tests and autouse fixtures execute seamlessly without event loop conflicts.
-- **Progressive Test Paths**: Define active `testpaths` covering the tests introduced in that milestone (e.g., `["tests/unit"]` initially, expanding to `["tests/unit", "tests/integration"]`, and finally `["tests/unit", "tests/integration", "tests/e2e"]`).
-- **Markers**: Declare custom markers (e.g., `e2e: live multi-process distributed scenarios`, `benchmark: capacity benchmarks`) to allow targeted runs.
-- **Coverage Target**: Enforce strict statement coverage (`--cov=app --cov=services/worker --cov-report=term-missing --cov-fail-under=100`).
+4. **Live E2E Tests (`tests/test_live_e2e.py`)**:
+   - Focus: End-to-end multi-service verification with running workers and message brokers.
 
 ---
 
@@ -122,31 +111,27 @@ async def async_client(test_database_url: str) -> AsyncGenerator[AsyncClient, No
 
 ## Step-by-Step Procedure for Creating Tests
 
-1. **Progressive Pytest Configuration**:
-   - Ensure `pyproject.toml` / `pytest.ini` is generated or updated to discover and execute the specific tests introduced in this milestone.
-2. **Audit Code Under Test**:
+1. **Audit Code Under Test**:
    - Identify all conditionals, exceptions, edge cases, and external calls.
    - List required fixtures: test payloads, mock database sessions, error manifests.
-3. **Implement Unit Tests First**:
+2. **Implement Unit Tests First**:
    - Create unit tests verifying positive and negative validation.
    - Verify zero floating-point math; use exact `Decimal` and integer minor units (cents).
    - Test Pydantic model validation failures (e.g., negative or zero facility amounts).
-4. **Implement Integration & API Tests**:
+3. **Implement Integration & API Tests**:
    - Test async API endpoints via `httpx.AsyncClient`.
    - Test `ErrorHandlingMiddleware` exception-trapping and `X-Request-ID` propagation.
-5. **Implement Workflow / Canvas Tests**:
+4. **Implement Workflow / Canvas Tests**:
    - Test sequential `.s()` piping vs `.si()` argument dropping.
    - Test chord barrier: verify callback processes list of results.
    - Test degraded envelopes: verify non-fatal errors route gracefully to review.
    - Test errbacks: verify `link_error` triggers compensating state updates.
-6. **Concurrent REST Client Suite Updates**:
-   - Ensure `requests/requests.rest` is created/updated in lockstep with matching API endpoints and tests.
-7. **Run Pytest with Coverage**:
+5. **Synchronous REST Client Generation**:
+   - Ensure `requests/requests.rest` is created/updated in lockstep with new endpoints and tests.
+6. **Run Pytest with Coverage**:
    ```bash
    pytest --cov=app --cov=services/worker --cov-report=term-missing --cov-fail-under=100
    ```
-8. **Close Coverage Gaps**:
+7. **Close Coverage Gaps**:
    - Inspect missing line numbers reported by `--cov-report=term-missing`.
    - Add targeted test cases to trigger every branch, validation check, and error handler until 100% statement coverage is achieved.
-9. **Final Milestone: Live E2E & Capacity Benchmarks**:
-   - Strictly implement live distributed multi-process tests (`tests/e2e/test_live_e2e.py`) and capacity benchmarks (`tests/benchmarks/`) as the final development milestone once all services, tasks, and unit/integration suites are green.

@@ -1,0 +1,24 @@
+# ==============================================================================
+# Pre-Commit Configuration for Celery & Distributed Backend Architecture
+#
+# Linked directly to scripts/run_local_ci.sh for local CI/CD verification:
+#   • Pre-Flight: Repository Hygiene & Conflict Safeguards
+#   • Stage 1   : Mermaid Diagram Syntax & Render Validation
+#   • Stage 2   : Code Style & Formatting Check (Ruff Format)
+#   • Stage 3   : Linting & Code Hygiene (Ruff Check)
+#   • Stage 4   : Static Type Checking (Mypy)
+#   • Stage 5   : Test Suite Execution (All Tests Pass)
+#   • Stage 6   : Test Coverage Gate (100% Statement Coverage)
+# ==============================================================================
+default_language_version:
+  python: python3
+
+repos:
+  - repo: local
+    hooks:
+      - id: local-ci
+        name: Local CI Gate (Mermaid, Ruff, Mypy, Tests)
+        entry: ./scripts/run_local_ci.sh --quick
+        language: script
+        pass_filenames: false
+        always_run: true

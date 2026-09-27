@@ -56,11 +56,12 @@ When preparing commits for a completed milestone or complex feature:
 
 ### Step 1: Group Files by Architectural Tier
 Inspect `git status` and cluster modified or untracked files into logical, cohesive tiers:
-1. `README.md` + `docs/ARCHITECTURE_AND_STANDARDS.md` + `docs/TEST_PLAN.md` (Milestone 1: proposal, architecture, and initial test matrix covering all use cases).
-2. Database DDL migrations (`init.sql`), container definitions, and SQLAlchemy ORM models.
-3. Domain worker tasks (`services/worker/tasks/`), Celery canvas, and unit tests (`tests/unit/`) with progressive `pyproject.toml` pytest config and worker launch config in `.vscode/launch.json`.
-4. API schemas, middlewares, producer dispatchers, FastAPI routes, matching API debug configs, and matching `requests/requests.rest` workflows with integration tests (`tests/integration/`).
-5. Live multi-process distributed E2E test suite (`tests/e2e/test_live_e2e.py`) and capacity benchmarks (`tests/benchmarks/`, `scripts/benchmark_*.py`) as the strictly final development steps.
+1. `services/worker/beat_lock.py` + `tests/unit/test_beat_lock.py`
+2. `services/worker/celery_app.py` + `tests/unit/test_schedules.py`
+3. `services/worker/tasks/` + `tests/integration/test_tasks.py`
+4. `app/schemas.py` + `app/dispatcher.py` + `app/routes.py` + `tests/integration/test_api.py`
+5. `.vscode/launch.json` + `requests/requests.rest`
+6. `docs/ARCHITECTURE_AND_STANDARDS.md` + `docs/TEST_PLAN.md`
 
 ### Step 2: Verify Incremental Buildability
 Ensure that staging Tier 1 does not rely on uncommitted symbols from Tier 2, or stage them together if strictly interdependent. Each commit must leave the repository in a green, working state.
