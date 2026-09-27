@@ -1,0 +1,185 @@
+### ====================================================================
+### Module 05: Application Integration - Card Dispute & Chargeback Engine
+### Interactive REST Client Test Scenarios
+### ====================================================================
+
+@baseUrl = http://localhost:8000
+@apiKey = sk_live_card_disputes_test_key_001
+@contentType = application/json
+
+### --------------------------------------------------------------------
+### 1. System Health & Readiness Check
+### --------------------------------------------------------------------
+# @name healthCheck
+GET {{baseUrl}}/health HTTP/1.1
+Accept: {{contentType}}
+
+### --------------------------------------------------------------------
+### 2. Happy Path Workflow: Dispute Submission & Polling
+### --------------------------------------------------------------------
+
+# Step A: Submit a new Card Dispute
+# NOTE: Pre-creates database record with status="processing" before Celery dispatch (anti-blackhole contract).
+# @name submitDispute
+POST {{baseUrl}}/disputes HTTP/1.1
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+{
+    "transaction_id": "tx_req_rest_happy_001",
+    "card_token": "tok_card_9921_sec",
+    "card_last_four": "4242",
+    "amount": "149.99",
+    "currency": "USD",
+    "reason": "fraudulent",
+    "evidence_notes": "Cardholder confirmed card was in possession; merchant unrecognized."
+}
+
+### Step B: Inspect Immediate In-Flight State (Anti-Blackhole Contract)
+# NOTE: Immediate query returns HTTP 200 OK with in-flight status: "processing" (zero-404 guarantee).
+# @name getDisputeImmediate
+GET {{baseUrl}}/disputes/{{submitDispute.response.body.id}} HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+### Step C: Poll Terminal Status After Worker Transmission
+# NOTE: Once Celery worker transmits evidence to clearinghouse, status transitions to "submitted_to_network".
+# @name getDisputeFinal
+GET {{baseUrl}}/disputes/{{submitDispute.response.body.id}} HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+
+### --------------------------------------------------------------------
+### 3. Idempotency Verification Workflow
+### --------------------------------------------------------------------
+
+# Attempt duplicate dispute submission for the same transaction_id (Expected: HTTP 409 Conflict)
+# @name submitDuplicate
+POST {{baseUrl}}/disputes HTTP/1.1
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+{
+    "transaction_id": "tx_req_rest_happy_001",
+    "card_token": "tok_card_9921_sec",
+    "card_last_four": "4242",
+    "amount": "149.99",
+    "currency": "USD",
+    "reason": "duplicate",
+    "evidence_notes": "Duplicate submission attempt."
+}
+
+
+### --------------------------------------------------------------------
+### 4. In-Flight Cooperative Cancellation Workflow
+### --------------------------------------------------------------------
+
+# Step A: Submit a Dispute Destined for Cancellation
+# @name submitForCancel
+POST {{baseUrl}}/disputes HTTP/1.1
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+{
+    "transaction_id": "tx_req_rest_cancel_002",
+    "card_token": "tok_card_8812_sec",
+    "card_last_four": "1234",
+    "amount": "45.00",
+    "currency": "USD",
+    "reason": "unrecognized",
+    "evidence_notes": "Initiated cancellation prior to clearinghouse network transmission."
+}
+
+### Step B: Cancel Dispute In-Flight (Revokes Celery Task via SIGTERM)
+# @name cancelDispute
+POST {{baseUrl}}/disputes/{{submitForCancel.response.body.id}}/cancel HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+### Step C: Attempt Second Cancellation on Cancelled Dispute (Expected: HTTP 409 Conflict)
+# @name cancelDisputeDuplicate
+POST {{baseUrl}}/disputes/{{submitForCancel.response.body.id}}/cancel HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+
+### --------------------------------------------------------------------
+### 5. Clearinghouse Failure Simulation & Manual Retry Workflow
+### --------------------------------------------------------------------
+
+# Step A: Submit Dispute with Simulated Clearinghouse Failure (?simulate_failure=true)
+# @name submitSimulateFailure
+POST {{baseUrl}}/disputes?simulate_failure=true HTTP/1.1
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+{
+    "transaction_id": "tx_req_rest_fail_003",
+    "card_token": "tok_card_7733_sec",
+    "card_last_four": "5678",
+    "amount": "250.00",
+    "currency": "USD",
+    "reason": "goods_not_received",
+    "evidence_notes": "Package not delivered; simulating clearinghouse network timeout."
+}
+
+### Step B: Poll Until Dispute Reaches 'failed' State
+# @name getFailedDispute
+GET {{baseUrl}}/disputes/{{submitSimulateFailure.response.body.id}} HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+### Step C: Retry Failed Dispute (Increments attempt_count and re-enqueues)
+# @name retryFailedDispute
+POST {{baseUrl}}/disputes/{{submitSimulateFailure.response.body.id}}/retry HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+### Step D: Attempt Retry on Non-Failed Dispute (Expected: HTTP 409 Conflict)
+# @name retryNonFailedDispute
+POST {{baseUrl}}/disputes/{{submitDispute.response.body.id}}/retry HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+
+### --------------------------------------------------------------------
+### 6. Security, Authentication & Validation Scenarios
+### --------------------------------------------------------------------
+
+# Scenario A: Missing API Key (Expected: HTTP 401 Unauthorized)
+# @name authMissingKey
+GET {{baseUrl}}/disputes/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Accept: {{contentType}}
+
+### Scenario B: Invalid API Key (Expected: HTTP 401 Unauthorized)
+# @name authInvalidKey
+GET {{baseUrl}}/disputes/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: sk_invalid_key_99999999
+
+### Scenario C: Non-Existent Dispute UUID (Expected: HTTP 404 Not Found)
+# @name nonExistentDispute
+GET {{baseUrl}}/disputes/00000000-0000-0000-0000-000000000000 HTTP/1.1
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+### Scenario D: Invalid Dispute Payload - Validation Failure (Expected: HTTP 422 Unprocessable Entity)
+# @name invalidPayload
+POST {{baseUrl}}/disputes HTTP/1.1
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+X-API-Key: {{apiKey}}
+
+{
+    "transaction_id": "tx",
+    "card_token": "short",
+    "card_last_four": "abc",
+    "amount": "-10.00",
+    "currency": "INVALID",
+    "reason": "unsupported_reason"
+}
