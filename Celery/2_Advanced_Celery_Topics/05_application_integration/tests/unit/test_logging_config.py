@@ -94,4 +94,3 @@ def test_configure_logging() -> None:
     root = logging.getLogger()
     assert root.level == logging.DEBUG
     assert len(root.handlers) >= 1
-
