@@ -115,7 +115,7 @@ async def _process_dispute_submission(
         update_res = await session.execute(success_stmt)
         await session.commit()
 
-        if update_res.rowcount == 0:
+        if getattr(update_res, "rowcount", 0) == 0:
             logger.info(
                 "dispute_state_transition_superseded_by_cancellation",
                 extra={"dispute_id": dispute_id_str},

@@ -171,7 +171,11 @@ def test_submit_card_dispute_task_wrapper() -> None:
     dispute_id = str(uuid4())
     expected = {"status": "submitted_to_network", "dispute_id": dispute_id}
 
-    with patch("services.worker.tasks.disputes.run_sync", return_value=expected):
+    with patch(
+        "services.worker.tasks.disputes._process_dispute_submission",
+        new_callable=AsyncMock,
+    ) as mock_process:
+        mock_process.return_value = expected
         res = submit_card_dispute_task.run(dispute_id, simulate_failure=False)
 
     assert res == expected
@@ -220,20 +224,48 @@ def test_worker_process_init_signal() -> None:
 
 def test_utils_event_loop_and_executor() -> None:
     """Verify worker event loop and executor utility functions."""
-    # Test worker loop lifecycle
-    reset_worker_loop()
+    # 1. Test worker loop lifecycle and clean reset
     loop = get_worker_loop()
     assert loop is not None
     assert not loop.is_closed()
 
-    # Test executor
+    # Reset while open
+    reset_worker_loop()
+
+    # Reset when already None
+    reset_worker_loop()
+
+    # Reset when loop exists but is manually closed
+    loop2 = get_worker_loop()
+    loop2.close()
+    reset_worker_loop()
+
+    # 2. Test executor shutdown and re-initialization
     executor = get_sync_executor()
     assert executor is not None
     shutdown_sync_executor()
+    # Calling shutdown again when already shut down
+    shutdown_sync_executor()
+    # Re-initialization when _shutdown is True
+    executor_reinit = get_sync_executor()
+    assert executor_reinit is not None
+    assert not executor_reinit._shutdown
 
-    # Test run_sync with a simple coroutine
+    # 3. Test run_sync outside of any active running event loop
     async def sample_coro() -> int:
         return 42
 
     res = run_sync(sample_coro())
     assert res == 42
+
+
+@pytest.mark.asyncio
+async def test_run_sync_inside_running_loop() -> None:
+    """Verify run_sync safely bridges to the thread pool executor when called inside an active loop."""
+
+    async def sample_coro(value: str) -> str:
+        await asyncio.sleep(0.01)
+        return f"processed_{value}"
+
+    res = run_sync(sample_coro("test_val"))
+    assert res == "processed_test_val"
