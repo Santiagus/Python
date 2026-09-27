@@ -11,9 +11,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 import pytest_asyncio
-from app.database import get_session
-from app.main import app
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -22,6 +20,9 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 from testcontainers.community.postgres import PostgresContainer
+
+from app.database import get_session
+from app.main import app
 
 
 @pytest.fixture(scope="session")
@@ -76,6 +77,26 @@ async def async_engine(postgres_url: str) -> AsyncGenerator[AsyncEngine, None]:
     engine = create_async_engine(postgres_url, poolclass=NullPool)
     yield engine
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def query_recorder(async_engine: AsyncEngine) -> AsyncGenerator[list[str], None]:
+    """Record SQL statements executed by the function-scoped async engine."""
+    statements: list[str] = []
+
+    def record_statement(
+        conn: object,
+        cursor: object,
+        statement: str,
+        parameters: object,
+        context: object,
+        executemany: bool,
+    ) -> None:
+        statements.append(statement)
+
+    event.listen(async_engine.sync_engine, "before_cursor_execute", record_statement)
+    yield statements
+    event.remove(async_engine.sync_engine, "before_cursor_execute", record_statement)
 
 
 @pytest_asyncio.fixture

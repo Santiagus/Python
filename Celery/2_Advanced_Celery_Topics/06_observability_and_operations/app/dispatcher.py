@@ -9,11 +9,11 @@ from uuid import UUID
 
 from celery import chain
 from celery.result import AsyncResult
-from services.worker.tasks.scoring import evaluate_screening
-from services.worker.tasks.screening import check_aml_watchlist, handle_screening_failure
 
 from app.logging_config import current_request_id
 from app.schemas import ScreeningRequest
+from services.worker.tasks.scoring import evaluate_screening
+from services.worker.tasks.screening import check_aml_watchlist, handle_screening_failure
 
 logger = logging.getLogger(__name__)
 

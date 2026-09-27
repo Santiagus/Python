@@ -6,9 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
-from app.models import ScreeningModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import ScreeningModel
 
 
 @pytest.mark.asyncio

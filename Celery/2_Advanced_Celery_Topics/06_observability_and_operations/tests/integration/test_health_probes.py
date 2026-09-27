@@ -2,9 +2,10 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import app.database
 import httpx
 import pytest
+
+import app.database
 from app.database import close_database_pool, warm_database_pool
 
 
