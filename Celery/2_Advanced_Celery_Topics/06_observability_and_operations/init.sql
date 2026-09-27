@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS screenings (
 );
 
 -- 2. Partial B-Tree Index for In-Flight State Visibility
--- Eliminates write amplification on terminal states; keeps active records in CPU L3 cache
+-- Eliminates write amplification on terminal states - keeps active records in CPU L3 cache
 CREATE INDEX IF NOT EXISTS idx_screenings_active_status 
 ON screenings (created_at DESC) 
 WHERE status IN ('pending', 'processing');

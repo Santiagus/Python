@@ -45,21 +45,29 @@ def get_shared_client() -> httpx.Client:
 )
 def check_aml_watchlist(
     self: Task,
-    screening_id: str,
-    entity_name: str,
+    screening_id_or_data: str | dict[str, Any],
+    entity_name: str | None = None,
     upstream_score: int = 0,
 ) -> dict[str, Any]:
     """Screen an individual or business entity against OFAC and AML watchlists.
 
     Args:
         self: Bound Celery task instance.
-        screening_id: Unique UUID string identifying this screening ledger entry.
+        screening_id_or_data: UUID string or upstream scoring result envelope dictionary.
         entity_name: Legal counterparty entity name to verify.
         upstream_score: Heuristic risk points calculated by the upstream scoring task.
 
     Returns:
         dict[str, Any]: Standardized result envelope with status 'ok' or 'degraded'.
     """
+    if isinstance(screening_id_or_data, dict):
+        screening_id = str(screening_id_or_data.get("screening_id", ""))
+        entity_name = str(screening_id_or_data.get("entity_name", entity_name or ""))
+        upstream_score = int(screening_id_or_data.get("risk_score", upstream_score))
+    else:
+        screening_id = str(screening_id_or_data)
+        entity_name = str(entity_name or "")
+
     client = get_shared_client()
 
     logger.info(

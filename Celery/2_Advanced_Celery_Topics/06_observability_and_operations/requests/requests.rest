@@ -1,0 +1,142 @@
+# ==============================================================================
+# REST Client Interactive Workflows - Real-Time Fraud & AML Screening Rail
+# ==============================================================================
+
+@baseUrl = http://localhost:8010
+@sanctionsUrl = http://localhost:8015
+@contentType = application/json
+
+# ------------------------------------------------------------------------------
+# 1. System Health & Telemetry Probes
+# ------------------------------------------------------------------------------
+
+### 1.1 Liveness Probe
+GET {{baseUrl}}/health/live
+
+### 1.2 Readiness Probe (PostgreSQL, Redis, RabbitMQ)
+GET {{baseUrl}}/health/ready
+
+### 1.3 Prometheus Telemetry Exposition
+GET {{baseUrl}}/metrics
+
+
+# ------------------------------------------------------------------------------
+# 2. Happy Path Screening Workflow (Low Risk -> Auto Approved)
+# ------------------------------------------------------------------------------
+
+### Step A: Ingest Payment Transaction (HTTP 202 Accepted)
+# @name createScreening
+POST {{baseUrl}}/api/v1/screenings
+Content-Type: {{contentType}}
+X-Request-ID: req-audit-{{$guid}}
+
+{
+  "transaction_id": "tx-corp-{{$datetime iso8601}}",
+  "account_id": "acct-us-99214",
+  "amount": 250.00,
+  "currency": "USD",
+  "client_ip": "192.168.1.100",
+  "entity_name": "Acme Global Supplies LLC",
+  "velocity_5m_count": 1
+}
+
+### Step B: Immediate In-Flight Inspection (FinTech In-Flight Visibility: HTTP 200 OK, status="processing")
+@screeningId = {{createScreening.response.body.id}}
+GET {{baseUrl}}/api/v1/screenings/{{screeningId}}
+
+### Step C: Poll Final Evaluation Status (Transitions to "approved", risk_score <= 15)
+GET {{baseUrl}}/api/v1/screenings/{{screeningId}}
+
+
+# ------------------------------------------------------------------------------
+# 3. Sanctions Watchlist Hit Workflow (OFAC SDN Match -> Blocked)
+# ------------------------------------------------------------------------------
+
+### Step A: Ingest Sanctioned Entity
+# @name createSanctionedScreening
+POST {{baseUrl}}/api/v1/screenings
+Content-Type: {{contentType}}
+
+{
+  "transaction_id": "tx-sanction-{{$datetime iso8601}}",
+  "account_id": "acct-ru-88123",
+  "amount": 75000.00,
+  "currency": "USD",
+  "client_ip": "203.0.113.45",
+  "entity_name": "Vladimir Rostov",
+  "velocity_5m_count": 4
+}
+
+### Step B: Poll Sanction Screening Result (Transitions to "blocked", risk_score >= 95)
+@sanctionedId = {{createSanctionedScreening.response.body.id}}
+GET {{baseUrl}}/api/v1/screenings/{{sanctionedId}}
+
+
+# ------------------------------------------------------------------------------
+# 4. Chaos Engineering: Watchlist Degradation & Fallback (Result Envelope)
+# ------------------------------------------------------------------------------
+
+### Step A: Inject 100% Timeout Failure into Partner Sanctions API
+POST {{sanctionsUrl}}/api/v1/simulate/mode
+Content-Type: {{contentType}}
+
+{
+  "mode": "timeout",
+  "latency_seconds": 2.5
+}
+
+### Step B: Ingest Screening during Partner Outage
+# @name createDegradedScreening
+POST {{baseUrl}}/api/v1/screenings
+Content-Type: {{contentType}}
+
+{
+  "transaction_id": "tx-chaos-{{$datetime iso8601}}",
+  "account_id": "acct-eu-11223",
+  "amount": 12500.00,
+  "currency": "EUR",
+  "client_ip": "198.51.100.22",
+  "entity_name": "Nordic Trade AB",
+  "velocity_5m_count": 2
+}
+
+### Step C: Verify Graceful Degradation (status="flagged_review", fallback_score=40)
+@degradedId = {{createDegradedScreening.response.body.id}}
+GET {{baseUrl}}/api/v1/screenings/{{degradedId}}
+
+### Step D: Reset Partner Sanctions API to Normal Operation
+POST {{sanctionsUrl}}/api/v1/simulate/reset
+
+
+# ------------------------------------------------------------------------------
+# 5. Atomic Idempotency Verification (Unique Constraint Deduplication)
+# ------------------------------------------------------------------------------
+
+### Step A: Initial Submission (HTTP 202 Accepted)
+# @name initialTx
+POST {{baseUrl}}/api/v1/screenings
+Content-Type: {{contentType}}
+
+{
+  "transaction_id": "tx-idempotent-fixed-key-001",
+  "account_id": "acct-us-44556",
+  "amount": 1000.00,
+  "currency": "USD",
+  "client_ip": "10.0.0.1",
+  "entity_name": "Reliable Merchant Inc",
+  "velocity_5m_count": 1
+}
+
+### Step B: Duplicate Submission with Same transaction_id (HTTP 200 OK with Existing Record)
+POST {{baseUrl}}/api/v1/screenings
+Content-Type: {{contentType}}
+
+{
+  "transaction_id": "tx-idempotent-fixed-key-001",
+  "account_id": "acct-us-44556",
+  "amount": 1000.00,
+  "currency": "USD",
+  "client_ip": "10.0.0.1",
+  "entity_name": "Reliable Merchant Inc",
+  "velocity_5m_count": 1
+}

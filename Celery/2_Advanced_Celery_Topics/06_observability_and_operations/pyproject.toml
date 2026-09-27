@@ -30,3 +30,7 @@ ignore_missing_imports = true
 check_untyped_defs = true
 explicit_package_bases = true
 exclude = [".venv", "build", "dist"]
+
+[tool.coverage.run]
+concurrency = ["greenlet", "thread"]
+source = ["app", "services"]

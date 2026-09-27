@@ -183,3 +183,27 @@ def test_get_shared_client_singleton() -> None:
 
     client = get_shared_client()
     assert isinstance(client, httpx.Client)
+
+
+def test_check_aml_watchlist_with_dict_payload() -> None:
+    """TC-05: Verify check_aml_watchlist unpacks upstream dictionary payload in canvas chain."""
+    upstream_payload = {
+        "status": "ok",
+        "screening_id": "11223344-5566-7788-99aa-bbccddeeff00",
+        "entity_name": "Dict Entity Corp",
+        "risk_score": 15,
+    }
+    with patch("services.worker.tasks.screening.get_shared_client") as mock_client_factory:
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"is_sanctioned": False, "matches": []}
+        mock_resp.raise_for_status.return_value = None
+        mock_client.post.return_value = mock_resp
+        mock_client_factory.return_value = mock_client
+
+        result = check_aml_watchlist.apply(args=[upstream_payload]).result
+
+    assert result["status"] == "ok"
+    assert result["screening_id"] == "11223344-5566-7788-99aa-bbccddeeff00"
+    assert result["risk_score"] == 15
+    assert result["decision"] == "approved"
