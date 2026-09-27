@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-09-27T09:27:33.690557+00:00",
+  "environment": {
+    "api_url": "http://testserver",
+    "mode": "burst",
+    "arrival_rate_req_sec": 0
+  },
+  "parameters": {
+    "probes_count": 10
+  },
+  "results": {
+    "total_probes": 10,
+    "successful_probes": 10,
+    "failed_probes": 0,
+    "duration_seconds": 0.001,
+    "actual_throughput_rps": 12253.31,
+    "api_latency_ms": {
+      "min": 0.04,
+      "mean": 0.07,
+      "p50": 0.07,
+      "p95": 0.1,
+      "p99": 0.1,
+      "max": 0.1
+    },
+    "worker_clearing_sla_ms": {
+      "mean": 50.39,
+      "samples_polled": 5
+    },
+    "sla_verdicts": {
+      "api_p99_under_50ms": true,
+      "worker_clearing_active": true
+    }
+  }
+}
