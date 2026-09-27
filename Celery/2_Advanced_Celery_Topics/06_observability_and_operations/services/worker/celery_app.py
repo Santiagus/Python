@@ -4,6 +4,7 @@ Defines the message routing architecture, dead-letter exchanges, Prometheus metr
 instrumentation, and graceful lifecycle shutdown hooks.
 """
 
+import logging
 import os
 import time
 from typing import Any
@@ -11,6 +12,8 @@ from typing import Any
 from celery import Celery, signals
 from kombu import Exchange, Queue
 from prometheus_client import Counter, Gauge, Histogram
+
+logger = logging.getLogger(__name__)
 
 # ==============================================================================
 # Prometheus Task Metrics Registry
@@ -212,4 +215,14 @@ def on_worker_shutting_down(**kwargs: Any) -> None:
     Args:
         **kwargs: Signal arguments passed by Celery shutdown handler.
     """
-    pass
+    try:
+        from services.worker.tasks.screening import get_shared_client
+
+        client = get_shared_client()
+        if not client.is_closed:
+            client.close()
+    except Exception:
+        logger.warning(
+            "Failed to close shared sanctions API client during worker shutdown",
+            exc_info=True,
+        )
