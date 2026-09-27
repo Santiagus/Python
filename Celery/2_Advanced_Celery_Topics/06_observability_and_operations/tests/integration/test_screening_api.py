@@ -6,10 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+from app.models import ScreeningModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models import ScreeningModel
 
 
 @pytest.mark.asyncio
@@ -158,3 +157,43 @@ def test_dispatch_screening_workflow_unit() -> None:
         call_kwargs = mock_workflow.apply_async.call_args.kwargs
         assert call_kwargs["headers"] == {"X-Request-ID": "trace-abc-123"}
         assert "link_error" in call_kwargs
+
+
+@pytest.mark.asyncio
+async def test_create_screening_query_minimization_and_zero_refresh(
+    client: httpx.AsyncClient,
+    query_recorder: list[str],
+) -> None:
+    """TC-19: Verify exactly 1 SQL INSERT is executed (no speculative SELECT, no post-insert refresh)."""
+    tx_id = f"tx-query-min-{uuid.uuid4().hex[:8]}"
+    payload = {
+        "transaction_id": tx_id,
+        "account_id": "acct-test-query-001",
+        "amount": 250.00,
+        "currency": "usd",
+        "client_ip": "10.0.0.1",
+        "entity_name": "Minimal Query Corp",
+        "velocity_5m_count": 0,
+    }
+
+    # 1. Clear any prior statements from initialization
+    query_recorder.clear()
+
+    # 2. Dispatch request to FastAPI endpoint
+    response = await client.post("/api/v1/screenings", json=payload)
+    assert response.status_code == 202
+
+    # 3. Filter out savepoint/transaction management statements if any
+    data_queries = [
+        q
+        for q in query_recorder
+        if not q.upper().startswith("SAVEPOINT")
+        and not q.upper().startswith("RELEASE")
+        and not q.upper().startswith("ROLLBACK")
+    ]
+
+    # 4. Assert exactly 1 INSERT query was executed
+    assert len(data_queries) == 1
+    assert data_queries[0].upper().startswith("INSERT INTO SCREENINGS")
+    # Verify no speculative SELECT and no session.refresh() SELECT was issued
+    assert not any(q.upper().startswith("SELECT") for q in data_queries)

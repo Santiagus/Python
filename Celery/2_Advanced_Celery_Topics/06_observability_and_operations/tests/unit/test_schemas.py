@@ -4,7 +4,6 @@ from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
-
 from services.worker.schemas import (
     ResultEnvelope,
     ScoringResult,

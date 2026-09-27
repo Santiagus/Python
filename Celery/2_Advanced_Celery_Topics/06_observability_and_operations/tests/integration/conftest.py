@@ -11,6 +11,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 import pytest_asyncio
+from app.database import get_session
+from app.main import app
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -20,9 +22,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 from testcontainers.community.postgres import PostgresContainer
-
-from app.database import get_session
-from app.main import app
 
 
 @pytest.fixture(scope="session")

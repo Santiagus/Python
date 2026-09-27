@@ -5,10 +5,9 @@ import uuid
 
 import httpx
 import pytest
-from fastapi import FastAPI
-
 from app.logging_config import DevelopmentLogFormatter, current_request_id, setup_logging
 from app.middlewares import register_middlewares
+from fastapi import FastAPI
 
 
 @pytest.fixture

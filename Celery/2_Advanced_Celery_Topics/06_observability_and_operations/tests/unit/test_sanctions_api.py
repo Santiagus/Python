@@ -1,9 +1,8 @@
 """Unit tests for standalone Sanctions Watchlist Simulator API (TC-14, TC-15)."""
 
 import pytest
-from starlette.testclient import TestClient
-
 from services.sanctions_api.main import _simulation_state, app
+from starlette.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)
