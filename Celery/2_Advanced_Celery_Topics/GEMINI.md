@@ -24,6 +24,10 @@ Every project module must maintain enterprise-grade automated testing with a har
   * **Integration Tests (`tests/integration/`)**: Verifying database transactions (SQLAlchemy asyncpg), API routes (HTTPX AsyncClient), middleware pipelines (`test_middlewares.py`), Kombu exchange/queue bindings, and service boundaries against real databases (via Testcontainers or local ports).
   * **Live E2E Tests (`tests/e2e/test_live_e2e.py`)**: Real asynchronous message dispatching across the full live distributed stack: real PostgreSQL, real RabbitMQ broker, live autonomous Celery worker daemon subprocesses (`worker_critical`, `worker_bulk`), and live partner APIs (`bank_simulator_api`).
   * **Capacity & Load Benchmarks (`tests/benchmarks/` or `scripts/`)**: Automated contention tests verifying queue isolation, prefetch buffer discipline, and SLA preservation under heavy background load.
+* **Progressive Pytest Configuration**:
+  Pytest configuration (`pyproject.toml` with `[tool.pytest.ini_options]` or `pytest.ini`) must be generated or updated to cover the specific tests introduced in each development milestone. It must configure `asyncio_mode = "auto"`, test discovery paths, coverage sources (`--cov`), and custom markers so tests in each milestone execute cleanly and pass coverage without broken imports or misconfigured settings.
+* **Final Phasing for E2E & Benchmarking**:
+  Live multi-process distributed E2E (`tests/e2e/test_live_e2e.py`) and capacity contention benchmarks (`tests/benchmarks/`, `scripts/benchmark_*.py`) must strictly be the final development steps/milestones. They are scheduled and executed only after all underlying application components, schemas, database models, worker tasks, API routes, middlewares, and unit/integration tests are fully implemented and verified.
 * **Hybrid Testcontainers Pattern**:
   Tests must seamlessly adapt to local developer containers or spin up ephemeral testcontainers when dependencies are missing:
   1. If `TEST_DATABASE_URL` / `TEST_REDIS_URL` / `TEST_RABBITMQ_URL` is configured, or local services are reachable, tests connect to the existing infrastructure.
@@ -41,8 +45,10 @@ Every project module must maintain enterprise-grade automated testing with a har
 Every module must provide an immediate, turn-key debugging environment in VS Code and interactive HTTP client workflows.
 
 * **Multi-Service Debugging (`.vscode/launch.json`)**:
-  * **Progressive Just-in-Time Generation Invariant**:
-    * Generate debug configurations strictly for services, workers, and entry points that currently exist and are suitable to be debugged at that specific stage of development.
+  * **Layer-Synchronized Progressive Generation Invariant**:
+    * Generate debug configurations strictly in lockstep with the corresponding developed layer.
+    * For example, as soon as a client API or partner simulator (e.g., `services/bank_simulator_api/`) is generated, a matching debug launch profile must immediately be made available.
+    * As workers, beat schedulers, or FastAPI gateways are implemented, their debug configurations must be added in that exact milestone/commit.
     * Never generate dangling or speculative configurations pointing to non-existent applications, modules, or entry points (e.g., do not add a FastAPI launch profile pointing to `app.main:app` if the web service has not yet been built or is not part of the active layer).
   * **Individual Service Configurations**:
     * **FastAPI**: `uvicorn app.main:app --reload --port <PORT>` with `justMyCode: true` (only once the FastAPI application entry point exists).
@@ -53,7 +59,8 @@ Every module must provide an immediate, turn-key debugging environment in VS Cod
     * When several services, workers, or architectural layers are complete and should be run together (e.g., FastAPI + Celery Worker + Celery Beat, or Worker + Partner Mock API), generate a compound debug configuration profile (`compounds` with `"stopAll": true`) that launches all active services concurrently.
     * Progressively update or expand compound configurations as additional services and background daemons are completed.
 * **REST Client Workflow (`requests/requests.rest`)**:
-  * **Concurrent Generation Mandate**: `requests/requests.rest` must be authored and kept in sync **at the exact same time** endpoints and test suites are developed (never deferred).
+  * **Layer-Synchronized Generation Mandate**: `requests/requests.rest` must be authored concurrently with the matching API endpoints (never deferred to a later disconnected milestone).
+  * **Iterative Refinement**: It is completely acceptable and expected to update `requests/requests.rest` in subsequent development iterations to fix bugs, add newly uncovered test cases, or add calls for newly added APIs as development expands.
   * An interactive file for the VS Code REST Client extension organized into **self-contained test workflows** covering:
     1. System Health Check (`GET /health`).
     2. Happy Path Workflow (Step A: Create resource -> Step B: Inspect pending state -> Step C: Dispatch Celery canvas -> Step D: Poll async state & final memo).
@@ -72,12 +79,13 @@ Every module must provide an immediate, turn-key debugging environment in VS Cod
 Clear architectural diagrams and execution traces must accompany every module.
 
 * **Project Planning & First Milestone Invariant (Planning & Architecture Specification)**:
-  * **Mandatory Milestone 1 Scope**: The mandatory first milestone for every project module is to update `README.md` with the domain proposal and generate `docs/ARCHITECTURE_AND_STANDARDS.md` defining the complete architecture, data models, state machines, execution paths, sequence diagrams, and a dedicated section defining all subsequent **Project Milestones**.
-  * **Milestone 1 Scope Boundary**: Milestone 1 must focus exclusively on proposal refinement and architectural planning. Committing or introducing Dockerfiles, container manifests, application code, or database scripts in Milestone 1 is strictly forbidden.
+  * **Mandatory Milestone 1 Scope**: The mandatory first milestone for every project module is to update `README.md` with the domain proposal, generate `docs/ARCHITECTURE_AND_STANDARDS.md` defining the complete architecture, data models, state machines, sequence diagrams, and a dedicated section defining all subsequent **Project Milestones**, and generate `docs/TEST_PLAN.md` defining the test architecture hierarchy, test tiers, and a comprehensive test matrix table. All use cases to cover by test must be clearly specified upfront from the beginning. Updating `docs/TEST_PLAN.md` in subsequent iterations (e.g. refining fixtures, edge cases, or coverage metrics) is expected and encouraged.
+  * **Milestone 1 Scope Boundary**: Milestone 1 must focus exclusively on proposal refinement, architectural planning, test planning, and milestone definition. Committing or introducing Dockerfiles, container manifests, application code, or database scripts in Milestone 1 is strictly forbidden.
 * **Location**: All architectural documentation and test plans reside in `docs/` (e.g., `docs/TEST_PLAN.md` and `docs/ARCHITECTURE_AND_STANDARDS.md`).
 * **Test Plan (`docs/TEST_PLAN.md`)**:
+  * Generated in Milestone 1 and updated progressively across development iterations.
   * Defines the test architecture hierarchy (Layer 1 Unit -> Layer 2 Canvas -> Layer 3 API -> Layer 4 Benchmarks).
-  * Comprehensive Test Matrix table specifying: Test ID, Function/File, Fixture/Input, Invariants/Assertions, and Expected Outcome.
+  * Comprehensive Test Matrix table specifying: Test ID, Function/File, Fixture/Input, Invariants/Assertions, and Expected Outcome covering all domain use cases from the start.
   * Red-Green-Refactor TDD roadmap.
 * **Mermaid Visualizations & Syntax Validation**:
   * Use Mermaid flowcharts (`flowchart TD` / `flowchart LR`) for system topologies, layer boundaries, and broker topologies.

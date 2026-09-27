@@ -92,8 +92,13 @@ async def ingest_credit_dossier(
 ---
 
 ## 3. Test Plan Generation (`docs/TEST_PLAN.md`)
+
+> [!IMPORTANT]
+> **Milestone 1 Mandate & Progressive Refinement**:
+> `docs/TEST_PLAN.md` must be generated during the first milestone alongside `README.md` and `docs/ARCHITECTURE_AND_STANDARDS.md`. All use cases to be covered by automated tests must be specified clearly from the beginning in the Test Matrix. It is completely acceptable and expected to iteratively update `docs/TEST_PLAN.md` in subsequent development milestones (e.g. refining fixtures, detailing newly uncovered edge cases, or updating execution timings), but the scope of use cases to cover must be established upfront.
+
 Every module requires a formal `docs/TEST_PLAN.md` containing:
-1. **Test Architecture & Layer Hierarchy**: Visualized with `flowchart TD` showing L1 Unit -> L2 Canvas -> L3 API -> L4 Benchmarks.
+1. **Test Architecture & Layer Hierarchy**: Visualized with `flowchart TD` showing L1 Unit -> L2 Canvas -> L3 API -> L4 Benchmarks (with Live E2E and Benchmarks strictly placed as the final phase).
 2. **Comprehensive Test Matrix Table**:
    | Test ID | Test Function / File | Fixture Input | Invariants & Assertions | Expected Outcome |
    | :--- | :--- | :--- | :--- | :--- |

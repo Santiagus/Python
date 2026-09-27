@@ -19,8 +19,8 @@ When working with individual project folders (such as `03_routing_and_capacity`,
 Place this file at `<module_folder>/.vscode/launch.json`. Adjust module paths and environment ports as needed.
 
 > [!IMPORTANT]
-> **Progressive Just-in-Time Generation**:
-> Only include launch configurations for services and entry points that actually exist and are suitable to be debugged at that stage of development. Do not generate dangling debug configurations pointing to non-existent applications (e.g., omit the FastAPI configuration if the module does not have or has not yet implemented the FastAPI app).
+> **Layer-Synchronized Progressive Generation**:
+> Debug configurations must be generated in lockstep with the corresponding developed layer. For example, if a client API or partner simulator (e.g. `services/bank_simulator_api/`) is generated, a matching debug launch profile must immediately be made available. As workers, beat schedulers, or FastAPI gateways are implemented, their debug configurations must be added in that exact milestone/commit. Never leave existing services without debug profiles, and do not generate dangling or speculative configurations pointing to non-existent applications.
 > When several services/layers (e.g., API gateway, Celery worker, Celery beat, simulator APIs) are complete and intended to be run together, generate a compound debug configuration (`compounds` with `"stopAll": true`) to launch and debug them all concurrently.
 
 ```json
@@ -308,7 +308,9 @@ class FacilityApplication(BaseModel):
 ## 6. Concurrent REST Client Suite (`requests/requests.rest`)
 
 > [!IMPORTANT]
-> **Concurrent Generation Mandate**: `requests/requests.rest` must be generated and updated **at the exact same time** as the FastAPI endpoints and test suite.
+> **Layer-Synchronized Generation Mandate**:
+> `requests/requests.rest` must be generated concurrently with the matching API (e.g., when a simulator API or ingestion gateway is generated, its REST scenarios must be created in that same milestone).
+> **Iterative Updates & Refinement**: It is completely acceptable and expected to update `requests/requests.rest` in subsequent development iterations to fix bugs, add newly uncovered test cases, or add requests for newly added endpoints as the system evolves.
 
 Organize the file into **self-contained test workflows** using named requests and variable chaining:
 
