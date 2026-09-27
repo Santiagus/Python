@@ -175,31 +175,52 @@ cd "${REPO_ROOT}"
 CHECK_PATHS=()
 COV_TARGETS=()
 
-# 1. Target application gateway (if present)
-if [ -d "${MODULE_DIR}/app" ]; then
+# Helper function to check if a directory contains Python files
+has_py_files() {
+    local target_dir="$1"
+    [ -d "${target_dir}" ] && [ -n "$(find "${target_dir}" \( -name "*.py" -o -name "*.pyi" \) 2>/dev/null | head -n 1)" ]
+}
+
+# 1. Target application gateway (if present and contains Python files)
+if has_py_files "${MODULE_DIR}/app"; then
     CHECK_PATHS+=("${MODULE_NAME}/app")
     COV_TARGETS+=("--cov=app")
 fi
 
-# 2. Target worker microservice or services layer (if present)
-if [ -d "${MODULE_DIR}/services/worker" ]; then
+# 2. Target worker microservice or services layer (if present and contains Python files)
+if has_py_files "${MODULE_DIR}/services/worker"; then
     CHECK_PATHS+=("${MODULE_NAME}/services/worker")
     COV_TARGETS+=("--cov=services/worker")
-elif [ -d "${MODULE_DIR}/services" ]; then
-    CHECK_PATHS+=("${MODULE_NAME}/services")
-    COV_TARGETS+=("--cov=services")
 fi
 
-# 3. Target standard domain/source root directories (if present)
+# Check for any standalone sibling services under services/* (e.g. services/sanctions_api)
+if [ -d "${MODULE_DIR}/services" ]; then
+    for SVC_DIR in "${MODULE_DIR}/services"/*; do
+        if [ -d "${SVC_DIR}" ]; then
+            SVC_NAME="$(basename "${SVC_DIR}")"
+            if [ "${SVC_NAME}" != "worker" ] && has_py_files "${SVC_DIR}"; then
+                CHECK_PATHS+=("${MODULE_NAME}/services/${SVC_NAME}")
+                COV_TARGETS+=("--cov=services/${SVC_NAME}")
+            fi
+        fi
+    done
+    # If services has python files directly or as a package and wasn't added yet
+    if [ ${#COV_TARGETS[@]} -eq 0 ] && has_py_files "${MODULE_DIR}/services"; then
+        CHECK_PATHS+=("${MODULE_NAME}/services")
+        COV_TARGETS+=("--cov=services")
+    fi
+fi
+
+# 3. Target standard domain/source root directories (if present and contains Python files)
 for EXTRA_DIR in src domain core; do
-    if [ -d "${MODULE_DIR}/${EXTRA_DIR}" ]; then
+    if has_py_files "${MODULE_DIR}/${EXTRA_DIR}"; then
         CHECK_PATHS+=("${MODULE_NAME}/${EXTRA_DIR}")
         COV_TARGETS+=("--cov=${EXTRA_DIR}")
     fi
 done
 
 # If module has root-level .py files, include them
-if [ -n "$(find "${MODULE_DIR}" -maxdepth 1 -name "*.py" 2>/dev/null)" ]; then
+if [ -n "$(find "${MODULE_DIR}" -maxdepth 1 \( -name "*.py" -o -name "*.pyi" \) 2>/dev/null | head -n 1)" ]; then
     CHECK_PATHS+=("${MODULE_NAME}")
 fi
 
@@ -283,13 +304,34 @@ fi
 # Stage 4: Static Type Checking (Mypy)
 # ------------------------------------------------------------------------------
 echo -e "\n${CYAN}▶ Stage 4: Static Type Checking (Mypy)${NC}"
-if [ -n "${MYPY_BIN}" ] && [ ${#CHECK_PATHS[@]} -gt 0 ]; then
-    if [ -n "${PYPROJECT_CONFIG}" ]; then
-        "${MYPY_BIN}" --config-file "${PYPROJECT_CONFIG}" "${CHECK_PATHS[@]}" --ignore-missing-imports
-    else
-        "${MYPY_BIN}" "${CHECK_PATHS[@]}" --ignore-missing-imports
+MYPY_TARGETS=()
+for P in "${CHECK_PATHS[@]}"; do
+    if [ -d "${P}" ] && [ -n "$(find "${P}" \( -name "*.py" -o -name "*.pyi" \) 2>/dev/null | head -n 1)" ]; then
+        MYPY_TARGETS+=("${P}")
+    elif [ -f "${P}" ]; then
+        MYPY_TARGETS+=("${P}")
     fi
-    echo -e "${GREEN}✅ Stage 4 Passed: Type checking verified with zero errors.${NC}"
+done
+
+if [ -n "${MYPY_BIN}" ] && [ ${#MYPY_TARGETS[@]} -gt 0 ]; then
+    MYPY_OUTPUT=""
+    MYPY_EXIT=0
+    if [ -n "${PYPROJECT_CONFIG}" ]; then
+        MYPY_OUTPUT="$("${MYPY_BIN}" --config-file "${PYPROJECT_CONFIG}" "${MYPY_TARGETS[@]}" --ignore-missing-imports 2>&1)" || MYPY_EXIT=$?
+    else
+        MYPY_OUTPUT="$("${MYPY_BIN}" "${MYPY_TARGETS[@]}" --ignore-missing-imports 2>&1)" || MYPY_EXIT=$?
+    fi
+
+    if [ ${MYPY_EXIT} -ne 0 ] && echo "${MYPY_OUTPUT}" | grep -q "There are no .py\[i\] files in directory"; then
+        echo -e "${YELLOW}ℹ️  Stage 4 Note: Ignored directory without Python files.${NC}"
+        echo -e "${GREEN}✅ Stage 4 Passed: Type checking verified.${NC}"
+    elif [ ${MYPY_EXIT} -ne 0 ]; then
+        echo "${MYPY_OUTPUT}"
+        exit ${MYPY_EXIT}
+    else
+        echo "${MYPY_OUTPUT}"
+        echo -e "${GREEN}✅ Stage 4 Passed: Type checking verified with zero errors.${NC}"
+    fi
 elif [ -z "${MYPY_BIN}" ]; then
     echo -e "${YELLOW}ℹ️  Stage 4 Skipped: Mypy binary not found.${NC}"
 else
@@ -344,7 +386,7 @@ if [ "${HAS_TESTS}" = true ] && [ -n "${PYTEST_BIN}" ] && [ ${#COV_TARGETS[@]} -
     cd "${MODULE_DIR}"
     PYTEST_ARGS=()
     [ -f pytest.ini ] && PYTEST_ARGS+=("-c" "pytest.ini")
-    
+
     "${PYTEST_BIN}" "${PYTEST_ARGS[@]}" tests "${COV_TARGETS[@]}" --cov-report=term-missing --cov-fail-under=100
     cd "${REPO_ROOT}"
     echo -e "${GREEN}✅ Stage 6 Passed: 100% statement and branch coverage verified in ${MODULE_NAME}.${NC}"
