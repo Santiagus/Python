@@ -1,6 +1,16 @@
 # ==============================================================================
 # REST Client Interactive Workflows - Real-Time Fraud & AML Screening Rail
 # ==============================================================================
+# QUICKSTART INSTRUCTIONS:
+# 1. Start all distributed services in the background:
+#    $ docker compose up --build -d
+# 2. Open the unified Grafana Dashboard:
+#    http://localhost:3000 (Anonymous Admin, pre-loaded dashboard)
+# 3. Execute the scenarios below sequentially by clicking "Send Request" above each block.
+# 4. Observe real-time metrics (throughput, P99 latency) and search live logs in Grafana.
+# 5. Shut down when finished:
+#    $ docker compose down -v
+# ==============================================================================
 
 @baseUrl = http://localhost:8010
 @sanctionsUrl = http://localhost:8015

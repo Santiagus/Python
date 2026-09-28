@@ -97,9 +97,75 @@ This project implements an end-to-end observable distributed architecture combin
 ## 4. Project Roadmap & Milestone Progression
 
 This project module strictly follows the standard 6-milestone development lifecycle:
-* **Milestone 1**: Proposal, Architectural Specification, Sequence Diagrams & Test Plan (Current).
+* **Milestone 1**: Proposal, Architectural Specification, Sequence Diagrams & Test Plan (Completed).
 * **Milestone 2**: Infrastructure, Multi-Container Orchestration & Database DDL Schema.
 * **Milestone 3**: Domain Models, AMQP Topology, Sanctions Simulator API & Worker Consumer.
 * **Milestone 4**: FastAPI Ingestion Gateway, Middlewares, Producer Dispatcher & REST Client Suite.
 * **Milestone 5**: Observability Engine (Prometheus Metrics, Flower, Runbooks & Incident Walkthrough).
-* **Milestone 6**: Distributed Live E2E Verification & Capacity Contention Benchmarks.
+* **Milestone 6**: Distributed Live E2E Verification & Capacity Contention Benchmarks (Completed).
+
+---
+
+## 5. Operational Quickstart & Interactive Testing Guide
+
+Follow this guide to spin up the entire distributed stack, trigger screening transactions using `requests/requests.rest`, and observe real-time metrics and searchable logs in Grafana.
+
+### Step 1: Boot the Entire Multi-Service Stack
+From the project root directory, launch all services via Docker Compose:
+```bash
+docker compose up --build -d
+```
+
+Verify all containers reach a healthy state:
+```bash
+docker compose ps
+```
+
+### Step 2: Access Operations Dashboards & Service Ports
+
+| Service | Host URL | Description | Default Credentials |
+| :--- | :--- | :--- | :--- |
+| **Grafana Dashboard** | [`http://localhost:3000`](http://localhost:3000) | **Primary Pane**: Real-time throughput, latency percentiles, queue lag, and Loki-powered searchable logs. | Anonymous Admin (No login required) |
+| **FastAPI Gateway Swagger** | [`http://localhost:8010/docs`](http://localhost:8010/docs) | Interactive API documentation for transaction ingestion and screening queries. | N/A |
+| **Celery Flower Console** | [`http://localhost:5558`](http://localhost:5558) | Worker process inspection, active child pools, task revocations, and queue depths. | N/A |
+| **Prometheus Scraper** | [`http://localhost:9095`](http://localhost:9095) | Raw Prometheus telemetry scraper querying `/metrics`. | N/A |
+| **Sanctions Simulator** | [`http://localhost:8015/docs`](http://localhost:8015/docs) | External watchlist partner API simulator (OFAC, PEP, timeout injection). | N/A |
+| **RabbitMQ Management** | [`http://localhost:15678`](http://localhost:15678) | AMQP exchanges, dead-letter bindings (`fraud.dlx`), and message rates. | `guest` / `guest` |
+
+### Step 3: Trigger Interactive Workflows via REST Client (`requests/requests.rest`)
+Open [`requests/requests.rest`](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/06_observability_and_operations/requests/requests.rest) in VS Code (with the REST Client extension) and execute the test workflows:
+
+1. **System Health Probes** (`§1`):
+   - Click `Send Request` on `GET {{baseUrl}}/health/ready` to verify PostgreSQL, Redis, and RabbitMQ connections.
+2. **Happy Path Screening** (`§2`):
+   - Click `Send Request` on `POST {{baseUrl}}/api/v1/screenings` to ingest a standard transaction ($250.00).
+   - Ingest returns `HTTP 202 Accepted` with `status="processing"`.
+   - Execute `Step B` immediately to observe FinTech in-flight visibility (`HTTP 200 OK`, `status="processing"`).
+   - Execute `Step C` to inspect terminal approval (`status="approved"`, `risk_score <= 15`).
+3. **Sanctions Watchlist Positive Match** (`§3`):
+   - Ingest entity `"Vladimir Rostov"` to trigger OFAC sanctions screening.
+   - Inspect terminal decision (`status="blocked"`, `risk_score >= 95`).
+4. **Partner Degradation & Result Envelope Fallback** (`§4`):
+   - Inject 2.5s latency into the sanctions simulator: `POST {{sanctionsUrl}}/api/v1/simulate/mode`.
+   - Ingest a transaction; observe non-fatal timeout handled gracefully via Result Envelope (`status="flagged_review"`).
+   - Reset the simulator back to normal: `POST {{sanctionsUrl}}/api/v1/simulate/reset`.
+5. **Atomic Idempotency Verification** (`§5`):
+   - Send duplicate transactions with the same `transaction_id`; observe the second request safely returning `HTTP 200 OK` with the existing record.
+
+### Step 4: Monitor Telemetry & Search Logs in Grafana
+Navigate to [`http://localhost:3000`](http://localhost:3000) and open the **Fraud Screening & AML Observability** dashboard:
+
+1. **Observe Real-Time Metrics**:
+   - Ingestion RPS and Celery Task Throughput counters rise dynamically with your requests.
+   - Latency Percentiles ($P_{50}, P_{95}, P_{99}$) reflect API and Celery execution times.
+   - Queue Depth and Message Age reflect RabbitMQ backpressure.
+2. **Search Logs in Real Time (Loki)**:
+   - Scroll down to the **Live Searchable Structured Logs** panel.
+   - In the **Log Search** textbox at the top of the dashboard, enter your `request_id` (e.g. `req-audit-...`) or `status="blocked"` to filter across both API and Celery worker streams simultaneously.
+   - Click any log line to unpack JSON fields (`risk_score`, `decision_reason`, `duration_ms`).
+
+### Step 5: Clean Teardown
+When finished, cleanly shut down all services and tear down test volumes:
+```bash
+docker compose down -v
+```
