@@ -4,14 +4,22 @@ Communicates with the Sanctions Watchlist Simulator API using persistent keep-al
 connection pooling and enforces the Result Envelope pattern during external outages.
 """
 
+from __future__ import annotations
+
 import logging
 import os
+from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 import httpx
 from celery import Task
+from sqlalchemy import update
 
+from app.database import session_factory
+from app.models import ScreeningModel, WatchlistHitModel
 from services.worker.celery_app import celery_app
+from services.worker.tasks.utils import run_sync
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +45,141 @@ def get_shared_client() -> httpx.Client:
     return _shared_client
 
 
+async def _async_persist_screening(
+    screening_id: str,
+    status: str,
+    risk_score: int,
+    decision_reason: str,
+    matches: list[dict[str, Any]] | None = None,
+) -> None:
+    """Persist screening state machine transition and watchlist hits asynchronously.
+
+    Args:
+        screening_id: Persistent UUID string of the screening ledger record.
+        status: Target state machine status (e.g., approved, flagged_review, blocked).
+        risk_score: Final composite fraud risk score.
+        decision_reason: Diagnostic reason explaining triage outcome.
+        matches: Optional list of matched compliance records.
+    """
+    # 1. Validate screening UUID format
+    try:
+        screening_uuid = UUID(screening_id)
+    except (ValueError, TypeError):
+        logger.error("invalid_screening_uuid_format", extra={"screening_id": screening_id})
+        return
+
+    # 2. Update master screening record and insert watchlist hit evidence
+    async with session_factory() as session:
+        stmt = (
+            update(ScreeningModel)
+            .where(ScreeningModel.id == screening_uuid)
+            .values(
+                status=status,
+                risk_score=risk_score,
+                decision_reason=decision_reason,
+            )
+        )
+        await session.execute(stmt)
+
+        if matches:
+            for match in matches:
+                hit = WatchlistHitModel(
+                    screening_id=screening_uuid,
+                    entity_name=match.get("entity_name", ""),
+                    watchlist_type=match.get("watchlist_type", "OFAC_SDN"),
+                    match_confidence=Decimal(str(match.get("match_confidence", 0.0))),
+                )
+                session.add(hit)
+
+        await session.commit()
+        logger.info(
+            "screening_state_transition_persisted",
+            extra={
+                "screening_id": screening_id,
+                "status": status,
+                "risk_score": risk_score,
+            },
+        )
+
+
+def _persist_screening(
+    screening_id: str,
+    status: str,
+    risk_score: int,
+    decision_reason: str,
+    matches: list[dict[str, Any]] | None = None,
+) -> None:
+    """Synchronous worker wrapper bridging Celery worker process to async persistence.
+
+    Args:
+        screening_id: UUID string of the screening record.
+        status: Target state machine status.
+        risk_score: Final composite risk score.
+        decision_reason: Diagnostic reason.
+        matches: Optional list of sanctions matches.
+    """
+    coro = _async_persist_screening(
+        screening_id=screening_id,
+        status=status,
+        risk_score=risk_score,
+        decision_reason=decision_reason,
+        matches=matches,
+    )
+    try:
+        run_sync(coro)
+    except Exception as exc:
+        coro.close()
+        logger.error(
+            "screening_persistence_failed",
+            extra={"screening_id": screening_id, "error": str(exc)},
+        )
+
+
+async def _async_persist_failure(screening_id: str, error_msg: str) -> None:
+    """Persist fatal errback failure transition to PostgreSQL asynchronously.
+
+    Args:
+        screening_id: UUID string of the screening record.
+        error_msg: Error message or traceback summary.
+    """
+    try:
+        screening_uuid = UUID(screening_id)
+    except (ValueError, TypeError):
+        logger.error("invalid_screening_uuid_format", extra={"screening_id": screening_id})
+        return
+
+    async with session_factory() as session:
+        stmt = (
+            update(ScreeningModel)
+            .where(ScreeningModel.id == screening_uuid)
+            .values(
+                status="failed",
+                decision_reason=f"fatal_worker_error: {error_msg[:200]}",
+            )
+        )
+        await session.execute(stmt)
+        await session.commit()
+        logger.info("screening_failure_transition_persisted", extra={"screening_id": screening_id})
+
+
+def _persist_failure(screening_id: str, error_msg: str) -> None:
+    """Synchronous worker wrapper to persist fatal failure state in errback.
+
+    Args:
+        screening_id: UUID string of the screening record.
+        error_msg: Error message to record.
+    """
+    coro = _async_persist_failure(screening_id, error_msg)
+    try:
+        run_sync(coro)
+    except Exception as exc:
+        coro.close()
+        logger.error(
+            "failure_persistence_failed",
+            extra={"screening_id": screening_id, "error": str(exc)},
+        )
+
+
 @celery_app.task(
     name="services.worker.tasks.screening.check_aml_watchlist",
     bind=True,
@@ -60,6 +203,7 @@ def check_aml_watchlist(
     Returns:
         dict[str, Any]: Standardized result envelope with status 'ok' or 'degraded'.
     """
+    # 1. Unpack upstream chain argument or direct task parameters
     if isinstance(screening_id_or_data, dict):
         screening_id = str(screening_id_or_data.get("screening_id", ""))
         entity_name = str(screening_id_or_data.get("entity_name", entity_name or ""))
@@ -79,6 +223,7 @@ def check_aml_watchlist(
         },
     )
 
+    # 2. Invoke Sanctions Watchlist Simulator API with Result Envelope degradation
     try:
         response = client.post(
             "/api/v1/watchlists/check",
@@ -95,6 +240,13 @@ def check_aml_watchlist(
                 "detail": str(exc),
             },
         )
+        _persist_screening(
+            screening_id=screening_id,
+            status="flagged_review",
+            risk_score=40,
+            decision_reason="aml_watchlist_timeout",
+            matches=[],
+        )
         return {
             "status": "degraded",
             "screening_id": screening_id,
@@ -106,6 +258,7 @@ def check_aml_watchlist(
             "errors": [f"{type(exc).__name__}: {exc}"],
         }
 
+    # 3. Evaluate sanctions match confidence thresholds
     matches = data.get("matches", [])
     is_sanctioned = bool(data.get("is_sanctioned", False))
 
@@ -118,6 +271,15 @@ def check_aml_watchlist(
         decision = "approved" if upstream_score < 50 else "flagged_review"
         composite_score = upstream_score
         reasons = []
+
+    # 4. Persist terminal decision and watchlist evidence to database
+    _persist_screening(
+        screening_id=screening_id,
+        status=decision,
+        risk_score=composite_score,
+        decision_reason=", ".join(reasons) if reasons else "automated_evaluation_completed",
+        matches=matches,
+    )
 
     return {
         "status": "ok",
@@ -137,36 +299,55 @@ def check_aml_watchlist(
 )
 def handle_screening_failure(
     self: Task,
-    request: Any,
-    exc: Any,
-    traceback: Any,
-    screening_id: str,
+    *args: Any,
+    screening_id: str | None = None,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Celery errback compensation handler linked via link_error.
 
     Args:
         self: Bound Celery task context.
-        request: Request context of the failed upstream task.
-        exc: Exception raised by upstream task.
-        traceback: Serialized traceback string.
-        screening_id: Identifier of the affected screening ledger row.
+        *args: Variable arguments passed by Celery error propagation.
+        screening_id: Optional keyword identifier of the affected screening ledger row.
+        **kwargs: Additional keyword arguments from Celery caller.
 
     Returns:
         dict[str, Any]: Failure audit payload.
     """
+    # 1. Resolve screening_id across kwargs, direct keyword, or positional args
+    resolved_id = screening_id or kwargs.get("screening_id")
+    if not resolved_id:
+        for arg in args:
+            if isinstance(arg, str) and len(arg) == 36 and "-" in arg:
+                resolved_id = arg
+                break
+    resolved_id = str(resolved_id or "")
+
+    # 2. Extract exception from kwargs or positional args
+    exc = kwargs.get("exc")
+    if not exc:
+        for arg in args:
+            if isinstance(arg, Exception):
+                exc = arg
+                break
+
     error_msg = str(exc) if exc else "unknown_fatal_error"
     logger.error(
         "screening_errback_triggered",
         extra={
             "task_id": self.request.id,
-            "screening_id": screening_id,
+            "screening_id": resolved_id,
             "error": error_msg,
         },
     )
 
+    # 3. Persist terminal failure transition in database
+    if resolved_id:
+        _persist_failure(resolved_id, error_msg)
+
     return {
         "status": "failed",
-        "screening_id": screening_id,
+        "screening_id": resolved_id,
         "error": error_msg,
         "decision": "failed",
         "decision_reason": "fatal_worker_error",

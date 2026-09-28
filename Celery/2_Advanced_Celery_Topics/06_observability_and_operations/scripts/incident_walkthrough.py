@@ -131,7 +131,10 @@ def run_walkthrough(
     print_banner(4, "Immediate In-Flight State Visibility Verification")
     poll_res = client.get(f"{api_url}/api/v1/screenings/{screening_id}")
     logger.info(
-        f"GET /api/v1/screenings/{screening_id} -> {poll_res.status_code} Status: {poll_res.json()['status']}"
+        "GET /api/v1/screenings/%s -> %d (status: %s)",
+        screening_id,
+        poll_res.status_code,
+        poll_res.json()["status"],
     )
     assert poll_res.status_code == 200
     assert poll_res.json()["status"] in ("processing", "flagged_review", "approved")

@@ -165,7 +165,10 @@ async def test_create_screening_query_minimization_and_zero_refresh(
     client: httpx.AsyncClient,
     query_recorder: list[str],
 ) -> None:
-    """TC-19: Verify exactly 1 SQL INSERT is executed (no speculative SELECT, no post-insert refresh)."""
+    """TC-19: Verify exactly 1 SQL INSERT is executed.
+
+    Ensures no speculative SELECT and no post-insert refresh calls occur.
+    """
     tx_id = f"tx-query-min-{uuid.uuid4().hex[:8]}"
     payload = {
         "transaction_id": tx_id,

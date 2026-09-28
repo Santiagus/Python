@@ -46,6 +46,7 @@ def dispatch_screening_workflow(
         "screening_id": str(screening_id),
         "transaction_id": request.transaction_id,
         "account_id": request.account_id,
+        "amount": str(request.amount),
         "amount_cents": request.amount_cents,
         "currency": request.currency,
         "client_ip": request.client_ip,
