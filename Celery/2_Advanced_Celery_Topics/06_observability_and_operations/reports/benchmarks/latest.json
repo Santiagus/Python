@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-28T08:34:40.414243+00:00",
+  "timestamp": "2026-09-28T08:50:30.692434+00:00",
   "environment": {
     "api_url": "http://testserver",
     "mode": "paced",
@@ -13,14 +13,14 @@
     "successful_probes": 2,
     "failed_probes": 4,
     "duration_seconds": 0.033,
-    "actual_throughput_rps": 181.08,
+    "actual_throughput_rps": 181.09,
     "api_latency_ms": {
       "min": 0.21,
-      "mean": 0.33,
+      "mean": 0.35,
       "p50": 0.36,
-      "p95": 0.42,
-      "p99": 0.42,
-      "max": 0.42
+      "p95": 0.44,
+      "p99": 0.44,
+      "max": 0.44
     },
     "worker_clearing_sla_ms": {
       "mean": null,

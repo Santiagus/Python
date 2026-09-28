@@ -38,7 +38,10 @@ flowchart TD
 
     subgraph TelemetryStack["Observability & Operations Console"]
         Prometheus["Prometheus Server<br/>(:9090 Scraping /metrics)"]
-        FlowerDash["Celery Flower Dashboard<br/>(:5555 Monitoring)"]
+        Loki["Grafana Loki Engine<br/>(:3100 Log Ingestion)"]
+        Promtail["Promtail Log Collector<br/>(Docker JSON Streamer)"]
+        GrafanaDash["Grafana Dashboard<br/>(:3000 Unified Metrics & Logs)"]
+        FlowerDash["Celery Flower Console<br/>(:5555 Process Introspection)"]
     end
 
     IngestionAPI -->|1. Immediate In-Flight Insert| DB
@@ -55,10 +58,16 @@ flowchart TD
     QScreening -.->|Dead Letter on Fatal Error| ExDLX
     ExDLX --> QDLQ
 
-    IngestionAPI -->|Telemetry Scraping| Prometheus
-    WFast -->|Telemetry Scraping| Prometheus
+    IngestionAPI -->|Metrics Scraping| Prometheus
+    WFast -->|Metrics Scraping| Prometheus
     MessagingBroker -.->|Broker Inspection| FlowerDash
     WorkerFleet -.->|Events & Heartbeats| FlowerDash
+    IngestionAPI -->|JSON stdout| Promtail
+    WFast -->|JSON stdout| Promtail
+    WAML -->|JSON stdout| Promtail
+    Promtail -->|Push Log Streams| Loki
+    Prometheus -->|Metrics Datasource| GrafanaDash
+    Loki -->|Logs Datasource| GrafanaDash
 ```
 
 ---
@@ -296,6 +305,33 @@ Celery workers register `@signals.worker_shutting_down`:
 3. Allows in-flight idempotent tasks to commit or rollback cleanly without orphaned locks.
 
 ---
+
+### 4.6 Unified Observability & Log Search Console: Grafana, Loki & Flower
+The stack provisions a complete, zero-configuration SRE observability console:
+* **Grafana Dashboard (`http://localhost:3000`)**:
+  - Automatically provisioned with Prometheus and Loki datasources on container boot.
+  - Pre-built dashboard `Fraud Screening & AML Observability` (`uid: fraud_screening_overview`) pre-configured with:
+    - Real-time ingestion RPS and Celery task throughput gauges.
+    - API Ingestion Latency Percentiles ({50}, P_{95}, P_{99}$).
+    - Celery Task Runtime SLA ({95}, P_{99}$ by task).
+    - Queue Depth Backpressure and Message Age tracking.
+    - Live Searchable Log Panel with regex/keyword filter textbox.
+  - Anonymous admin access enabled for instant exploration (`admin` / `admin`).
+* **Grafana Loki Engine (`http://localhost:3100`) & Promtail Agent**:
+  - Promtail connects via Docker socket to stream stdout/stderr JSON logs from all `fraud_*` containers directly into Loki.
+  - Native LogQL filtering and JSON attribute extraction:
+    ```logql
+    # Search by correlation request ID across all workers
+    {job="docker"} |= "a1b2c3d4" | json
+
+    # Isolate all blocked or failed screening transactions
+    {job="docker"} | json | status="blocked" or status="failure"
+
+    # Identify slow screening tasks breaching 100ms SLA
+    {job="docker"} | json | duration_ms > 100
+    ```
+* **Celery Flower Console (`http://localhost:5558`)**:
+  - Worker process introspection, active child pools, broker queue lengths, and remote task revocation controls.
 
 ## 5. Operational Runbooks for SRE Operators
 

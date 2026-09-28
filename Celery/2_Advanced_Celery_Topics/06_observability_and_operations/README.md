@@ -29,7 +29,7 @@ This project turns the initial operational requirements above into an observable
 | :--- | :--- | :--- | :---: |
 | **1. Structured logs** | JSON logs carry task ID, correlation/request ID, queue, duration, risk score, and outcome; context propagates through API requests (`app/middlewares/correlation.py`) and Celery task headers (`app/dispatcher.py`). Worker tasks log structured fields (`services/worker/tasks/`). | `tests/integration/test_middlewares.py`<br>`tests/unit/test_scoring.py`<br>`tests/unit/test_screening_persistence.py` | **100% Verified** |
 | **2. Metrics** | Prometheus exposes request/task throughput, latency percentiles, in-flight tasks, retries, failures, queue depth, and message age; exposed via `GET /metrics` in `app/main.py` and Celery worker signals in `services/worker/celery_app.py`. | `tests/integration/test_metrics_endpoint.py`<br>`tests/unit/test_topology.py` | **100% Verified** |
-| **3. Operational dashboard** | Celery Flower provides worker, pool, queue, and task lifecycle visibility; containerized on port `:5555` in `docker-compose.yml`. | `docker-compose.yml` / `docs/ARCHITECTURE_AND_STANDARDS.md` (§4) | **100% Verified** |
+| **3. Operational dashboard** | Unified Grafana dashboard (`:3000`) and Celery Flower console (`:5555`) provide real-time throughput, latency percentiles, queue lag, and Loki-powered searchable log streams. | `docker-compose.yml` / `docs/ARCHITECTURE_AND_STANDARDS.md` (§4) | **100% Verified** |
 | **4. Operational hygiene** | Result expiration (`result_expires=3600`) limits Redis growth; dual health probes cover liveness and dependencies (`/health/live`, `/health/ready`); graceful shutdown handles worker termination (`SIGTERM` client cleanup). | `tests/unit/test_topology.py`<br>`tests/integration/test_health_probes.py`<br>`tests/unit/test_worker_lifecycle.py` | **100% Verified** |
 | **5. Worker runbook** | SRE runbooks cover stuck workers and lock deadlocks, queue lag and backpressure, and poison pills, retry storms, and DLQ remediation. Includes inspection & replay CLI scripts. | `tests/unit/test_dlq_tools.py` (6 tests)<br>`docs/ARCHITECTURE_AND_STANDARDS.md` (§5) | **100% Verified** |
 | **6. Incident evidence** | A reproducible incident walkthrough follows alert detection through Flower, metrics, trace/log correlation, mitigation, recovery, and data-loss verification (`scripts/incident_walkthrough.py`). | `tests/unit/test_incident_walkthrough.py` (3 tests) | **100% Verified** |
@@ -43,7 +43,7 @@ In modern financial payment platforms, every transaction authorization requires 
 2. **Anti-Money Laundering (AML) & Sanctions Screening**: Checking counterparties against global sanctions lists (OFAC SDN, PEP, HM Treasury) and high-risk jurisdiction blacklists.
 3. **Operational Mission**: Financial platforms cannot treat risk screening as a "black box." When external sanction watchlists degrade, network latency spikes, or worker queues back up, the system must remain diagnosable and operable by on-call site reliability engineers (SREs) who did not write the code.
 
-This project implements an end-to-end observable distributed architecture combining FastAPI, Celery, RabbitMQ, PostgreSQL, Redis, Prometheus, OpenTelemetry, and Flower.
+This project implements an end-to-end observable distributed architecture combining FastAPI, Celery, RabbitMQ, PostgreSQL, Redis, Prometheus, Grafana, Loki, Promtail, OpenTelemetry, and Flower.
 
 ---
 
@@ -56,8 +56,9 @@ This project implements an end-to-end observable distributed architecture combin
    - Real-time scrapable telemetry exposing throughput (requests/sec, tasks/sec), latency histograms ($P_{50}, P_{95}, P_{99}$), task in-flight gauges, failure counters, and queue message age.
 3. **Queue Health & Backpressure Telemetry**:
    - Live queue depth and message age tracking across tiered queues (`fraud.screening.critical` vs `fraud.aml.bulk`) with automated SLA breach detection.
-4. **Operational Dashboard & Visual Inspection**:
-   - Celery Flower operational console providing real-time worker introspection, active pools, broker queue depths, and task lifecycle tracking.
+4. **Operational Dashboards & Visual Log Search**:
+   - Grafana unified operations console (`:3000`) auto-provisioned with Prometheus metrics and Loki searchable log streams.
+   - Celery Flower operational console (`:5555`) providing real-time worker introspection, active pools, broker queue depths, and task lifecycle tracking.
 5. **Operational Hygiene & Lifecycle Guarantees**:
    - Result expiration (`result_expires=3600`) to prevent Redis memory bloat.
    - Dual-probe container health checks: `/health/live` (lightweight process event loop ping) and `/health/ready` (eager PostgreSQL, Redis, and RabbitMQ connection pool pings).

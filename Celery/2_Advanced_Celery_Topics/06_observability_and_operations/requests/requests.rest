@@ -140,3 +140,16 @@ Content-Type: {{contentType}}
   "entity_name": "Reliable Merchant Inc",
   "velocity_5m_count": 1
 }
+
+# ------------------------------------------------------------------------------
+# 6. Observability Consoles & Log Search Probes
+# ------------------------------------------------------------------------------
+
+### 6.1 Grafana Dashboard (Port 3000)
+GET http://localhost:3000/api/health
+
+### 6.2 Grafana Loki Health Probe (Port 3100)
+GET http://localhost:3100/ready
+
+### 6.3 Celery Flower Worker Console (Port 5558)
+GET http://localhost:5558/
