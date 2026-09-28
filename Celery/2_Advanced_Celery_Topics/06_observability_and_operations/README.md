@@ -1,7 +1,38 @@
-# 06: Observability, Distributed Telemetry & Operations
+# 06: Observability and Operations
 
-> **Domain**: Real-Time Fraud Detection & AML Sanctions Screening Rail  
+Make the system diagnosable and operable by someone who did not write it.
+
+## Deliverables
+
+- Structured logs containing task ID, correlation ID, queue, duration, and outcome.
+- Metrics for throughput, latency, retries, failures, queue depth, and age.
+- Flower or an equivalent operational dashboard.
+- Result expiration, log retention, health checks, and graceful shutdown.
+- A runbook for stuck, failed, and overloaded workers.
+
+## Evidence
+
+Create an incident walkthrough showing how one failed task is found from an alert to its root cause.
+
+---
+
+## Project Definition: Real-Time Fraud Detection & AML Sanctions Screening Rail
+
+> **Domain**: Real-Time Fraud Detection & AML Sanctions Screening Rail
 > **Industry Reference**: Unit21, Sardine, Stripe Radar, Socure, Chainalysis
+
+This project turns the initial operational requirements above into an observable distributed screening system. The sections below specify its architecture, telemetry, operational controls, and incident evidence.
+
+### Deliverables Mapping
+
+| Original deliverable | Implementation in this system |
+| :--- | :--- |
+| **Structured logs** | JSON logs carry task ID, correlation/request ID, queue, duration, risk score, and outcome; context propagates through API requests and Celery task headers. |
+| **Metrics** | Prometheus exposes request/task throughput, latency percentiles, in-flight tasks, failures, queue depth, and message age; retry metrics should be verified as part of deployment. |
+| **Operational dashboard** | Celery Flower provides worker, pool, queue, and task lifecycle visibility. |
+| **Operational hygiene** | Result expiration limits Redis growth; health probes cover liveness and dependencies; graceful shutdown handles worker termination. Configure log retention in the deployment policy. |
+| **Worker runbook** | Runbooks cover stuck workers and lock deadlocks, queue lag and backpressure, and poison pills, retry storms, and DLQ remediation. |
+| **Incident evidence** | A reproducible incident walkthrough follows alert detection through Flower, metrics, trace/log correlation, mitigation, recovery, and data-loss verification. |
 
 ---
 
