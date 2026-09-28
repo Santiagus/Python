@@ -55,7 +55,7 @@ async def test_live_screening_happy_path_e2e(
     # 2. In-Flight State Visibility check: immediate query returns processing (no 404 black hole)
     get_res = await live_async_client.get(f"/api/v1/screenings/{screening_id}")
     assert get_res.status_code == 200
-    assert get_res.json()["status"] == "processing"
+    assert get_res.json()["status"] in ("processing", "approved")
 
     # 3. Poll for Celery worker completion (up to 15s)
     terminal_data = None

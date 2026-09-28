@@ -103,6 +103,7 @@ celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
     accept_content=["json"],
+    result_expires=3600,
     timezone="UTC",
     enable_utc=True,
     # AMQP Queues & Dynamic Routing Definitions

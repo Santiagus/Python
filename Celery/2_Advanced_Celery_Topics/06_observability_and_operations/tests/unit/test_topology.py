@@ -62,6 +62,7 @@ def test_celery_configuration_invariants() -> None:
     assert conf.task_serializer == "json"
     assert conf.result_serializer == "json"
     assert "json" in conf.accept_content
+    assert conf.result_expires == 3600
     assert conf.timezone == "UTC"
     assert conf.enable_utc is True
 
