@@ -78,8 +78,8 @@ fraud_dlq = Queue(
 # ==============================================================================
 # 2. Celery Application Construction & Invariants
 # ==============================================================================
-broker_url = os.getenv("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//")
-result_backend = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+broker_url = os.getenv("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5678//")
+result_backend = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6385/1")
 
 celery_app = Celery(
     "fraud_screening_worker",
