@@ -109,7 +109,7 @@ def dispatch_task_with_trace(task_signature, *args, **kwargs):
     """Dispatch Celery task with injected W3C traceparent headers."""
     carrier: dict[str, str] = {}
     TraceContextTextMapPropagator().inject(carrier)
-    
+
     # Pass carrier inside Celery headers
     return task_signature.apply_async(
         args=args,
@@ -176,14 +176,14 @@ logger = logging.getLogger(__name__)
 def on_worker_shutting_down(sig, how, exitcode, **kwargs):
     """Cleanly release active distributed locks and flush connection pools upon SIGTERM."""
     logger.info("worker_shutting_down_signal_received", extra={"signal": sig, "how": how})
-    
+
     # 1. Cleanly release process-local locks if held
     try:
         from services.worker.redis_client import release_held_worker_locks
         release_held_worker_locks()
     except Exception as exc:
         logger.warning("failed_to_release_locks_on_shutdown", extra={"error": str(exc)})
-    
+
     # 2. Dispose of database engine connection pool
     try:
         from services.worker.database import dispose_worker_engine
