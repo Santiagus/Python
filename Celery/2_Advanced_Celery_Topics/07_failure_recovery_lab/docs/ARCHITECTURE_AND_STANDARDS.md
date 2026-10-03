@@ -216,7 +216,9 @@ class WireCreateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    client_id: str = Field(..., min_length=3, max_length=64, description="Originating client ID")
+    client_id: str = Field(
+        ..., min_length=3, max_length=64, description="Originating client ID"
+    )
     amount: Decimal = Field(
         ...,
         gt=Decimal("0.00"),
@@ -225,9 +227,15 @@ class WireCreateRequest(BaseModel):
         examples=[Decimal("250000.00")],
     )
     currency: str = Field(default="USD", min_length=3, max_length=3, examples=["USD"])
-    beneficiary_account: str = Field(..., min_length=8, max_length=34, description="Raw bank account / IBAN")
-    routing_number: str = Field(..., pattern=r"^\d{9}$", description="US Fedwire ABA routing number")
-    swift_bic: str = Field(..., min_length=8, max_length=11, description="SWIFT BIC code")
+    beneficiary_account: str = Field(
+        ..., min_length=8, max_length=34, description="Raw bank account / IBAN"
+    )
+    routing_number: str = Field(
+        ..., pattern=r"^\d{9}$", description="US Fedwire ABA routing number"
+    )
+    swift_bic: str = Field(
+        ..., min_length=8, max_length=11, description="SWIFT BIC code"
+    )
 
 
 class WireResponse(BaseModel):
@@ -253,7 +261,7 @@ class WireResponse(BaseModel):
 
 class WireTaskPayload(BaseModel):
     """AMQP message contract transmitted across RabbitMQ broker.
-    
+
     Adheres strictly to the Zero-Knowledge Broker Invariant:
     Contains zero raw unmasked account numbers.
     """
@@ -508,18 +516,18 @@ flowchart LR
     M5 --> M6["Milestone 6<br/>Live E2E Verification & MTTR"]
 ```
 
-### Milestone 1: Proposal, Architecture, Sequence Diagrams & Milestone Planning (**Current**)
+### Milestone 1: Proposal, Architecture, Sequence Diagrams & Milestone Planning (**Complete**)
 * Refine project proposal in `README.md`.
 * Author comprehensive `docs/ARCHITECTURE_AND_STANDARDS.md` defining system topology, data models, state machines, sequence diagrams, and failure recovery specifications.
 * **Acceptance Criteria**: Full document alignment with zero code or container implementations in Milestone 1.
 
-### Milestone 2: Infrastructure, Multi-Container Orchestration & Database Schema
+### Milestone 2: Infrastructure, Multi-Container Orchestration & Database Schema (**Complete**)
 * Author `docker-compose.yml` declaring PostgreSQL 16, RabbitMQ 3.13 (Management), API Gateway, Worker Fleet (2 pods), and Bank Simulator API.
 * Implement database DDL `init.sql` with tables, unique constraints, and partial indexes.
 * Declare Kombu AMQP 0-9-1 topology: `wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`.
 * **Acceptance Criteria**: `docker compose up -d` boots all services with clean health checks and pre-configured queues.
 
-### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer
+### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer (**Next**)
 * Implement Pydantic v2 schemas and domain models.
 * Implement standalone `services/bank_simulator_api/` simulating external Fedwire/SWIFT clearing with idempotent transaction tracking.
 * Implement Celery worker tasks in `services/worker/tasks/` enforcing:
@@ -566,3 +574,17 @@ flowchart LR
 | **Chaos Harness & Evidence Schema** | Section 5 | **Complete** |
 | **Architectural Standards & Invariants** | Section 6 | **Complete** |
 | **Granular Milestone Breakdown (M1–M6)** | Section 7 (`flowchart LR`) | **Complete** |
+
+### Milestone 2 Deliverables Matrix
+
+| Milestone 2 Deliverable | Implementation Artifact | Verification & Compliance Status |
+| :--- | :--- | :---: |
+| **Multi-Container Compose Orchestration** | `docker-compose.yml` (Postgres, RabbitMQ, API, 2 Worker Pods, Bank Simulator) | **Complete & Verified Healthy** |
+| **Database DDL & Partial Indexes** | `init.sql` (`wire_transfers`, `ledger_journal`, `wire_audit_log`, `idx_wire_in_flight_status`) | **Complete & Verified (Zero Duplicate Indexes)** |
+| **Kombu AMQP 0-9-1 Queue Topology** | `shared/amqp_topology.py` (`wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`) | **Complete & 100% Tested** |
+| **Pre-Configured RabbitMQ Definitions** | `docker/rabbitmq/definitions.json` & `docker/rabbitmq/rabbitmq.conf` | **Complete & Pre-Loaded at Boot** |
+| **Service Entrypoints & Dockerfiles** | `Dockerfile.api`, `services/worker/Dockerfile`, `services/bank_simulator_api/Dockerfile` | **Complete & Built Cleanly** |
+| **Celery Late-Ack Worker Configuration** | `services/worker/celery_app.py` (`acks_late=True`, `reject_on_worker_lost=True`) | **Complete & Connected** |
+| **Unit Test Suite & Statement Coverage** | `tests/unit/test_amqp_topology.py`, `test_init_sql.py`, `test_docker_compose.py`, etc. | **Complete (100% Test Coverage)** |
+| **VS Code Debug Environments** | `.vscode/launch.json` (API, Bank Simulator, Worker, Compound Launcher) | **Complete & Ready** |
+

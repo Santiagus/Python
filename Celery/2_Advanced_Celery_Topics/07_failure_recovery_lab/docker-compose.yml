@@ -1,0 +1,119 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wire_postgres
+    environment:
+      POSTGRES_USER: wire_user
+      POSTGRES_PASSWORD: wire_password
+      POSTGRES_DB: wire_settlement_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "wal_buffers=16MB", "-c", "synchronous_commit=on"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wire_user -d wire_settlement_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: wire_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  bank_simulator_api:
+    build:
+      context: .
+      dockerfile: services/bank_simulator_api/Dockerfile
+    container_name: wire_bank_simulator_api
+    ports:
+      - "8010:8010"
+    environment:
+      PORT: 8010
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: wire_ingestion_api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wire_user:wire_password@postgres:5432/wire_settlement_db
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      BANK_SIMULATOR_URL: http://bank_simulator_api:8010
+      PORT: 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      bank_simulator_api:
+        condition: service_healthy
+
+  worker_1:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: wire_worker_1
+    hostname: worker-pod-1
+    command: ["celery", "-A", "services.worker.celery_app:celery_app", "worker", "--loglevel=INFO", "-Q", "wire.settlement.critical", "-c", "2", "-n", "worker_1@worker-pod-1"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wire_user:wire_password@postgres:5432/wire_settlement_db
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      BANK_SIMULATOR_URL: http://bank_simulator_api:8010
+      WORKER_HOSTNAME: worker-pod-1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      bank_simulator_api:
+        condition: service_healthy
+
+  worker_2:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    container_name: wire_worker_2
+    hostname: worker-pod-2
+    command: ["celery", "-A", "services.worker.celery_app:celery_app", "worker", "--loglevel=INFO", "-Q", "wire.settlement.critical", "-c", "2", "-n", "worker_2@worker-pod-2"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wire_user:wire_password@postgres:5432/wire_settlement_db
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      BANK_SIMULATOR_URL: http://bank_simulator_api:8010
+      WORKER_HOSTNAME: worker-pod-2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      bank_simulator_api:
+        condition: service_healthy
+

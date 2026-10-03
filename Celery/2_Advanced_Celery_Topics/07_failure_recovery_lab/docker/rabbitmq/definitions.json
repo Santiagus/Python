@@ -1,0 +1,86 @@
+{
+  "rabbit_version": "3.13.7",
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "users": [
+    {
+      "name": "guest",
+      "password_hash": "d6wl/b3QFtvc+LJqXjbMd3dleO4gWfaAKbjZdsu6ViLgWEyh",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": [
+        "administrator"
+      ],
+      "limits": {}
+    }
+  ],
+  "permissions": [
+    {
+      "user": "guest",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "queues": [
+    {
+      "name": "wire.settlement.critical",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "wire.dlx",
+        "x-dead-letter-routing-key": "wire.settlement.dlq"
+      }
+    },
+    {
+      "name": "wire.settlement.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "wire.direct",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "wire.dlx",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "wire.direct",
+      "vhost": "/",
+      "destination": "wire.settlement.critical",
+      "destination_type": "queue",
+      "routing_key": "wire.settlement.critical",
+      "arguments": {}
+    },
+    {
+      "source": "wire.dlx",
+      "vhost": "/",
+      "destination": "wire.settlement.dlq",
+      "destination_type": "queue",
+      "routing_key": "wire.settlement.dlq",
+      "arguments": {}
+    }
+  ]
+}
+
