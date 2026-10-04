@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from kombu import Connection
+from kombu import Connection, Producer
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -96,7 +96,10 @@ class ChaosHarness:
         api_url: str = "http://localhost:8000",
         bank_url: str = "http://localhost:8010",
         broker_url: str = "amqp://guest:guest@localhost:5672//",
-        db_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/settlement_db",
+        db_url: str = os.getenv(
+            "DATABASE_URL",
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/settlement_db",
+        ),
         compose_file: str = "docker-compose.yml",
     ) -> None:
         """Initialize the Chaos Harness.
@@ -647,6 +650,7 @@ class ChaosHarness:
             # 4. Restart broker and verify reconnection
             self.start_container("rabbitmq")
             details["broker_restarted"] = True
+            await asyncio.sleep(3.0)
 
             # 5. Wait for queue recovery and task settlement
             settled_wire = await self.audit_wire_status(wire_id, timeout=20.0, client=cl)
@@ -698,6 +702,9 @@ class ChaosHarness:
         try:
             # 2. Connect to broker and declare critical queue
             conn = connection or Connection(self.broker_url)
+            if connection is None:
+                conn.connect()
+
             malformed_payload = {
                 "corrupted_schema": True,
                 "bad_field": "INVALID_BIC_XXXXXX",
@@ -708,10 +715,12 @@ class ChaosHarness:
                 # 3. Publish malformed message directly into critical queue
                 producer_queue = wire_critical_queue(channel)
                 producer_queue.declare()
-                channel.basic_publish(
-                    msg=conn.dumps(malformed_payload),
+                producer = Producer(channel)
+                producer.publish(
+                    malformed_payload,
                     exchange=wire_direct_exchange.name,
                     routing_key=WIRE_CRITICAL_QUEUE_NAME,
+                    serializer="json",
                 )
                 details["poison_pill_dispatched"] = True
 
@@ -900,11 +909,12 @@ class ChaosHarness:
         for exp in experiments:
             exp_id = exp.get("experiment_id")
             name = exp.get("name")
-            status = exp.get("status")
+            raw_status = exp.get("status")
+            status_val = raw_status.value if hasattr(raw_status, "value") else str(raw_status)
             mttr = exp.get("mttr_ms")
             err = exp.get("error_message")
             detail_str = f"Error: {err}" if err else "All financial & AMQP invariants verified"
-            lines.append(f"| **`{exp_id}`** | {name} | `{status}` | {mttr} | {detail_str} |")
+            lines.append(f"| **`{exp_id}`** | {name} | `{status_val}` | {mttr} | {detail_str} |")
 
         lines.extend([
             "",
@@ -970,7 +980,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--db-url",
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/settlement_db",
+        default=os.getenv(
+            "DATABASE_URL",
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/settlement_db",
+        ),
         help="PostgreSQL asyncpg URL",
     )
     parser.add_argument(

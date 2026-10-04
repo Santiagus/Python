@@ -501,6 +501,17 @@ def test_run_experiment_4_poison_pill_passed_and_failed() -> None:
     assert res_fail.experiment_id == "EXP-04"
     assert res_fail.status == ExperimentStatus.FAILED
 
+    # 3. Connection is None default initialization
+    with patch("scripts.chaos_harness.Connection") as mock_conn_cls, \
+         patch("scripts.chaos_harness.wire_critical_queue") as mock_q_fn:
+        conn_inst = MagicMock()
+        conn_inst.channel.return_value.__enter__.return_value = mock_channel
+        mock_conn_cls.return_value = conn_inst
+        mock_q_fn.return_value = MagicMock()
+        res_none = harness.run_experiment_4_poison_pill(connection=None)
+        assert res_none.status == ExperimentStatus.PASSED
+        conn_inst.connect.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_run_experiment_5_mttr_benchmarks_passed_and_failed() -> None:
