@@ -47,7 +47,7 @@ flowchart LR
   - Two-Phase Provider Inquiry (Phase 1: GET by idempotency key $\to$ Phase 2: POST if not found).
 * **Acceptance Criteria**: 100% statement test coverage across worker tasks and simulator logic.
 
-### Milestone 4: FastAPI Ingestion Gateway, Dispatcher & REST Client Suite (**Next**)
+### Milestone 4: FastAPI Ingestion Gateway, Dispatcher & REST Client Suite (**Complete**)
 * **Agent Runbook**: [.agents/milestones/M4_FASTAPI_GATEWAY_AND_REST_CLIENT.md](../.agents/milestones/M4_FASTAPI_GATEWAY_AND_REST_CLIENT.md)
 * Implement FastAPI gateway in `app/main.py` with `POST /api/v1/wires` and `GET /api/v1/wires/{id}`.
 * Implement correlation ID middleware (`X-Request-ID` propagation) and zero-refresh response generation.
@@ -55,7 +55,7 @@ flowchart LR
 * Author self-contained REST Client scenario suite in `requests/requests.rest`.
 * **Acceptance Criteria**: FastAPI integration tests passing with 100% coverage; zero observable 404 blackholes during processing.
 
-### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites
+### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites (**Next**)
 * **Agent Runbook**: [.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md](../.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md)
 * Implement `scripts/chaos_harness.py` capable of programmatically executing the 5 core experiments.
 * Implement unit and integration test suites:
@@ -113,3 +113,16 @@ flowchart LR
 | **Wire Audit Log & DLQ Quarantine Task** | `services/worker/tasks/audit.py` (`record_wire_audit`, `quarantine_poison_pill`) | **Complete & 100% Tested** |
 | **Unit Test Coverage Gate** | `tests/unit/test_models.py`, `test_schemas.py`, `test_bank_simulator_routes.py`, `test_task_settlement.py`, `test_task_audit.py` | **Complete (100% Statement Coverage)** |
 | **Static Type & Lint Validation** | `mypy.ini` (configured stubs for Kombu/Celery), zero mypy errors, zero ruff errors | **Complete & Verified Clean** |
+
+### Milestone 4 Deliverables Matrix
+
+| Milestone 4 Deliverable | Implementation Artifact | Verification & Compliance Status |
+| :--- | :--- | :---: |
+| **FastAPI Gateway Application** | `app/main.py` (lifespan pre-warming, route registration) | **Complete & Verified** |
+| **Correlation & Error Middlewares** | `app/middlewares/` (`correlation.py`, `error_handling.py`) | **Complete & 100% Tested** |
+| **Kombu Publisher Confirms Dispatcher** | `app/dispatcher.py` (Celery v2 protocol, delivery_mode=2) | **Complete & 100% Tested** |
+| **Wire Ingestion & In-Flight Query Routes** | `app/routes/wires.py` (anti-blackhole persistence, atomic idempotency) | **Complete & 100% Tested** |
+| **Container Health & Readiness Probes** | `app/routes/health.py` (`/health`, `/ready` DB ping) | **Complete & 100% Tested** |
+| **Interactive REST Client Suite** | `requests/requests.rest` (self-contained workflows, variable chaining) | **Complete & Verified** |
+| **Unit Test Coverage & Static Typing** | `tests/unit/test_api_routes.py`, `test_middlewares.py`, `test_dispatcher.py`, `test_requests_rest.py` | **Complete (100% Statement Coverage)** |
+
