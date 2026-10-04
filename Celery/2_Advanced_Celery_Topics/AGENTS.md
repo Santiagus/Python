@@ -31,6 +31,7 @@ This project enforces strict backend engineering, distributed task execution, an
       - `feat(schemas)`: Pydantic v2 request/response schemas (committed with schema test).
       - `feat(api)`: API routes and Swagger/OpenAPI documentation with realistic examples.
     - `chore(orchestration)`: Multi-container orchestration (`docker-compose.yml`) (committed with orchestration test).
+    - `chore(debug)`: Just-in-time VS Code launch configurations (`.vscode/launch.json`) per runnable service, test harness, or compound multi-service workflow.
   - **Zero-Broken-Execution Invariant**: Every individual micro-commit must be functionally self-contained, syntactically clean, and working. Never commit intermediate broken states, unresolved imports, failing tests, or invalid type annotations. Each commit in a sequence must pass syntax, type checking, and automated tests independently.
 * **FastAPI Standards**:
   - `async def` endpoints as default.
@@ -57,10 +58,10 @@ This project enforces strict backend engineering, distributed task execution, an
     Whenever authoring or refining milestone specifications for any project module (during Milestone 1 planning or milestone refinements), **always generate both layers concurrently**:
     1. **Human & Governance Layer (`docs/MILESTONES.md`)**: High-level delivery roadmap, Mermaid timeline (`flowchart LR`), phase summaries, acceptance criteria, and deliverables compliance matrix.
     2. **Agent Execution Runbook Layer (`.agents/milestones/M<N>_<SLUG>.md`)**: Dedicated per-milestone execution runbooks for all planned milestones. Each agent milestone file must specify:
-       - **Scope Fences**: Explicitly enumerated in-scope vs. out-of-scope files to prevent premature edits and scope bleed.
-       - **Micro-Commit Sequence**: Ordered Conventional Commit headers ($\le 72$ chars) with associated tests, strictly adhering to the 1-task-per-commit rule.
+       - **Scope Fences**: Explicitly enumerated in-scope vs. out-of-scope files to prevent premature edits and scope bleed. For any implementation milestone that introduces or updates a runnable service, worker, API, simulator, or harness, `.vscode/launch.json` MUST be included in the in-scope files.
+       - **Micro-Commit Sequence**: Ordered Conventional Commit headers ($\le 72$ chars) with associated tests, strictly adhering to the 1-task-per-commit rule. Implementation milestones with runnable services must include an explicit `chore(debug): ...` step to create or update just-in-time launch and compound configurations.
        - **Technical Contracts & Invariant Links**: Direct links to `docs/ARCHITECTURE_AND_STANDARDS.md`, `init.sql`, etc. (no raw code duplication).
-       - **Verification Gates**: Exact deterministic shell commands (`pytest`, coverage threshold, `ruff`, `mypy`).
+       - **Verification Gates**: Exact deterministic shell commands (`pytest`, coverage threshold, `ruff`, `mypy`, and `python3 -m json.tool .vscode/launch.json` when debug configs are updated).
   - **Documentation Anti-Bloat & Single Source of Truth (SSOT) Invariant**:
     Never copy-paste raw implementation code into markdown documentation files!
     - **No Raw DDL Duplication**: Do NOT embed raw SQL DDL code from `init.sql`. Link to `[init.sql](...)` and illustrate the schema visually using a clean Mermaid `erDiagram`.

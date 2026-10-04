@@ -22,3 +22,9 @@
   - Never open files in the editor or trigger editor tab openings during automated agent operations.
   - Never perform "backstage" modifications (such as running `ruff check --fix` or repeated overwrite edits) after writing a file; always author fully formatted, sorted, and lint-clean code upfront on the first attempt so disk contents never conflict with open editor buffers.
   - Workspace configuration (`.vscode/settings.json`) must strictly maintain `"files.autoSave": "off"` and `"editor.formatOnSave": false` to prevent editor buffers from dirtying or overwriting on-disk files.
+* **Debugging & Just-in-Time Debug Configurations**:
+  - **Progressive Debug Config Generation**: In `.vscode/launch.json`, generate debug configurations strictly for services and entry points that currently exist and are suitable to be debugged at that point in development. Never generate dangling or speculative configurations pointing to non-existent applications, files, or entry points.
+  - **Compound Multi-Service Configurations**: When several services or architectural layers (e.g., FastAPI gateway, Celery worker, simulator APIs) are complete and should be run together, generate compound debug configurations (`compounds` with `"stopAll": true`) to launch and debug them all concurrently.
+  - **Milestone Runbook Invariant**: For any implementation milestone that introduces or updates a runnable service, worker, API, simulator, or harness, `.vscode/launch.json` MUST be included in the in-scope files and scheduled as a dedicated micro-commit (`chore(debug): ...`).
+  - **Interactive REST Scenarios**: Self-contained test scenarios in `requests/requests.rest` (generated concurrently with endpoints and tests).
+
