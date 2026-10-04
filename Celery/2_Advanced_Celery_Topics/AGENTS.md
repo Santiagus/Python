@@ -12,8 +12,26 @@ This project enforces strict backend engineering, distributed task execution, an
   - **Interactive REST Scenarios**: Self-contained test scenarios in `requests/requests.rest` (generated concurrently with endpoints and tests).
 * **Atomic & Granular Commit Strategy**:
   - **Mandatory Review Prior to Commit & Push (Strict Non-Negotiable Invariant)**: Any change (code, documentation, test, or configuration) is strictly subject to user review prior to commit. Running `git commit` or `git push` without explicit confirmation and authorization from the user is strictly forbidden under all circumstances. Always present the proposed changes, diffs, and verification results to the user, and await their explicit approval before running any commit or push command.
-  - **Minimal Cohesive Commits**: Keep git commits as small, focused, and granular as possible (partitioned by logical unit: domain task, data model/schema, API route, middleware, scheduler/worker component, developer tooling, or documentation). Avoid monolithic multi-feature or multi-layer commits.
-  - **Zero-Broken-Execution Invariant**: Every individual commit must be functionally self-contained, syntactically clean, and working. Never commit intermediate broken states, unresolved imports, failing tests, or invalid type annotations. Each commit in a sequence must pass syntax, type checking, and automated tests independently.
+  - **Single-Line Commit Message Mandate**: All git commit messages must be strictly formatted as a concise single-line Conventional Commit (`<type>(<scope>): <imperative summary>`, $\le 72$ characters). Omit multi-line bullet points or essays; commit granularity must be fine enough that a single concise line completely captures the change.
+  - **Granular Development Micro-Commit Slicing Matrix**:
+    Never bundle multi-file, multi-layer implementations into monolithic commits. Partition development strictly into independent, cohesive micro-commits:
+    - `chore(deps)`: Dependency manifests (`requirements_api.txt`, `requirements_dev.txt`, `services/*/requirements.txt`).
+    - `feat(db)`: Database DDL (`init.sql`) and database configuration (committed with its dedicated DDL test).
+    - `chore(db)`: Database container Dockerfile / custom engine parameters.
+    - `feat(amqp)`: Kombu AMQP 0-9-1 topology (`shared/amqp_topology.py`) (committed with its dedicated topology test).
+    - `chore(rabbitmq)`: RabbitMQ pre-loaded topology definitions (`definitions.json`, `rabbitmq.conf`).
+    - `chore(rabbitmq)`: RabbitMQ Dockerfile or broker container manifest.
+    - `feat(worker)`: Celery worker application configuration (`celery_app.py`) (committed with its configuration test).
+    - `feat(worker)`: Individual Celery task (**STRICTLY ONE TASK PER COMMIT**, committed with its dedicated unit test).
+    - `chore(worker)`: Celery worker Dockerfile and runtime entrypoint.
+    - Per API Gateway / Mock Service (e.g. `app/`, `services/bank_simulator_api/`):
+      - `feat(api)`: Minimal API skeleton with `/health` and `/ready` probes (committed with health test).
+      - `feat(models)`: Domain database models definition (committed with model test).
+      - `feat(models)`: Model validations and data constraints definition.
+      - `feat(schemas)`: Pydantic v2 request/response schemas (committed with schema test).
+      - `feat(api)`: API routes and Swagger/OpenAPI documentation with realistic examples.
+    - `chore(orchestration)`: Multi-container orchestration (`docker-compose.yml`) (committed with orchestration test).
+  - **Zero-Broken-Execution Invariant**: Every individual micro-commit must be functionally self-contained, syntactically clean, and working. Never commit intermediate broken states, unresolved imports, failing tests, or invalid type annotations. Each commit in a sequence must pass syntax, type checking, and automated tests independently.
 * **FastAPI Standards**:
   - `async def` endpoints as default.
   - Development logger with pretty formatter (`datefmt="%H:%M:%S"`, truncated 8-character UUID `req_id[:8]`, no headers for standard HTTP fields).
@@ -23,11 +41,25 @@ This project enforces strict backend engineering, distributed task execution, an
   - Realistic specimen defaults and examples (`examples=[...]`) across all schemas so Swagger UI (`/docs`) "Try it out" executes cleanly without $422$ errors.
   - **Zero-Refresh Response Generation**: Pre-generate primary keys (`uuid.uuid4()`) and UTC timestamps in the application layer. Never call `await session.refresh()` in high-throughput write endpoints.
   - **Atomic Idempotency via Unique Constraints**: Enforce idempotency via database `UNIQUE` constraints and catch `IntegrityError` instead of issuing speculative `SELECT` queries before `INSERT`.
-* **Documentation & Readability**:
-  - **First Milestone Project Invariant (Planning & Architecture Specification)**: The mandatory first milestone for every project module is to update `README.md` with the project proposal and generate `docs/ARCHITECTURE_AND_STANDARDS.md` defining the system architecture, state machines, sequence diagrams, and a dedicated breakdown defining all project **Milestones**.
+* **Documentation Architecture & Anti-Bloat Standards**:
+  - **Modular Documentation Partitioning**:
+    Partition documentation across dedicated, specialized files rather than creating monolithic, bloated markdown documents:
+    - `README.md`: Project proposal, executive summary, business impact, quickstart, and compliance matrix.
+    - `docs/ARCHITECTURE_AND_STANDARDS.md`: System topology, clean architecture layer rules, engineering invariants, performance & security standards.
+    - `docs/USE_CASES.md`: Detailed business workflows, actor interactions, failure recovery scenarios, and financial edge cases.
+    - `docs/TEST_PLAN.md`: Test strategy, test matrix table, hybrid testcontainers configuration, and verification commands.
+    - `docs/MILESTONES.md`: Detailed milestone roadmap (M1–M6), deliverables breakdown, and acceptance criteria tracking.
+    - `docs/SEQUENCE_DIAGRAMS.md`: Comprehensive distributed sequence diagrams covering all execution and failure paths.
+  - **Granular Documentation Micro-Commit Slicing**:
+    Commit documentation additions individually per document (e.g. `docs(proposal): ...`, `docs(arch): ...`, `docs(use-cases): ...`, `docs(test-plan): ...`, `docs(milestones): ...`, `docs(diagrams): ...`).
+  - **Documentation Anti-Bloat & Single Source of Truth (SSOT) Invariant**:
+    Never copy-paste raw implementation code into markdown documentation files!
+    - **No Raw DDL Duplication**: Do NOT embed raw SQL DDL code from `init.sql`. Link to `[init.sql](...)` and illustrate the schema visually using a clean Mermaid `erDiagram`.
+    - **No Raw Pydantic / AMQP Code Duplication**: Do NOT paste raw Python Pydantic models or Kombu definitions. Link to source files and illustrate contracts using Mermaid `classDiagram` or `flowchart`.
+    - Architecture documents must focus on topologies, contracts, invariants, and rationale, keeping markdown files lean and eliminating documentation drift.
+  - **First Milestone Project Invariant (Planning & Architecture Specification)**: The mandatory first milestone for every project module is to update `README.md` with the project proposal and generate `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/MILESTONES.md`, and `docs/SEQUENCE_DIAGRAMS.md`.
   - **Scope Boundary for Milestone 1**: Milestone 1 must focus exclusively on proposal refinement, architectural definition, and milestone planning. Never commit or introduce Dockerfiles, container manifests, application code, or database scripts in Milestone 1.
-  - `docs/TEST_PLAN.md`, `docs/ARCHITECTURE_AND_STANDARDS.md`, and Mermaid `flowchart` and `sequenceDiagram` diagrams covering all execution paths.
-  - **Mermaid Graph Render Verification**: For any documentation modifications involving Mermaid diagrams, mandatory syntax and render validation must be executed via `python3 scripts/verify_mermaid.py [path]` (or `node scripts/verify_mermaid.mjs`). Never commit malformed diagrams; always quote labels containing parentheses, brackets, or colons (`id["Label (Extra)"]`) and ensure block closure (`end`).
+  - **Mermaid Graph Render Verification**: For any documentation modifications involving Mermaid diagrams, mandatory syntax and render validation must be executed. Never commit malformed diagrams; always quote labels containing parentheses, brackets, or colons (`id["Label (Extra)"]`) and ensure block closure (`end`).
   - Mandatory Google-style docstrings for **every** method and function.
   - Step-by-step numbered block comments (`# 1. ...`, `# 2. ...`) for multi-stage or long functions so execution flow is effortlessly readable from method calls and headers.
 * **Celery Architecture & Abstraction Layers**:

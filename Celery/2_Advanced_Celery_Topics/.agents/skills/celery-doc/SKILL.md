@@ -102,76 +102,59 @@ Every module requires a formal `docs/TEST_PLAN.md` containing:
 
 ---
 
-## 4. Mermaid Sequence Diagram Mandate (All Execution Paths)
-Architecture documentation must include a comprehensive `sequenceDiagram` mapping out **every path through the system**:
+---
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client
-    participant API as FastAPI Router
-    participant DB as PostgreSQL (ACID)
-    participant Broker as RabbitMQ Broker
-    participant W_Val as Worker (Validation)
-    participant W_Fan as Workers (Parallel Fan-Out)
-    participant Redis as Redis Backend
-    participant W_Agg as Worker (Callback Aggregator)
+## 4. Modular Documentation Architecture & Anti-Bloat Standards
 
-    %% PATH 1: Happy Path
-    rect rgb(235, 245, 235)
-        Note over Client,W_Agg: Path 1: Happy Path Workflow
-        Client->>API: POST /resource (Payload)
-        API->>DB: INSERT initial record (status='pending')
-        API->>Broker: Dispatch validate_task.s() with link_error
-        API-->>Client: 202 Accepted {id, status: 'pending'}
-        Broker->>W_Val: Consume validation task
-        W_Val->>DB: Update status='validating'
-        W_Val->>Broker: Dispatch Chord (Header Tasks -> Callback)
-        par Parallel Execution
-            Broker->>W_Fan: Header Task 1
-            Broker->>W_Fan: Header Task 2
-        end
-        W_Fan->>Redis: Store partial results & decrement barrier
-        Redis->>Broker: Barrier reached -> Trigger Callback
-        Broker->>W_Agg: Consume aggregate_task()
-        W_Agg->>DB: UPDATE status='completed', persist decision memo
-    end
+To prevent unmaintainable monolithic documents and eliminate drift, documentation is strictly partitioned into dedicated single-concern files:
 
-    %% PATH 2: Degraded / Partial Failure Path
-    rect rgb(255, 250, 235)
-        Note over W_Fan,DB: Path 2: Partial Degradation (Result Envelope)
-        W_Fan-->>Redis: Return ResultEnvelope(status='degraded', warnings=['Low confidence'])
-        Redis->>Broker: Barrier reached -> Trigger Callback
-        Broker->>W_Agg: Consume aggregate_task()
-        W_Agg->>DB: UPDATE status='manual_review' (non-fatal routing)
-    end
+| Documentation File | Dedicated Purpose & Scope | Anti-Bloat Invariant |
+| :--- | :--- | :--- |
+| `README.md` | Executive overview, problem statement, architecture snapshot, quickstart, compliance matrix. | High-level summary only; references detailed `docs/` files. |
+| `docs/ARCHITECTURE_AND_STANDARDS.md` | Core system topology, layered architecture rules, high-level invariants, caching & pooling. | **NO raw SQL DDL or Python code**. Uses Mermaid `flowchart`, `erDiagram`, `classDiagram`, and file links. |
+| `docs/SEQUENCE_DIAGRAMS.md` | Dedicated sequence diagrams covering **all** distributed execution and failure paths. | Dark-theme compatible Mermaid diagrams with step notes and recovery stages. |
+| `docs/MILESTONES.md` | Project delivery roadmap (M1–M6), phase deliverables, and acceptance criteria. | Visualized with Mermaid `flowchart LR` + structured status tables. |
+| `docs/TEST_PLAN.md` | 4-tier test architecture, hybrid testcontainers configuration, and test matrix. | Visualized with Mermaid `flowchart TD` + test specification table. |
+| `docs/USE_CASES.md` | Financial business scenarios, counterparty interactions, failure modes, and edge cases. | Actor-driven workflows and expected distributed invariants. |
 
-    %% PATH 3: Fatal Error & Errback Compensation
-    rect rgb(255, 235, 235)
-        Note over W_Val,DB: Path 3: Fatal Error & link_error Errback
-        W_Val->>W_Val: Fatal error / Corrupt payload detected
-        W_Val->>Broker: Dispatch link_error (handle_failure.s)
-        Broker->>W_Val: Consume handle_failure
-        W_Val->>DB: UPDATE status='failed', record error traceback
-    end
-```
+---
+
+## 5. Documentation Anti-Bloat & Visual Modeling Rules
+
+Never copy-paste raw implementation code into markdown documentation files:
+1. **Relational Database Schema**:
+   - **Banned**: Embedding 50+ lines of raw `CREATE TABLE` DDL from `init.sql`.
+   - **Mandated**: Link directly to `[init.sql](file:///path/to/init.sql)`. Illustrate schema relationships, primary keys, and foreign keys using a Mermaid `erDiagram`.
+2. **Pydantic Schemas & DTOs**:
+   - **Banned**: Pasting 80+ lines of Pydantic model class code.
+   - **Mandated**: Link directly to source files (e.g. `[schemas.py](file:///path/to/schemas.py)`). Illustrate fields, types, and constraints using a Mermaid `classDiagram`.
+3. **AMQP 0-9-1 Topology**:
+   - **Banned**: Pasting Kombu Python exchange/queue definitions.
+   - **Mandated**: Link directly to `[amqp_topology.py](file:///path/to/amqp_topology.py)`. Illustrate bindings, routing keys, and DLX routing using a Mermaid `flowchart TD`.
+
+---
+
+## 6. Mermaid Sequence Diagram Mandate (`docs/SEQUENCE_DIAGRAMS.md`)
+All execution flows and failure paths must be documented in `docs/SEQUENCE_DIAGRAMS.md`:
+- Happy Path (Zero-refresh, publisher-confirmed ingestion $\to$ Late-ack settlement)
+- Worker Hard Crash (`SIGKILL`) & Redelivery Recovery (`acks_late=True`)
+- The Early Ack Failure Mode (`acks_late=False`) - Proving Silent Data Loss
+- Broker Hard Crash & Persistent WAL Replay / Recovery
+- Poison Pill Quarantine via Dead Letter Exchange (`wire.dlx` $\to$ `wire.settlement.dlq`)
 
 ### Mermaid Render & Syntax Verification
 Mermaid graphs frequently suffer from render failures due to unquoted parentheses or brackets, unescaped characters, or broken blocks. For **any** documentation additions or modifications:
 1. Always quote labels containing special characters: `Node["Label (Details)"]` or `participant DB as "PostgreSQL (ACID)"`.
 2. Ensure every block (`subgraph`, `rect`, `opt`, `par`, `alt`) terminates with `end`.
-3. Verify renderability and syntax before committing by running:
-   ```bash
-   python3 scripts/verify_mermaid.py [path/to/doc.md]
-   ```
-   (or `node scripts/verify_mermaid.mjs`).
+3. Verify renderability and syntax before proposing or committing.
 
 ---
 
-## 5. Architecture and Standards Audit (`docs/ARCHITECTURE_AND_STANDARDS.md`)
+## 7. Architecture and Standards Audit (`docs/ARCHITECTURE_AND_STANDARDS.md`)
 Must audit and document:
 1. Architectural Dataflow & Topology (Mermaid diagram).
-2. Standards Checklist:
+2. Clean Architecture layer boundaries.
+3. Standards Checklist:
    - Async API non-blocking guarantees.
    - ACID database transactions and constraint definitions.
    - Broker safety (JSON primitives only).
