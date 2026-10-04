@@ -37,7 +37,7 @@ flowchart LR
 * Declare Kombu AMQP 0-9-1 topology: `wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`.
 * **Acceptance Criteria**: `docker compose up -d` boots all services with clean health checks and pre-configured queues.
 
-### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer (**Next**)
+### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer (Complete)
 * **Agent Runbook**: [.agents/milestones/M3_WORKER_AND_BANK_SIMULATOR.md](../.agents/milestones/M3_WORKER_AND_BANK_SIMULATOR.md)
 * Implement Pydantic v2 schemas and domain models.
 * Implement standalone `services/bank_simulator_api/` simulating external Fedwire/SWIFT clearing with idempotent transaction tracking.
@@ -47,7 +47,7 @@ flowchart LR
   - Two-Phase Provider Inquiry (Phase 1: GET by idempotency key $\to$ Phase 2: POST if not found).
 * **Acceptance Criteria**: 100% statement test coverage across worker tasks and simulator logic.
 
-### Milestone 4: FastAPI Ingestion Gateway, Dispatcher & REST Client Suite
+### Milestone 4: FastAPI Ingestion Gateway, Dispatcher & REST Client Suite (**Next**)
 * **Agent Runbook**: [.agents/milestones/M4_FASTAPI_GATEWAY_AND_REST_CLIENT.md](../.agents/milestones/M4_FASTAPI_GATEWAY_AND_REST_CLIENT.md)
 * Implement FastAPI gateway in `app/main.py` with `POST /api/v1/wires` and `GET /api/v1/wires/{id}`.
 * Implement correlation ID middleware (`X-Request-ID` propagation) and zero-refresh response generation.
@@ -101,3 +101,15 @@ flowchart LR
 | **Celery Late-Ack Worker Configuration** | `services/worker/celery_app.py` (`acks_late=True`, `reject_on_worker_lost=True`) | **Complete & Connected** |
 | **Unit Test Suite & Statement Coverage** | `tests/unit/test_amqp_topology.py`, `test_init_sql.py`, `test_docker_compose.py`, etc. | **Complete (100% Test Coverage)** |
 | **VS Code Debug Environments** | `.vscode/launch.json` (API, Bank Simulator, Worker, Compound Launcher) | **Complete & Ready** |
+
+### Milestone 3 Deliverables Matrix
+
+| Milestone 3 Deliverable | Implementation Artifact | Verification & Compliance Status |
+| :--- | :--- | :---: |
+| **SQLAlchemy 2.0 Domain Models** | `shared/models.py` (`WireTransfer`, `LedgerJournal`, `WireAuditLog`) | **Complete & 100% Tested** |
+| **Pydantic v2 Schemas & Contracts** | `shared/schemas.py` (`WireCreateRequest`, `WireResponse`, `WireTaskPayload`, etc.) | **Complete & 100% Tested** |
+| **Wholesale Bank Simulator API** | `services/bank_simulator_api/main.py` (`GET /v1/wires/{key}`, `POST /v1/wires/settle`, chaos hooks) | **Complete & 100% Tested** |
+| **Two-Phase Inquiry Celery Task** | `services/worker/tasks/settlement.py` (`settle_wire_transfer`, row-level locking, anti-double-payout) | **Complete & 100% Tested** |
+| **Wire Audit Log & DLQ Quarantine Task** | `services/worker/tasks/audit.py` (`record_wire_audit`, `quarantine_poison_pill`) | **Complete & 100% Tested** |
+| **Unit Test Coverage Gate** | `tests/unit/test_models.py`, `test_schemas.py`, `test_bank_simulator_routes.py`, `test_task_settlement.py`, `test_task_audit.py` | **Complete (100% Statement Coverage)** |
+| **Static Type & Lint Validation** | `mypy.ini` (configured stubs for Kombu/Celery), zero mypy errors, zero ruff errors | **Complete & Verified Clean** |
