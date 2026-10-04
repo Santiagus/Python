@@ -50,14 +50,23 @@ This project enforces strict backend engineering, distributed task execution, an
     - `docs/TEST_PLAN.md`: Test strategy, test matrix table, hybrid testcontainers configuration, and verification commands.
     - `docs/MILESTONES.md`: Detailed milestone roadmap (M1–M6), deliverables breakdown, and acceptance criteria tracking.
     - `docs/SEQUENCE_DIAGRAMS.md`: Comprehensive distributed sequence diagrams covering all execution and failure paths.
+    - `.agents/milestones/M<N>_<SLUG>.md`: Granular, agent-focused procedural execution runbooks generated concurrently with `docs/MILESTONES.md`. While `docs/MILESTONES.md` serves as the high-level human roadmap and lifecycle compliance tracker, `.agents/milestones/` contains atomic execution specifications defining strict scope fences, ordered micro-commit slicing sequences, technical contracts, and automated verification commands.
   - **Granular Documentation Micro-Commit Slicing**:
     Commit documentation additions individually per document (e.g. `docs(proposal): ...`, `docs(arch): ...`, `docs(use-cases): ...`, `docs(test-plan): ...`, `docs(milestones): ...`, `docs(diagrams): ...`).
+  - **Dual-Layer Milestone Generation Invariant**:
+    Whenever authoring or refining milestone specifications for any project module (during Milestone 1 planning or milestone refinements), **always generate both layers concurrently**:
+    1. **Human & Governance Layer (`docs/MILESTONES.md`)**: High-level delivery roadmap, Mermaid timeline (`flowchart LR`), phase summaries, acceptance criteria, and deliverables compliance matrix.
+    2. **Agent Execution Runbook Layer (`.agents/milestones/M<N>_<SLUG>.md`)**: Dedicated per-milestone execution runbooks for all planned milestones. Each agent milestone file must specify:
+       - **Scope Fences**: Explicitly enumerated in-scope vs. out-of-scope files to prevent premature edits and scope bleed.
+       - **Micro-Commit Sequence**: Ordered Conventional Commit headers ($\le 72$ chars) with associated tests, strictly adhering to the 1-task-per-commit rule.
+       - **Technical Contracts & Invariant Links**: Direct links to `docs/ARCHITECTURE_AND_STANDARDS.md`, `init.sql`, etc. (no raw code duplication).
+       - **Verification Gates**: Exact deterministic shell commands (`pytest`, coverage threshold, `ruff`, `mypy`).
   - **Documentation Anti-Bloat & Single Source of Truth (SSOT) Invariant**:
     Never copy-paste raw implementation code into markdown documentation files!
     - **No Raw DDL Duplication**: Do NOT embed raw SQL DDL code from `init.sql`. Link to `[init.sql](...)` and illustrate the schema visually using a clean Mermaid `erDiagram`.
     - **No Raw Pydantic / AMQP Code Duplication**: Do NOT paste raw Python Pydantic models or Kombu definitions. Link to source files and illustrate contracts using Mermaid `classDiagram` or `flowchart`.
     - Architecture documents must focus on topologies, contracts, invariants, and rationale, keeping markdown files lean and eliminating documentation drift.
-  - **First Milestone Project Invariant (Planning & Architecture Specification)**: The mandatory first milestone for every project module is to update `README.md` with the project proposal and generate `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/MILESTONES.md`, and `docs/SEQUENCE_DIAGRAMS.md`.
+  - **First Milestone Project Invariant (Planning & Architecture Specification)**: The mandatory first milestone for every project module is to update `README.md` with the project proposal and generate `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/MILESTONES.md`, `docs/SEQUENCE_DIAGRAMS.md`, and the initial agent execution runbooks in `.agents/milestones/`.
   - **Scope Boundary for Milestone 1**: Milestone 1 must focus exclusively on proposal refinement, architectural definition, and milestone planning. Never commit or introduce Dockerfiles, container manifests, application code, or database scripts in Milestone 1.
   - **Mermaid Graph Render Verification**: For any documentation modifications involving Mermaid diagrams, mandatory syntax and render validation must be executed. Never commit malformed diagrams; always quote labels containing parentheses, brackets, or colons (`id["Label (Extra)"]`) and ensure block closure (`end`).
   - Mandatory Google-style docstrings for **every** method and function.

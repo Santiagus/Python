@@ -114,6 +114,7 @@ To prevent unmaintainable monolithic documents and eliminate drift, documentatio
 | `docs/ARCHITECTURE_AND_STANDARDS.md` | Core system topology, layered architecture rules, high-level invariants, caching & pooling. | **NO raw SQL DDL or Python code**. Uses Mermaid `flowchart`, `erDiagram`, `classDiagram`, and file links. |
 | `docs/SEQUENCE_DIAGRAMS.md` | Dedicated sequence diagrams covering **all** distributed execution and failure paths. | Dark-theme compatible Mermaid diagrams with step notes and recovery stages. |
 | `docs/MILESTONES.md` | Project delivery roadmap (M1–M6), phase deliverables, and acceptance criteria. | Visualized with Mermaid `flowchart LR` + structured status tables. |
+| `.agents/milestones/M<N>_<SLUG>.md` | Granular agent-focused procedural execution runbooks with scope fences, micro-commit sequences, and verification gates. | Direct links to SSOT architectural documents; NO duplicate code/DDL; imperative execution steps. |
 | `docs/TEST_PLAN.md` | 4-tier test architecture, hybrid testcontainers configuration, and test matrix. | Visualized with Mermaid `flowchart TD` + test specification table. |
 | `docs/USE_CASES.md` | Financial business scenarios, counterparty interactions, failure modes, and edge cases. | Actor-driven workflows and expected distributed invariants. |
 
@@ -162,4 +163,60 @@ Must audit and document:
    - Minor-unit financial precision (cents, `NUMERIC(14, 2)`).
    - Structured logging & correlation IDs (`X-Request-ID`).
    - Automated test results and 100% statement coverage table.
+
+---
+
+## 8. Dual-Layer Milestone & Agent Runbook Mandate
+
+Whenever milestone documentation is generated or updated for a module (e.g. during Milestone 1 planning or milestone transitions), **always generate both documentation layers concurrently**:
+
+### 1. Human / Lifecycle Governance Layer (`docs/MILESTONES.md`)
+- Serves human developers, project leads, and auditors.
+- Contains high-level roadmap (`flowchart LR`), milestone summary breakdown, acceptance criteria, and formal compliance tables.
+- Keeps descriptions concise and links directly to the agent execution runbooks.
+
+### 2. Agent Execution Runbook Layer (`.agents/milestones/M<N>_<SLUG>.md`)
+- Serves autonomous AI agents executing active milestone tasks.
+- Eliminates multi-hop retrieval, context bloat, and scope creep by concentrating execution contracts, constraints, and test commands in a single focused document.
+- Strict rules:
+  1. **Scope Fences**: Explicitly enumerate allowed in-scope files and strictly forbidden out-of-scope files.
+  2. **Micro-Commit Sequence**: Detail the exact ordered sequence of single-line Conventional Commits ($\le 72$ chars) with dedicated test files, strictly honoring the one-task-per-commit rule.
+  3. **SSOT Links (Anti-Bloat)**: Reference `docs/ARCHITECTURE_AND_STANDARDS.md`, `init.sql`, etc. without copying raw code.
+  4. **Deterministic Verification Gates**: Provide exact shell commands for `pytest` (100% statement coverage), `mypy`, and `ruff`.
+
+### Standard Template for `.agents/milestones/M<N>_<SLUG>.md`:
+````markdown
+# Milestone <N>: <Milestone Title>
+
+> **Module**: `<module_name>`  
+> **Milestone**: M<N>  
+> **Status**: [Pending | In Progress | Complete]  
+> **Reference SSOT**: [docs/ARCHITECTURE_AND_STANDARDS.md](../../docs/ARCHITECTURE_AND_STANDARDS.md)
+
+## 1. Scope Boundary & Fences
+* **In-Scope Files (Allowed to create / modify)**:
+  - `<file_1>`
+  - `<file_2>`
+* **Out-of-Scope Files (Strictly forbidden to touch)**:
+  - `<future_milestone_files>`
+
+## 2. Technical Contracts & Invariants
+* Domain invariant 1 (with markdown link to SSOT).
+* Execution invariant 2 (e.g. `acks_late=True`, row-level locks, cents precision).
+
+## 3. Ordered Micro-Commit Execution Sequence
+Strictly follow one-task-per-commit discipline and single-line Conventional Commits (<= 72 chars):
+1. `<type>(<scope>): <summary>`
+   - Target files: `...`
+   - Test files: `...`
+2. `<type>(<scope>): <summary>`
+   - Target files: `...`
+   - Test files: `...`
+
+## 4. Verification & Acceptance Gates
+- Run tests: `.venv/bin/pytest <test_path> -v --cov=<module> --cov-report=term-missing`
+- Statement coverage gate: 100% required.
+- Type check: `.venv/bin/mypy <target>`
+- Linter: `.venv/bin/ruff check <target>`
+````
 

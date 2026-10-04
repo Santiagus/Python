@@ -53,7 +53,7 @@ This skill defines the standards and procedural rules for generating small, atom
    - `docs(arch)`: System architecture and topology specification in `docs/ARCHITECTURE_AND_STANDARDS.md`.
    - `docs(use-cases)`: Business workflows and failure recovery scenarios in `docs/USE_CASES.md`.
    - `docs(test-plan)`: Test strategy, test matrix table, and execution plan in `docs/TEST_PLAN.md`.
-   - `docs(milestones)`: Detailed milestone roadmap (M1–M6) and acceptance criteria in `docs/MILESTONES.md`.
+   - `docs(milestones)`: Detailed milestone roadmap in `docs/MILESTONES.md` and agent execution runbooks in `.agents/milestones/`.
    - `docs(diagrams)`: Comprehensive distributed sequence diagrams across all execution paths in `docs/SEQUENCE_DIAGRAMS.md`.
 
 5. **Documentation Anti-Bloat & Single Source of Truth (SSOT) Invariant**:

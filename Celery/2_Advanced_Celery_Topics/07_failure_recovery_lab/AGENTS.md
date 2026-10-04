@@ -15,5 +15,7 @@
     - Per API: minimal API skeleton (`/health`, `/ready`), models definition, models validations, schemas definition, Swagger examples & endpoints.
   - Zero broken execution: each micro-commit must pass syntax, type checking, and its localized unit tests independently.
 * **Modular Documentation & Anti-Bloat Invariant**:
-  - Partition documentation across dedicated files: `README.md`, `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/SEQUENCE_DIAGRAMS.md`, `docs/MILESTONES.md`, `docs/TEST_PLAN.md`, `docs/USE_CASES.md`.
+  - Partition documentation across dedicated files: `README.md`, `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/SEQUENCE_DIAGRAMS.md`, `docs/MILESTONES.md`, `docs/TEST_PLAN.md`, `docs/USE_CASES.md`, and `.agents/milestones/M<N>_<SLUG>.md`.
+  - **Dual-Layer Milestone Generation**: Always maintain `docs/MILESTONES.md` (human-facing lifecycle roadmap and compliance matrix) concurrently with `.agents/milestones/M<N>_<SLUG>.md` (agent-facing procedural execution runbooks with explicit scope fences, micro-commit slicing, and verification gates).
   - Anti-Bloat: NEVER duplicate raw SQL (`init.sql`) or Python models in markdown files. Link directly to code files and use visual Mermaid models (`erDiagram`, `classDiagram`, `flowchart`).
+

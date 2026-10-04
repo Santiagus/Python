@@ -24,18 +24,21 @@ flowchart LR
 ## 2. Granular Milestone Breakdown
 
 ### Milestone 1: Proposal, Architecture, Sequence Diagrams & Milestone Planning (**Complete**)
+* **Agent Runbook**: [.agents/milestones/M1_PROPOSAL_AND_PLANNING.md](../.agents/milestones/M1_PROPOSAL_AND_PLANNING.md)
 * Refine project proposal in [README.md](../README.md).
 * Author comprehensive [docs/ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) defining system topology, invariants, and failure recovery specifications.
 * Author dedicated [docs/SEQUENCE_DIAGRAMS.md](SEQUENCE_DIAGRAMS.md) and [docs/MILESTONES.md](MILESTONES.md).
 * **Acceptance Criteria**: Full architectural definition with zero application code or container implementations in Milestone 1.
 
 ### Milestone 2: Infrastructure, Multi-Container Orchestration & Database Schema (**Complete**)
+* **Agent Runbook**: [.agents/milestones/M2_INFRASTRUCTURE_AND_SCHEMA.md](../.agents/milestones/M2_INFRASTRUCTURE_AND_SCHEMA.md)
 * Author `docker-compose.yml` declaring PostgreSQL 16, RabbitMQ 3.13 (Management), API Gateway, Worker Fleet (2 pods), and Bank Simulator API.
 * Implement database DDL [init.sql](../init.sql) with tables, unique constraints, and partial indexes.
 * Declare Kombu AMQP 0-9-1 topology: `wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`.
 * **Acceptance Criteria**: `docker compose up -d` boots all services with clean health checks and pre-configured queues.
 
 ### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer (**Next**)
+* **Agent Runbook**: [.agents/milestones/M3_WORKER_AND_BANK_SIMULATOR.md](../.agents/milestones/M3_WORKER_AND_BANK_SIMULATOR.md)
 * Implement Pydantic v2 schemas and domain models.
 * Implement standalone `services/bank_simulator_api/` simulating external Fedwire/SWIFT clearing with idempotent transaction tracking.
 * Implement Celery worker tasks in `services/worker/tasks/` enforcing:
@@ -45,6 +48,7 @@ flowchart LR
 * **Acceptance Criteria**: 100% statement test coverage across worker tasks and simulator logic.
 
 ### Milestone 4: FastAPI Ingestion Gateway, Dispatcher & REST Client Suite
+* **Agent Runbook**: [.agents/milestones/M4_FASTAPI_GATEWAY_AND_REST_CLIENT.md](../.agents/milestones/M4_FASTAPI_GATEWAY_AND_REST_CLIENT.md)
 * Implement FastAPI gateway in `app/main.py` with `POST /api/v1/wires` and `GET /api/v1/wires/{id}`.
 * Implement correlation ID middleware (`X-Request-ID` propagation) and zero-refresh response generation.
 * Implement AMQP dispatcher (`app/dispatcher.py`) with Kombu publisher confirms.
@@ -52,6 +56,7 @@ flowchart LR
 * **Acceptance Criteria**: FastAPI integration tests passing with 100% coverage; zero observable 404 blackholes during processing.
 
 ### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites
+* **Agent Runbook**: [.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md](../.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md)
 * Implement `scripts/chaos_harness.py` capable of programmatically executing the 5 core experiments.
 * Implement unit and integration test suites:
   - `tests/integration/test_worker_crash_recovery.py` (Worker SIGKILL).
@@ -61,6 +66,7 @@ flowchart LR
 * **Acceptance Criteria**: All failure injection integration tests execute cleanly in isolated test environments.
 
 ### Milestone 6: Distributed Live E2E Verification, MTTR Benchmarks & Evidence Log
+* **Agent Runbook**: [.agents/milestones/M6_LIVE_E2E_VERIFICATION_AND_BENCHMARKS.md](../.agents/milestones/M6_LIVE_E2E_VERIFICATION_AND_BENCHMARKS.md)
 * Execute live multi-process end-to-end test suite (`tests/e2e/test_live_e2e.py`) against the running Docker Compose cluster.
 * Run capacity and chaos benchmarks (`tests/benchmarks/test_recovery_benchmarks.py`).
 * Generate empirical evidence artifacts: `reports/experiments/latest_experiment_log.json` and `docs/EXPERIMENT_LOG.md`.
