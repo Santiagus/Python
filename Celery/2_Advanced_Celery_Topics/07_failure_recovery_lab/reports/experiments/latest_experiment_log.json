@@ -1,0 +1,108 @@
+{
+  "timestamp": "2026-10-04T21:56:33.060781+00:00",
+  "summary": {
+    "total_experiments": 5,
+    "passed": 5,
+    "failed": 0,
+    "average_mttr_ms": 3197.69
+  },
+  "experiments": [
+    {
+      "experiment_id": "EXP-01",
+      "name": "Worker Hard Crash During Execution",
+      "status": "PASSED",
+      "mttr_ms": 200.84,
+      "started_at": "2026-10-04T21:56:16.796978+00:00",
+      "finished_at": "2026-10-04T21:56:17.126046+00:00",
+      "details": {
+        "wire_id": "0df3bcce-af87-48e2-8d41-9014319408be",
+        "fault_injected": "SIGKILL delivered to worker_1",
+        "settled_status": "settled",
+        "redelivered_flag": false,
+        "ledger_audit": {
+          "total_debits_cents": 660549900,
+          "total_credits_cents": 660549900,
+          "drift_cents": 0,
+          "settled_wires_count": 74,
+          "unique_idempotency_keys_count": 74,
+          "is_balanced": true,
+          "double_disbursements_count": 0
+        }
+      },
+      "error_message": null
+    },
+    {
+      "experiment_id": "EXP-02",
+      "name": "Early vs. Late Acknowledgement Trade-Offs",
+      "status": "PASSED",
+      "mttr_ms": 555.1,
+      "started_at": "2026-10-04T21:56:17.126077+00:00",
+      "finished_at": "2026-10-04T21:56:17.684401+00:00",
+      "details": {
+        "mode_a_early_ack": "Demonstrates message loss when worker crashes before DB commit",
+        "mode_b_late_ack": "Demonstrates message redelivery and 100% durability with acks_late=True",
+        "wire_id": "710c0bce-34f0-46de-bfff-622629512819",
+        "late_ack_outcome": "settled",
+        "lost_messages_mode_b": 0
+      },
+      "error_message": null
+    },
+    {
+      "experiment_id": "EXP-03",
+      "name": "RabbitMQ Broker Restart & Durable Recovery",
+      "status": "PASSED",
+      "mttr_ms": 8118.05,
+      "started_at": "2026-10-04T21:56:17.684455+00:00",
+      "finished_at": "2026-10-04T21:56:25.941562+00:00",
+      "details": {
+        "wire_id": "c88e02c5-1393-4593-ace5-b6bf56391f29",
+        "broker_stopped": true,
+        "broker_restarted": true,
+        "recovered_status": "settled"
+      },
+      "error_message": null
+    },
+    {
+      "experiment_id": "EXP-04",
+      "name": "Poison Pill Dead-Letter Exchange Quarantine",
+      "status": "PASSED",
+      "mttr_ms": 5015.84,
+      "started_at": "2026-10-04T21:56:25.941594+00:00",
+      "finished_at": "2026-10-04T21:56:30.957456+00:00",
+      "details": {
+        "poison_pill_dispatched": true
+      },
+      "error_message": null
+    },
+    {
+      "experiment_id": "EXP-05",
+      "name": "Mean Time to Recovery (MTTR) & Drift",
+      "status": "PASSED",
+      "mttr_ms": 2098.64,
+      "started_at": "2026-10-04T21:56:30.957486+00:00",
+      "finished_at": "2026-10-04T21:56:33.060756+00:00",
+      "details": {
+        "initial_audit": {
+          "total_debits_cents": 735549900,
+          "total_credits_cents": 735549900,
+          "drift_cents": 0,
+          "settled_wires_count": 76,
+          "unique_idempotency_keys_count": 76,
+          "is_balanced": true,
+          "double_disbursements_count": 0
+        },
+        "final_audit": {
+          "total_debits_cents": 735549900,
+          "total_credits_cents": 735549900,
+          "drift_cents": 0,
+          "settled_wires_count": 76,
+          "unique_idempotency_keys_count": 76,
+          "is_balanced": true,
+          "double_disbursements_count": 0
+        },
+        "drift_cents": 0
+      },
+      "error_message": null
+    }
+  ]
+}

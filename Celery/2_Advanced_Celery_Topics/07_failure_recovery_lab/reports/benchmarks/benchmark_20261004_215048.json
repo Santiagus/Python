@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-10-04T21:50:48.109552+00:00",
+  "benchmark_suite": "distributed_failure_recovery_and_mttr",
+  "cluster_topology": {
+    "api_gateway": "FastAPI (zero-refresh, asyncpg pool=10)",
+    "worker_fleet": "2 pods x 2 prefork concurrency (acks_late=True)",
+    "message_broker": "RabbitMQ 3.13 (publisher confirms, persistent, DLX)",
+    "database": "PostgreSQL 16 (synchronous_commit=on, partial indexes)",
+    "bank_simulator": "Wholesale Clearinghouse Simulator (Two-Phase Inquiry)"
+  },
+  "metrics": {
+    "total_settled_wires": 62,
+    "unique_idempotency_keys": 62,
+    "double_disbursements": 0,
+    "ledger_drift_cents": 0,
+    "ledger_balanced": true,
+    "total_cleared_volume_usd": "$3,755,499.00",
+    "mttr_sla_target_ms": 15000.0,
+    "worker_crash_recovery_status": "PASSED (zero message loss)"
+  }
+}
