@@ -1,6 +1,8 @@
 """Unit tests for Celery worker application configuration and failure recovery settings."""
 
-from services.worker.celery_app import celery_app
+from unittest.mock import patch
+
+from services.worker.celery_app import celery_app, on_worker_process_init
 from shared.amqp_topology import (
     WIRE_CRITICAL_QUEUE_NAME,
     WIRE_DIRECT_EXCHANGE_NAME,
@@ -44,3 +46,13 @@ def test_celery_queue_topology_binding() -> None:
     queue_names = [q.name for q in conf.task_queues]
     assert "wire.settlement.critical" in queue_names
     assert "wire.settlement.dlq" in queue_names
+
+
+def test_worker_process_init_signal() -> None:
+    """Verify on_worker_process_init signal listener resets process singletons."""
+    with patch("services.worker.tasks.settlement.reset_process_singletons") as mock_settle, \
+         patch("services.worker.tasks.audit.reset_process_singletons") as mock_audit:
+        on_worker_process_init()
+        assert mock_settle.called
+        assert mock_audit.called
+

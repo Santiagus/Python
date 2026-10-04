@@ -68,6 +68,61 @@ _shared_client: AsyncClient = AsyncClient(
     timeout=10.0,
 )
 
+_worker_loop: asyncio.AbstractEventLoop | None = None
+
+
+def get_worker_loop() -> asyncio.AbstractEventLoop:
+    """Retrieve or initialize the persistent process-level asyncio event loop.
+
+    Returns:
+        asyncio.AbstractEventLoop: Event loop bound to the current process.
+    """
+    global _worker_loop
+    if _worker_loop is None or _worker_loop.is_closed():
+        _worker_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_worker_loop)
+    return _worker_loop
+
+
+def run_in_worker_loop(coro: Any) -> Any:
+    """Execute coroutine on the persistent process-level event loop.
+
+    Args:
+        coro: Coroutine or synchronous return value to execute.
+
+    Returns:
+        Any: Result of the coroutine execution.
+    """
+    import inspect
+
+    if inspect.iscoroutine(coro):
+        loop = get_worker_loop()
+        return loop.run_until_complete(coro)
+    return coro
+
+
+def reset_process_singletons() -> None:
+    """Re-initialize event loop and connection pools on worker child process fork."""
+    global _engine, _session_factory, _shared_client, _worker_loop
+    _worker_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_worker_loop)
+    _engine = create_async_engine(
+        DATABASE_URL,
+        pool_size=2,
+        max_overflow=2,
+        pool_pre_ping=True,
+    )
+    _session_factory = async_sessionmaker(
+        _engine,
+        expire_on_commit=False,
+        class_=AsyncSession,
+    )
+    _shared_client = AsyncClient(
+        base_url=BANK_SIMULATOR_URL,
+        limits=_http_limits,
+        timeout=10.0,
+    )
+
 
 def get_shared_client() -> AsyncClient:
     """Retrieve the shared process-level HTTP client."""
@@ -290,7 +345,7 @@ def settle_wire_transfer(self: Task, task_payload: dict[str, Any]) -> dict[str, 
     is_redelivered = bool(delivery_info.get("redelivered", False))
     worker_hostname = getattr(self.request, "hostname", None) or socket.gethostname()
 
-    return asyncio.run(
+    return run_in_worker_loop(
         process_wire_settlement(
             task_payload=task_payload,
             is_redelivered=is_redelivered,

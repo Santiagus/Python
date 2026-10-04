@@ -6,7 +6,7 @@ prefetch constraints, Kombu AMQP 0-9-1 durable queue topologies, and broker conn
 
 import os
 
-from celery import Celery
+from celery import Celery, signals
 
 from shared.amqp_topology import (
     WIRE_CRITICAL_QUEUE_NAME,
@@ -24,6 +24,10 @@ BROKER_URL: str = os.getenv(
 celery_app: Celery = Celery(
     "wire_settlement_worker",
     broker=BROKER_URL,
+    include=[
+        "services.worker.tasks.settlement",
+        "services.worker.tasks.audit",
+    ],
 )
 
 # 3. Configure strict financial failure recovery invariants
@@ -48,3 +52,15 @@ celery_app.conf.update(
     task_default_routing_key=WIRE_CRITICAL_QUEUE_NAME,
     task_default_queue=WIRE_CRITICAL_QUEUE_NAME,
 )
+
+
+@signals.worker_process_init.connect
+def on_worker_process_init(**kwargs: object) -> None:
+    """Re-initialize event loop and connection pools on worker child process fork."""
+    from services.worker.tasks.audit import reset_process_singletons as reset_audit
+    from services.worker.tasks.settlement import (
+        reset_process_singletons as reset_settlement,
+    )
+
+    reset_settlement()
+    reset_audit()

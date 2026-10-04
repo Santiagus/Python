@@ -38,6 +38,56 @@ _audit_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
     class_=AsyncSession,
 )
 
+_worker_loop: asyncio.AbstractEventLoop | None = None
+
+
+def get_worker_loop() -> asyncio.AbstractEventLoop:
+    """Retrieve or initialize the persistent process-level asyncio event loop.
+
+    Returns:
+        asyncio.AbstractEventLoop: Event loop bound to the current process.
+    """
+    global _worker_loop
+    if _worker_loop is None or _worker_loop.is_closed():
+        _worker_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_worker_loop)
+    return _worker_loop
+
+
+def run_in_worker_loop(coro: Any) -> Any:
+    """Execute coroutine on the persistent process-level event loop.
+
+    Args:
+        coro: Coroutine or synchronous return value to execute.
+
+    Returns:
+        Any: Result of the coroutine execution.
+    """
+    import inspect
+
+    if inspect.iscoroutine(coro):
+        loop = get_worker_loop()
+        return loop.run_until_complete(coro)
+    return coro
+
+
+def reset_process_singletons() -> None:
+    """Re-initialize event loop and connection pools on worker child process fork."""
+    global _audit_engine, _audit_session_factory, _worker_loop
+    _worker_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_worker_loop)
+    _audit_engine = create_async_engine(
+        DATABASE_URL,
+        pool_size=2,
+        max_overflow=2,
+        pool_pre_ping=True,
+    )
+    _audit_session_factory = async_sessionmaker(
+        _audit_engine,
+        expire_on_commit=False,
+        class_=AsyncSession,
+    )
+
 
 def get_audit_session_factory() -> async_sessionmaker[AsyncSession]:
     """Retrieve the audit worker database session factory."""
@@ -185,7 +235,7 @@ def record_wire_audit(self: Task, audit_data: dict[str, Any]) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Confirmation dictionary.
     """
-    return asyncio.run(
+    return run_in_worker_loop(
         process_record_wire_audit(
             audit_data=audit_data,
         )
@@ -214,7 +264,7 @@ def quarantine_poison_pill(
         dict[str, Any]: Quarantine result envelope.
     """
     worker_hostname = getattr(self.request, "hostname", None) or socket.gethostname()
-    return asyncio.run(
+    return run_in_worker_loop(
         process_quarantine_poison_pill(
             wire_id=wire_id,
             failure_reason=failure_reason,
