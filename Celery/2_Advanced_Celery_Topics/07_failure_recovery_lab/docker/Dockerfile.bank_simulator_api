@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY services/bank_simulator_api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY shared/ ./shared
 COPY services/bank_simulator_api/ ./services/bank_simulator_api
 
 EXPOSE 8010
