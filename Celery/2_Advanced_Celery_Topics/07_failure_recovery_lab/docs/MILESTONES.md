@@ -56,6 +56,7 @@ flowchart LR
 * **Acceptance Criteria**: FastAPI integration tests passing with 100% coverage; zero observable 404 blackholes during processing.
 
 ### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites (**Next**)
+### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites (**Complete**)
 * **Agent Runbook**: [.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md](../.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md)
 * Implement `scripts/chaos_harness.py` capable of programmatically executing the 5 core experiments.
 * Implement unit and integration test suites:
@@ -66,6 +67,7 @@ flowchart LR
 * **Acceptance Criteria**: All failure injection integration tests execute cleanly in isolated test environments.
 
 ### Milestone 6: Distributed Live E2E Verification, MTTR Benchmarks & Evidence Log
+### Milestone 6: Distributed Live E2E Verification, MTTR Benchmarks & Evidence Log (**Next**)
 * **Agent Runbook**: [.agents/milestones/M6_LIVE_E2E_VERIFICATION_AND_BENCHMARKS.md](../.agents/milestones/M6_LIVE_E2E_VERIFICATION_AND_BENCHMARKS.md)
 * Execute live multi-process end-to-end test suite (`tests/e2e/test_live_e2e.py`) against the running Docker Compose cluster.
 * Run capacity and chaos benchmarks (`tests/benchmarks/test_recovery_benchmarks.py`).
@@ -125,4 +127,16 @@ flowchart LR
 | **Container Health & Readiness Probes** | `app/routes/health.py` (`/health`, `/ready` DB ping) | **Complete & 100% Tested** |
 | **Interactive REST Client Suite** | `requests/requests.rest` (self-contained workflows, variable chaining) | **Complete & Verified** |
 | **Unit Test Coverage & Static Typing** | `tests/unit/test_api_routes.py`, `test_middlewares.py`, `test_dispatcher.py`, `test_requests_rest.py` | **Complete (100% Statement Coverage)** |
+
+### Milestone 5 Deliverables Matrix
+
+| Milestone 5 Deliverable | Implementation Artifact | Verification & Compliance Status |
+| :--- | :--- | :---: |
+| **Programmatic Chaos Injection Harness** | `scripts/chaos_harness.py` (fault injection, state auditing, CLI, reporting) | **Complete & 100% Tested** |
+| **Worker SIGKILL Redelivery & Idempotency** | `tests/integration/test_worker_crash_recovery.py` (two-phase inquiry hit, zero double-payout) | **Complete & 100% Tested** |
+| **Early vs Late Acknowledgement Trade-offs** | `tests/integration/test_acknowledgement_modes.py` (silent loss vs zero-loss comparison) | **Complete & 100% Tested** |
+| **RabbitMQ Broker Restart & Durable Recovery** | `tests/integration/test_broker_restart_recovery.py` (durable queues, persistent messages, reconnection) | **Complete & 100% Tested** |
+| **Poison Pill DLQ & x-death Quarantine** | `tests/integration/test_dead_letter_quarantine.py` (wire.dlx, x-death headers, status dead_lettered) | **Complete & 100% Tested** |
+| **Integration Test Fixtures & Topology** | `tests/integration/conftest.py` (stateful bank simulator, memory AMQP, async DB sessions) | **Complete & Verified** |
+| **Unit Test Coverage & Static Typing** | `tests/unit/test_chaos_harness.py` (26 test cases, 100% statement coverage, mypy clean) | **Complete (100% Statement Coverage)** |
 
