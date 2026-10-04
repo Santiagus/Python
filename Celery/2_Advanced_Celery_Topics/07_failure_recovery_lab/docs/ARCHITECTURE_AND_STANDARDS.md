@@ -137,7 +137,7 @@ stateDiagram-v2
 
 ### 2.2 Relational Database Schema Model (PostgreSQL 16)
 
-The relational schema is defined declaratively in [init.sql](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/init.sql). The relational entity model and balancing tables are visualized below:
+The relational schema is defined declaratively in [init.sql](../init.sql). The relational entity model and balancing tables are visualized below:
 
 ```mermaid
 erDiagram
@@ -186,7 +186,7 @@ erDiagram
 ```
 
 #### Key Relational Invariants & Storage Rules:
-* **Source DDL**: [init.sql](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/init.sql).
+* **Source DDL**: [init.sql](../init.sql).
 * **Strict Monetary Precision**: `amount_cents` is stored as `BIGINT CHECK (amount_cents > 0)` representing minor currency units. Floats and rounding are strictly prohibited.
 * **Partial B-Tree Index (`idx_wire_in_flight_status`)**: Covers `WHERE status IN ('processing', 'submitted_to_bank')`. This eliminates write amplification on settled transactions while guaranteeing sub-millisecond retrieval of in-flight records.
 * **Index Deduplication**: No redundant `CREATE INDEX` on `(client_id, idempotency_key)` since PostgreSQL automatically provisions a B-Tree index for the `UNIQUE` constraint.
@@ -195,7 +195,7 @@ erDiagram
 
 ### 2.3 Domain Entity & AMQP Contracts (Pydantic v2)
 
-Domain schemas decouple client presentation from internal broker communication. Detailed class definitions reside in [app/schemas.py](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/app/schemas.py) and [shared/amqp_topology.py](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/shared/amqp_topology.py):
+Domain schemas decouple client presentation from internal broker communication. Detailed class definitions reside in [app/schemas.py](../app/schemas.py) and [shared/amqp_topology.py](../shared/amqp_topology.py):
 
 ```mermaid
 classDiagram
@@ -251,7 +251,7 @@ classDiagram
 
 To maintain single-responsibility documentation and avoid bloated architecture specifications, all detailed dark-theme sequence diagrams covering distributed execution and failure recovery flows are housed in the dedicated document:
 
-👉 **[docs/SEQUENCE_DIAGRAMS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/SEQUENCE_DIAGRAMS.md)**
+👉 **[docs/SEQUENCE_DIAGRAMS.md](SEQUENCE_DIAGRAMS.md)**
 
 ### Summary of Documented Execution Paths:
 1. **Path 1: Normal Wire Submission & Settlement (Happy Path)**: Zero-refresh ingestion, publisher confirms (`confirm_delivery=True`), late acknowledgements (`acks_late=True`), and two-phase provider settlement.
@@ -307,7 +307,7 @@ The automated chaos test harness manages container interactions and failure inje
 
 The implementation roadmap and verification milestones are tracked in the dedicated roadmap document:
 
-👉 **[docs/MILESTONES.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/MILESTONES.md)**
+👉 **[docs/MILESTONES.md](MILESTONES.md)**
 
 ```mermaid
 flowchart LR
@@ -332,11 +332,11 @@ flowchart LR
 
 | System Concern | Canonical File / Artifact | Purpose |
 | :--- | :--- | :--- |
-| **System Overview & Quickstart** | [README.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/README.md) | Executive summary, business context, quickstart guide |
-| **Architecture & Invariants** | [docs/ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | System topology, invariants, pooling & storage design |
-| **Distributed Sequences** | [docs/SEQUENCE_DIAGRAMS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/SEQUENCE_DIAGRAMS.md) | All 5 execution, redelivery, and failure sequence diagrams |
-| **Project Milestones** | [docs/MILESTONES.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/MILESTONES.md) | Roadmap breakdown, deliverables matrix, and status |
-| **Relational DDL** | [init.sql](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/init.sql) | PostgreSQL 16 schema, constraints, partial indexes |
-| **AMQP 0-9-1 Topology** | [shared/amqp_topology.py](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/shared/amqp_topology.py) | Kombu exchanges, queues, DLX routing |
-| **Multi-Container Cluster** | [docker-compose.yml](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docker-compose.yml) | 6-container orchestrated runtime environment |
+| **System Overview & Quickstart** | [README.md](../README.md) | Executive summary, business context, quickstart guide |
+| **Architecture & Invariants** | [docs/ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) | System topology, invariants, pooling & storage design |
+| **Distributed Sequences** | [docs/SEQUENCE_DIAGRAMS.md](SEQUENCE_DIAGRAMS.md) | All 5 execution, redelivery, and failure sequence diagrams |
+| **Project Milestones** | [docs/MILESTONES.md](MILESTONES.md) | Roadmap breakdown, deliverables matrix, and status |
+| **Relational DDL** | [init.sql](../init.sql) | PostgreSQL 16 schema, constraints, partial indexes |
+| **AMQP 0-9-1 Topology** | [shared/amqp_topology.py](../shared/amqp_topology.py) | Kombu exchanges, queues, DLX routing |
+| **Multi-Container Cluster** | [docker-compose.yml](../docker-compose.yml) | 6-container orchestrated runtime environment |
 

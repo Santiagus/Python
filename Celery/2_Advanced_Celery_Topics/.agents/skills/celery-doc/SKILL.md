@@ -124,13 +124,13 @@ To prevent unmaintainable monolithic documents and eliminate drift, documentatio
 Never copy-paste raw implementation code into markdown documentation files:
 1. **Relational Database Schema**:
    - **Banned**: Embedding 50+ lines of raw `CREATE TABLE` DDL from `init.sql`.
-   - **Mandated**: Link directly to `[init.sql](file:///path/to/init.sql)`. Illustrate schema relationships, primary keys, and foreign keys using a Mermaid `erDiagram`.
+   - **Mandated**: Link directly using relative paths (e.g., `[init.sql](../init.sql)`). Illustrate schema relationships, primary keys, and foreign keys using a Mermaid `erDiagram`.
 2. **Pydantic Schemas & DTOs**:
    - **Banned**: Pasting 80+ lines of Pydantic model class code.
-   - **Mandated**: Link directly to source files (e.g. `[schemas.py](file:///path/to/schemas.py)`). Illustrate fields, types, and constraints using a Mermaid `classDiagram`.
+   - **Mandated**: Link directly to source files using relative paths (e.g. `[schemas.py](../app/schemas.py)`). Illustrate fields, types, and constraints using a Mermaid `classDiagram`.
 3. **AMQP 0-9-1 Topology**:
    - **Banned**: Pasting Kombu Python exchange/queue definitions.
-   - **Mandated**: Link directly to `[amqp_topology.py](file:///path/to/amqp_topology.py)`. Illustrate bindings, routing keys, and DLX routing using a Mermaid `flowchart TD`.
+   - **Mandated**: Link directly using relative paths (e.g. `[amqp_topology.py](../shared/amqp_topology.py)`). Illustrate bindings, routing keys, and DLX routing using a Mermaid `flowchart TD`.
 
 ---
 

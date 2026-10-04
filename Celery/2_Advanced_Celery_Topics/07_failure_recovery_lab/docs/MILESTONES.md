@@ -24,14 +24,14 @@ flowchart LR
 ## 2. Granular Milestone Breakdown
 
 ### Milestone 1: Proposal, Architecture, Sequence Diagrams & Milestone Planning (**Complete**)
-* Refine project proposal in [README.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/README.md).
-* Author comprehensive [docs/ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) defining system topology, invariants, and failure recovery specifications.
-* Author dedicated [docs/SEQUENCE_DIAGRAMS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/SEQUENCE_DIAGRAMS.md) and [docs/MILESTONES.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/MILESTONES.md).
+* Refine project proposal in [README.md](../README.md).
+* Author comprehensive [docs/ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) defining system topology, invariants, and failure recovery specifications.
+* Author dedicated [docs/SEQUENCE_DIAGRAMS.md](SEQUENCE_DIAGRAMS.md) and [docs/MILESTONES.md](MILESTONES.md).
 * **Acceptance Criteria**: Full architectural definition with zero application code or container implementations in Milestone 1.
 
 ### Milestone 2: Infrastructure, Multi-Container Orchestration & Database Schema (**Complete**)
 * Author `docker-compose.yml` declaring PostgreSQL 16, RabbitMQ 3.13 (Management), API Gateway, Worker Fleet (2 pods), and Bank Simulator API.
-* Implement database DDL [init.sql](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/init.sql) with tables, unique constraints, and partial indexes.
+* Implement database DDL [init.sql](../init.sql) with tables, unique constraints, and partial indexes.
 * Declare Kombu AMQP 0-9-1 topology: `wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`.
 * **Acceptance Criteria**: `docker compose up -d` boots all services with clean health checks and pre-configured queues.
 
@@ -74,14 +74,14 @@ flowchart LR
 
 | Milestone 1 Deliverable | Document Reference | Compliance Status |
 | :--- | :--- | :---: |
-| **System Architecture & Topology** | [ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
-| **Chaos Testbed Topology** | [ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
-| **State Machine & In-Flight Contract** | [ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
-| **Relational Data Model (ER Diagram)** | [ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
-| **Distributed Sequence Diagrams (5 Paths)** | [docs/SEQUENCE_DIAGRAMS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/SEQUENCE_DIAGRAMS.md) | **Complete** |
-| **Failure Recovery Experiment Specifications** | [ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
-| **Architectural Standards & Invariants** | [ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
-| **Granular Milestone Breakdown (M1–M6)** | [docs/MILESTONES.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/MILESTONES.md) | **Complete** |
+| **System Architecture & Topology** | [ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
+| **Chaos Testbed Topology** | [ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
+| **State Machine & In-Flight Contract** | [ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
+| **Relational Data Model (ER Diagram)** | [ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
+| **Distributed Sequence Diagrams (5 Paths)** | [docs/SEQUENCE_DIAGRAMS.md](SEQUENCE_DIAGRAMS.md) | **Complete** |
+| **Failure Recovery Experiment Specifications** | [ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
+| **Architectural Standards & Invariants** | [ARCHITECTURE_AND_STANDARDS.md](ARCHITECTURE_AND_STANDARDS.md) | **Complete** |
+| **Granular Milestone Breakdown (M1–M6)** | [docs/MILESTONES.md](MILESTONES.md) | **Complete** |
 
 ### Milestone 2 Deliverables Matrix
 
