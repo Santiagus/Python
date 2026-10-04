@@ -1,0 +1,137 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: FastAPI Gateway",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8000",
+                "--reload"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DATABASE_URL": "postgresql+asyncpg://wire_user:wire_password@localhost:5432/wire_settlement_db",
+                "CELERY_BROKER_URL": "amqp://guest:guest@localhost:5672//",
+                "BANK_SIMULATOR_URL": "http://127.0.0.1:8010",
+                "PORT": "8000",
+                "ENVIRONMENT": "development",
+                "LOG_LEVEL": "DEBUG",
+                "LOG_FORMAT": "pretty"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "Python Debugger: Bank Simulator API",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "services.bank_simulator_api.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8010",
+                "--reload"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PORT": "8010",
+                "ENVIRONMENT": "development",
+                "LOG_LEVEL": "DEBUG"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "Python Debugger: Celery Worker",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "celery",
+            "args": [
+                "-A",
+                "services.worker.celery_app:celery_app",
+                "worker",
+                "--loglevel=DEBUG",
+                "-Q",
+                "wire.settlement.critical",
+                "-P",
+                "solo"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DATABASE_URL": "postgresql+asyncpg://wire_user:wire_password@localhost:5432/wire_settlement_db",
+                "CELERY_BROKER_URL": "amqp://guest:guest@localhost:5672//",
+                "BANK_SIMULATOR_URL": "http://127.0.0.1:8010",
+                "WORKER_HOSTNAME": "worker-debug",
+                "ENVIRONMENT": "development",
+                "LOG_LEVEL": "DEBUG"
+            },
+            "justMyCode": true,
+            "subProcess": true
+        },
+        {
+            "name": "Python Debugger: Chaos Harness (All Experiments)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/chaos_harness.py",
+            "args": [
+                "--experiment",
+                "ALL"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DATABASE_URL": "postgresql+asyncpg://wire_user:wire_password@localhost:5432/wire_settlement_db",
+                "CELERY_BROKER_URL": "amqp://guest:guest@localhost:5672//",
+                "BANK_SIMULATOR_URL": "http://127.0.0.1:8010",
+                "API_URL": "http://127.0.0.1:8000"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "Python Debugger: Current Test File",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${file}",
+                "-v",
+                "-s"
+            ],
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Composed: All Services (FastAPI + Worker + Bank Simulator)",
+            "configurations": [
+                "Python Debugger: FastAPI Gateway",
+                "Python Debugger: Bank Simulator API",
+                "Python Debugger: Celery Worker"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "Composed: FastAPI + Bank Simulator",
+            "configurations": [
+                "Python Debugger: FastAPI Gateway",
+                "Python Debugger: Bank Simulator API"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "Composed: Worker + Bank Simulator",
+            "configurations": [
+                "Python Debugger: Bank Simulator API",
+                "Python Debugger: Celery Worker"
+            ],
+            "stopAll": true
+        }
+    ]
+}
+
