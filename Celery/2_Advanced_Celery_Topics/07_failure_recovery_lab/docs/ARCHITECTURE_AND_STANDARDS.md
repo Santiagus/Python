@@ -135,332 +135,130 @@ stateDiagram-v2
 
 ---
 
-### 2.2 Relational Database DDL (`init.sql`)
+### 2.2 Relational Database Schema Model (PostgreSQL 16)
 
-```sql
--- Database Schema: 07_failure_recovery_lab (PostgreSQL 16)
+The relational schema is defined declaratively in [init.sql](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/init.sql). The relational entity model and balancing tables are visualized below:
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```mermaid
+erDiagram
+    WIRE_TRANSFERS ||--o{ LEDGER_JOURNAL : "generates dual-entry"
+    WIRE_TRANSFERS ||--o{ WIRE_AUDIT_LOG : "records transitions"
 
--- 1. Master Wire Transfers Ledger Table
-CREATE TABLE IF NOT EXISTS wire_transfers (
-    wire_id UUID PRIMARY KEY,
-    client_id VARCHAR(64) NOT NULL,
-    idempotency_key VARCHAR(128) NOT NULL,
-    amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
-    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
-    sender_account_mask VARCHAR(32) NOT NULL,
-    beneficiary_account_mask VARCHAR(32) NOT NULL,
-    routing_number VARCHAR(9) NOT NULL,
-    swift_bic VARCHAR(11) NOT NULL,
-    status VARCHAR(32) NOT NULL DEFAULT 'processing',
-    delivery_attempts INT NOT NULL DEFAULT 1,
-    redelivered_flag BOOLEAN NOT NULL DEFAULT FALSE,
-    bank_reference_id VARCHAR(128),
-    failure_reason TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    settled_at TIMESTAMPTZ,
-    CONSTRAINT uq_wire_idempotency UNIQUE (client_id, idempotency_key)
-);
+    WIRE_TRANSFERS {
+        uuid wire_id PK
+        string client_id
+        string idempotency_key UK
+        bigint amount_cents
+        string currency
+        string sender_account_mask
+        string beneficiary_account_mask
+        string routing_number
+        string swift_bic
+        string status
+        int delivery_attempts
+        bool redelivered_flag
+        string bank_reference_id
+        string failure_reason
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz settled_at
+    }
 
--- Partial B-Tree Index for In-Flight Transactions (Anti-Blackhole & High-Throughput Write)
--- Excludes terminal states ('settled', 'failed', 'dead_lettered') to minimize index write amplification
-CREATE INDEX IF NOT EXISTS idx_wire_in_flight_status 
-ON wire_transfers (status, created_at) 
-WHERE status IN ('processing', 'submitted_to_bank');
+    LEDGER_JOURNAL {
+        uuid entry_id PK
+        uuid wire_id FK
+        string account_type
+        string direction
+        bigint amount_cents
+        timestamptz created_at
+    }
 
--- 2. Immutable Ledger Journal Table (Dual-Entry Balancing)
-CREATE TABLE IF NOT EXISTS ledger_journal (
-    entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    wire_id UUID NOT NULL REFERENCES wire_transfers(wire_id) ON DELETE RESTRICT,
-    account_type VARCHAR(32) NOT NULL, -- 'customer_cash' or 'clearinghouse_settlement'
-    direction VARCHAR(8) NOT NULL CHECK (direction IN ('DEBIT', 'CREDIT')),
-    amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_ledger_wire_id ON ledger_journal(wire_id);
-
--- 3. Comprehensive Wire Audit Log (Failure Recovery Tracking)
-CREATE TABLE IF NOT EXISTS wire_audit_log (
-    audit_id BIGSERIAL PRIMARY KEY,
-    wire_id UUID NOT NULL REFERENCES wire_transfers(wire_id) ON DELETE CASCADE,
-    previous_status VARCHAR(32),
-    new_status VARCHAR(32) NOT NULL,
-    worker_hostname VARCHAR(128),
-    redelivered BOOLEAN DEFAULT FALSE,
-    event_description TEXT NOT NULL,
-    occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_wire_id ON wire_audit_log(wire_id);
+    WIRE_AUDIT_LOG {
+        bigint audit_id PK
+        uuid wire_id FK
+        string previous_status
+        string new_status
+        string worker_hostname
+        bool redelivered
+        string event_description
+        timestamptz occurred_at
+    }
 ```
+
+#### Key Relational Invariants & Storage Rules:
+* **Source DDL**: [init.sql](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/init.sql).
+* **Strict Monetary Precision**: `amount_cents` is stored as `BIGINT CHECK (amount_cents > 0)` representing minor currency units. Floats and rounding are strictly prohibited.
+* **Partial B-Tree Index (`idx_wire_in_flight_status`)**: Covers `WHERE status IN ('processing', 'submitted_to_bank')`. This eliminates write amplification on settled transactions while guaranteeing sub-millisecond retrieval of in-flight records.
+* **Index Deduplication**: No redundant `CREATE INDEX` on `(client_id, idempotency_key)` since PostgreSQL automatically provisions a B-Tree index for the `UNIQUE` constraint.
 
 ---
 
-### 2.3 Pydantic v2 Application & AMQP Schemas
+### 2.3 Domain Entity & AMQP Contracts (Pydantic v2)
 
-```python
-"""Pydantic domain models for wire transfer submission and worker payload contracts."""
+Domain schemas decouple client presentation from internal broker communication. Detailed class definitions reside in [app/schemas.py](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/app/schemas.py) and [shared/amqp_topology.py](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/shared/amqp_topology.py):
 
-from datetime import datetime
-from decimal import Decimal
-from typing import Optional
-from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field
+```mermaid
+classDiagram
+    class WireCreateRequest {
+        +string client_id
+        +Decimal amount
+        +string currency
+        +string beneficiary_account
+        +string routing_number
+        +string swift_bic
+    }
 
+    class WireResponse {
+        +UUID wire_id
+        +string client_id
+        +int amount_cents
+        +string currency
+        +string beneficiary_account_mask
+        +string routing_number
+        +string swift_bic
+        +string status
+        +int delivery_attempts
+        +bool redelivered_flag
+        +string bank_reference_id
+        +datetime created_at
+        +datetime updated_at
+        +datetime settled_at
+    }
 
-class WireCreateRequest(BaseModel):
-    """Client request model for high-value interbank wire transfer creation."""
+    class WireTaskPayload {
+        +string wire_id
+        +string client_id
+        +string idempotency_key
+        +int amount_cents
+        +string currency
+        +string beneficiary_account_mask
+        +string routing_number
+        +string swift_bic
+        +string disbursement_token
+    }
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    client_id: str = Field(
-        ..., min_length=3, max_length=64, description="Originating client ID"
-    )
-    amount: Decimal = Field(
-        ...,
-        gt=Decimal("0.00"),
-        decimal_places=2,
-        description="Wire amount in major currency units",
-        examples=[Decimal("250000.00")],
-    )
-    currency: str = Field(default="USD", min_length=3, max_length=3, examples=["USD"])
-    beneficiary_account: str = Field(
-        ..., min_length=8, max_length=34, description="Raw bank account / IBAN"
-    )
-    routing_number: str = Field(
-        ..., pattern=r"^\d{9}$", description="US Fedwire ABA routing number"
-    )
-    swift_bic: str = Field(
-        ..., min_length=8, max_length=11, description="SWIFT BIC code"
-    )
-
-
-class WireResponse(BaseModel):
-    """Public representation of an in-flight or settled wire transfer."""
-
-    model_config = ConfigDict(from_attributes=True, frozen=True)
-
-    wire_id: UUID
-    client_id: str
-    amount_cents: int
-    currency: str
-    beneficiary_account_mask: str
-    routing_number: str
-    swift_bic: str
-    status: str
-    delivery_attempts: int
-    redelivered_flag: bool
-    bank_reference_id: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
-    settled_at: Optional[datetime] = None
-
-
-class WireTaskPayload(BaseModel):
-    """AMQP message contract transmitted across RabbitMQ broker.
-
-    Adheres strictly to the Zero-Knowledge Broker Invariant:
-    Contains zero raw unmasked account numbers.
-    """
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    wire_id: str
-    client_id: str
-    idempotency_key: str
-    amount_cents: int
-    currency: str
-    beneficiary_account_mask: str
-    routing_number: str
-    swift_bic: str
-    disbursement_token: str  # Tokenized reference to encrypted vault payload
+    WireCreateRequest ..> WireResponse : "yields on ingestion"
+    WireCreateRequest ..> WireTaskPayload : "tokenized into broker payload"
 ```
+
+#### Key Contract Invariants:
+* **Zero-Knowledge Broker**: Raw unmasked account numbers are never passed to Celery workers or RabbitMQ. Only the `disbursement_token` and `beneficiary_account_mask` are transmitted.
+* **Pydantic Validation**: Strict regex on Fedwire ABA routing number (`^\d{9}$`) and SWIFT BIC length (8–11 chars). Strict Decimal inputs are converted to integer cents at the API perimeter.
 
 ---
 
 ## 3. Distributed Sequence Diagrams (All Execution Paths)
 
-### Path 1: Normal Wire Submission & Settlement (Happy Path)
+To maintain single-responsibility documentation and avoid bloated architecture specifications, all detailed dark-theme sequence diagrams covering distributed execution and failure recovery flows are housed in the dedicated document:
 
-Demonstrates the zero-refresh, publisher-confirmed ingestion and late-ack settlement workflow.
+👉 **[docs/SEQUENCE_DIAGRAMS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/SEQUENCE_DIAGRAMS.md)**
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as "Treasury Client"
-    participant API as "FastAPI Gateway (:8000)"
-    participant DB as "PostgreSQL 16 (ACID)"
-    participant Broker as "RabbitMQ 3.13 (wire.direct)"
-    participant Worker as "Celery Worker (Pod 1)"
-    participant Bank as "Bank Simulator API (:8010)"
-
-    Note over Client,Bank: Path 1: Happy Path Wire Execution
-    Client->>API: POST /api/v1/wires (Payload + Idempotency-Key)
-    API->>API: Generate wire_id (UUID4) & calculate amount_cents
-    API->>DB: INSERT into wire_transfers (status='processing')
-    DB-->>API: Commit successful
-    API->>Broker: Basic.Publish (wire.settlement.critical, delivery_mode=2)
-    Broker-->>API: Basic.Ack (Publisher Confirm)
-    API-->>Client: HTTP 202 Accepted {wire_id, status: 'processing'}
-
-    Broker->>Worker: Basic.Deliver (wire_task, redelivered=False)
-    Worker->>DB: SELECT FOR UPDATE FROM wire_transfers WHERE wire_id = ?
-    Worker->>Bank: GET /api/v1/fedwire/disburse/{idempotency_key}
-    Bank-->>Worker: 404 Not Found (Not yet executed)
-    Worker->>Bank: POST /api/v1/fedwire/disburse (Wire Payload)
-    Bank-->>Worker: 200 OK {bank_reference_id: "FED-WIRE-99214"}
-    Worker->>DB: UPDATE wire_transfers SET status='settled', bank_ref=...
-    Worker->>DB: INSERT into ledger_journal (DEBIT, CREDIT entries)
-    DB-->>Worker: Commit successful
-    Worker->>Broker: Basic.Ack (DeliveryTag)
-```
-
----
-
-### Path 2: Worker Hard Crash (`SIGKILL`) During Execution & Redelivery Recovery (`acks_late=True`)
-
-Illustrates the core problem: worker killed *after* external disbursement but *before* database commit and ACK. Proves two-phase idempotency eliminates double-disbursement.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Chaos as "Chaos Harness (scripts/chaos_harness.py)"
-    participant Broker as "RabbitMQ (wire.direct)"
-    participant W1 as "Worker Pod 1 (Crash Target)"
-    participant W2 as "Worker Pod 2 (Surviving Pod)"
-    participant DB as "PostgreSQL 16"
-    participant Bank as "Bank Simulator API (:8010)"
-
-    Note over Broker,Bank: Stage 1: Worker Execution & Abrupt Hard Crash
-    Broker->>W1: Basic.Deliver (wire_task, redelivered=False)
-    W1->>DB: Acquire row lock (SELECT FOR UPDATE)
-    W1->>Bank: POST /api/v1/fedwire/disburse (Wire Payload)
-    Bank-->>W1: 200 OK {bank_reference_id: "FED-WIRE-77312"}
-    
-    Note over Chaos,W1: CHAOS INJECTION: kill -9 W1 (SIGKILL)
-    Chaos->>W1: SIGKILL (Hard process crash)
-    Note over W1: Process terminates abruptly. Socket closes.
-    Note over DB: PostgreSQL detects severed TCP connection -> Aborts TX & Releases Lock
-    
-    Broker->>Broker: AMQP channel closed without Basic.Ack
-    Broker->>Broker: Re-queue message at head of queue (redelivered=True)
-
-    Note over Broker,Bank: Stage 2: Surviving Worker Consumes Redelivered Task
-    Broker->>W2: Basic.Deliver (wire_task, redelivered=True)
-    W2->>DB: SELECT FOR UPDATE FROM wire_transfers WHERE wire_id = ?
-    W2->>Bank: GET /api/v1/fedwire/disburse/{idempotency_key}
-    Bank-->>W2: 200 OK {bank_reference_id: "FED-WIRE-77312"} (ALREADY EXECUTED!)
-    Note over W2: Phase 1 Check: External Wire Already Disbursed! Bypassing Phase 2!
-    W2->>DB: UPDATE wire_transfers SET status='settled', redelivered_flag=TRUE
-    W2->>DB: INSERT into ledger_journal (DEBIT, CREDIT entries)
-    DB-->>W2: Commit successful
-    W2->>Broker: Basic.Ack (DeliveryTag)
-    Note over W2,Bank: Result: Zero Duplicate Payouts! Exact Ledger Parity!
-```
-
----
-
-### Path 3: The Early Ack Failure Mode (`acks_late=False`) - The Silent Data Loss Trap
-
-Proves why default Celery early acknowledgements must never be used in financial applications.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Chaos as "Chaos Injector"
-    participant Broker as "RabbitMQ Broker"
-    participant Worker as "Celery Worker (acks_late=False)"
-    participant DB as "PostgreSQL 16"
-    participant Bank as "Bank Simulator API"
-
-    Note over Broker,Bank: Path 3: The Early Ack Silent Loss Failure Mode
-    Broker->>Worker: Basic.Deliver (wire_task)
-    Worker->>Broker: Basic.Ack (IMMEDIATE EARLY ACKNOWLEDGEMENT)
-    Note over Broker: Broker removes message from queue. Message is GONE.
-    
-    Worker->>DB: Acquire row lock & begin work
-    
-    Note over Chaos,Worker: CHAOS INJECTION: kill -9 Worker
-    Chaos->>Worker: SIGKILL
-    Note over Worker: Worker dies. Memory lost.
-    Note over DB: Database transaction rolls back.
-    
-    Note over Broker,DB: POST-MORTEM: Broker has NO record of message.<br/>Database status is stuck indefinitely in 'processing'.<br/>No surviving worker will ever execute the wire.<br/>RESULT: SILENT CAPITAL & TRANSACTION LOSS!
-```
-
----
-
-### Path 4: Broker Hard Crash & Reconnect / Recovery
-
-Proves that durable exchanges, persistent messages (`delivery_mode=2`), and publisher confirms survive complete broker failure without data loss.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as "Chaos Load Generator"
-    participant API as "FastAPI Gateway"
-    participant Broker as "RabbitMQ Container"
-    participant Disk as "RabbitMQ NVMe WAL Storage"
-    participant Worker as "Celery Worker Fleet"
-
-    Note over Client,Worker: Path 4: Broker Hard Crash & Recovery
-    Client->>API: Rapid Ingestion (100 req/s)
-    API->>Broker: Basic.Publish (delivery_mode=2)
-    Broker->>Disk: fsync to write-ahead log
-    Broker-->>API: Basic.Ack (Publisher Confirm)
-
-    Note over Broker: CHAOS: docker kill rabbitmq
-    Broker->>Broker: Abrupt Container Termination
-    
-    API->>Broker: Basic.Publish (Next batch)
-    API--xBroker: ConnectionRefusedError
-    API-->>Client: HTTP 503 Service Unavailable (with Retry-After: 5s)
-    
-    Note over Worker: Worker heartbeat fails (AMQPHeartbeatTimeout).<br/>Workers enter exponential reconnection backoff.
-
-    Note over Broker: RECOVERY: docker start rabbitmq
-    Broker->>Disk: Replay persistent journal from disk
-    Broker->>Broker: Re-instantiate durable queues with 100% messages intact
-    
-    Worker->>Broker: Reconnect & re-open AMQP channels
-    Broker->>Worker: Deliver queued persistent messages
-    Worker->>Worker: Process and settle all wire orders
-    Note over Client,Worker: Result: Zero Messages Lost. Full Ingestion Recovery.
-```
-
----
-
-### Path 5: Poison Pill Malformed Payload & DLX/DLQ Dead-Letter Handling
-
-Demonstrates the quarantine of corrupt or unrecoverable wire payloads without blocking critical queues or triggering infinite crash loops.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Malicious as "Corrupt Payload Injector"
-    participant API as "FastAPI Gateway"
-    participant Broker as "RabbitMQ (wire.settlement.critical)"
-    participant DLX as "Dead Letter Exchange (wire.dlx)"
-    participant DLQ as "Quarantine Queue (wire.settlement.dlq)"
-    participant Worker as "Celery Worker"
-    participant DB as "PostgreSQL 16"
-
-    Note over Malicious,DB: Path 5: Poison Pill Quarantine
-    Malicious->>API: POST /api/v1/wires (Malformed payload bypassing validation)
-    API->>Broker: Publish to wire.settlement.critical
-    Broker->>Worker: Basic.Deliver (corrupt_task)
-    Worker->>Worker: Execute task -> Fatal Domain Exception (Invalid SWIFT BIC format)
-    Worker->>Worker: Detect unrecoverable poison pill (non-retryable)
-    Worker->>DB: UPDATE wire_transfers SET status='dead_lettered', failure_reason=...
-    Worker->>Broker: Basic.Reject (requeue=False)
-    Broker->>DLX: Route rejected message to wire.dlx
-    DLX->>DLQ: Bind to wire.settlement.dlq with x-death headers
-    Note over DLQ: Message quarantined with headers:<br/>x-death: [{reason: 'rejected', queue: 'wire.settlement.critical'}]
-    Note over Worker,DLQ: Critical Queue Remains Unblocked! Workers Continue Normal Processing!
-```
+### Summary of Documented Execution Paths:
+1. **Path 1: Normal Wire Submission & Settlement (Happy Path)**: Zero-refresh ingestion, publisher confirms (`confirm_delivery=True`), late acknowledgements (`acks_late=True`), and two-phase provider settlement.
+2. **Path 2: Worker Hard Crash (`SIGKILL`) & Redelivery Recovery (`acks_late=True`)**: Mid-execution process termination after disbursement; automatic queue redelivery to surviving worker; Phase 1 inquiry detects existing transaction to eliminate double payouts.
+3. **Path 3: The Early Ack Failure Mode (`acks_late=False`) - The Silent Data Loss Trap**: Proves why default Celery early acknowledgements cause irrevocable message loss upon worker crashes.
+4. **Path 4: Broker Hard Crash & Reconnect / Recovery**: Demonstrates NVMe WAL replay, persistent queue survival (`delivery_mode=2`), and automatic worker channel reconnection.
+5. **Path 5: Poison Pill Malformed Payload & DLX/DLQ Dead-Letter Handling**: Non-retryable formatting errors rejected without requeue (`requeue=False`), routed to `wire.dlx` $\to$ `wire.settlement.dlq` with diagnostic `x-death` metadata.
 
 ---
 
@@ -505,7 +303,11 @@ The automated chaos test harness manages container interactions and failure inje
 
 ---
 
-## 7. Project Milestones Breakdown
+## 7. Project Milestones & Verification Roadmap
+
+The implementation roadmap and verification milestones are tracked in the dedicated roadmap document:
+
+👉 **[docs/MILESTONES.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/MILESTONES.md)**
 
 ```mermaid
 flowchart LR
@@ -516,75 +318,25 @@ flowchart LR
     M5 --> M6["Milestone 6<br/>Live E2E Verification & MTTR"]
 ```
 
-### Milestone 1: Proposal, Architecture, Sequence Diagrams & Milestone Planning (**Complete**)
-* Refine project proposal in `README.md`.
-* Author comprehensive `docs/ARCHITECTURE_AND_STANDARDS.md` defining system topology, data models, state machines, sequence diagrams, and failure recovery specifications.
-* **Acceptance Criteria**: Full document alignment with zero code or container implementations in Milestone 1.
-
-### Milestone 2: Infrastructure, Multi-Container Orchestration & Database Schema (**Complete**)
-* Author `docker-compose.yml` declaring PostgreSQL 16, RabbitMQ 3.13 (Management), API Gateway, Worker Fleet (2 pods), and Bank Simulator API.
-* Implement database DDL `init.sql` with tables, unique constraints, and partial indexes.
-* Declare Kombu AMQP 0-9-1 topology: `wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`.
-* **Acceptance Criteria**: `docker compose up -d` boots all services with clean health checks and pre-configured queues.
-
-### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer (**Next**)
-* Implement Pydantic v2 schemas and domain models.
-* Implement standalone `services/bank_simulator_api/` simulating external Fedwire/SWIFT clearing with idempotent transaction tracking.
-* Implement Celery worker tasks in `services/worker/tasks/` enforcing:
-  - `acks_late=True` and `reject_on_worker_lost=True`.
-  - Row-level locking (`SELECT ... FOR UPDATE`).
-  - Two-Phase Provider Inquiry (Phase 1: GET by idempotency key $\to$ Phase 2: POST if not found).
-* **Acceptance Criteria**: 100% statement test coverage across worker tasks and simulator logic.
-
-### Milestone 4: FastAPI Ingestion Gateway, Dispatcher & REST Client Suite
-* Implement FastAPI gateway in `app/main.py` with `POST /api/v1/wires` and `GET /api/v1/wires/{id}`.
-* Implement correlation ID middleware (`X-Request-ID` propagation) and zero-refresh response generation.
-* Implement AMQP dispatcher (`app/dispatcher.py`) with Kombu publisher confirms.
-* Author self-contained REST Client scenario suite in `requests/requests.rest`.
-* **Acceptance Criteria**: FastAPI integration tests passing with 100% coverage; zero observable 404 blackholes during processing.
-
-### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites
-* Implement `scripts/chaos_harness.py` capable of programmatically executing the 5 core experiments.
-* Implement unit and integration test suites:
-  - `tests/integration/test_worker_crash_recovery.py` (Worker SIGKILL).
-  - `tests/integration/test_acknowledgement_modes.py` (Early vs Late Ack comparison).
-  - `tests/integration/test_broker_restart_recovery.py` (RabbitMQ crash & durable recovery).
-  - `tests/integration/test_dead_letter_quarantine.py` (Poison pill routing & `x-death` verification).
-* **Acceptance Criteria**: All failure injection integration tests execute cleanly in isolated test environments.
-
-### Milestone 6: Distributed Live E2E Verification, MTTR Benchmarks & Evidence Log
-* Execute live multi-process end-to-end test suite (`tests/e2e/test_live_e2e.py`) against the running Docker Compose cluster.
-* Run capacity and chaos benchmarks (`tests/benchmarks/test_recovery_benchmarks.py`).
-* Generate empirical evidence artifacts: `reports/experiments/latest_experiment_log.json` and `docs/EXPERIMENT_LOG.md`.
-* **Acceptance Criteria**: Verification of zero lost wires, zero double-disbursements, and mathematical ledger balance ($0\text{ cents drift}$).
+### Milestone Progress Overview:
+* **Milestone 1 (Complete)**: Architecture specification, data models, state machines, and sequence diagrams.
+* **Milestone 2 (Complete)**: Multi-container orchestration (`docker-compose.yml`), PostgreSQL 16 schema (`init.sql`), Kombu AMQP 0-9-1 topology, RabbitMQ pre-loaded definitions, worker base configuration (`acks_late=True`), and 100% unit test coverage.
+* **Milestone 3 (Next)**: Pydantic v2 schemas, Bank Simulator API (`services/bank_simulator_api/`), and Celery worker task execution with Two-Phase Provider Inquiry.
+* **Milestone 4**: FastAPI wire ingestion gateway (`app/main.py`), correlation middleware, Kombu publisher-confirmed dispatcher, and REST scenario suite.
+* **Milestone 5**: Automated chaos harness (`scripts/chaos_harness.py`) and failure recovery integration tests.
+* **Milestone 6**: Distributed live multi-process E2E verification, MTTR benchmarking, and immutable experiment evidence logs.
 
 ---
 
-## 8. Deliverables & Evidence Compliance Matrix
+## 8. Documentation References & Single Source of Truth
 
-| Milestone 1 Deliverable | Section Reference | Compliance Status |
-| :--- | :--- | :---: |
-| **System Architecture & Topology** | Section 1.1 (`flowchart TD`) | **Complete** |
-| **Chaos Testbed Topology** | Section 1.2 (`flowchart TD`) | **Complete** |
-| **State Machine & In-Flight Contract** | Section 2.1 (`stateDiagram-v2`) | **Complete** |
-| **Database Schema & Partial Indexes** | Section 2.2 (`init.sql`) | **Complete** |
-| **Pydantic Domain Schemas** | Section 2.3 | **Complete** |
-| **Distributed Sequence Diagrams (5 Paths)** | Section 3 (`sequenceDiagram`) | **Complete** |
-| **Failure Recovery Experiment Specifications** | Section 4 (Table) | **Complete** |
-| **Chaos Harness & Evidence Schema** | Section 5 | **Complete** |
-| **Architectural Standards & Invariants** | Section 6 | **Complete** |
-| **Granular Milestone Breakdown (M1–M6)** | Section 7 (`flowchart LR`) | **Complete** |
-
-### Milestone 2 Deliverables Matrix
-
-| Milestone 2 Deliverable | Implementation Artifact | Verification & Compliance Status |
-| :--- | :--- | :---: |
-| **Multi-Container Compose Orchestration** | `docker-compose.yml` (Postgres, RabbitMQ, API, 2 Worker Pods, Bank Simulator) | **Complete & Verified Healthy** |
-| **Database DDL & Partial Indexes** | `init.sql` (`wire_transfers`, `ledger_journal`, `wire_audit_log`, `idx_wire_in_flight_status`) | **Complete & Verified (Zero Duplicate Indexes)** |
-| **Kombu AMQP 0-9-1 Queue Topology** | `shared/amqp_topology.py` (`wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`) | **Complete & 100% Tested** |
-| **Pre-Configured RabbitMQ Definitions** | `docker/rabbitmq/definitions.json` & `docker/rabbitmq/rabbitmq.conf` | **Complete & Pre-Loaded at Boot** |
-| **Service Entrypoints & Dockerfiles** | `Dockerfile.api`, `services/worker/Dockerfile`, `services/bank_simulator_api/Dockerfile` | **Complete & Built Cleanly** |
-| **Celery Late-Ack Worker Configuration** | `services/worker/celery_app.py` (`acks_late=True`, `reject_on_worker_lost=True`) | **Complete & Connected** |
-| **Unit Test Suite & Statement Coverage** | `tests/unit/test_amqp_topology.py`, `test_init_sql.py`, `test_docker_compose.py`, etc. | **Complete (100% Test Coverage)** |
-| **VS Code Debug Environments** | `.vscode/launch.json` (API, Bank Simulator, Worker, Compound Launcher) | **Complete & Ready** |
+| System Concern | Canonical File / Artifact | Purpose |
+| :--- | :--- | :--- |
+| **System Overview & Quickstart** | [README.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/README.md) | Executive summary, business context, quickstart guide |
+| **Architecture & Invariants** | [docs/ARCHITECTURE_AND_STANDARDS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/ARCHITECTURE_AND_STANDARDS.md) | System topology, invariants, pooling & storage design |
+| **Distributed Sequences** | [docs/SEQUENCE_DIAGRAMS.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/SEQUENCE_DIAGRAMS.md) | All 5 execution, redelivery, and failure sequence diagrams |
+| **Project Milestones** | [docs/MILESTONES.md](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docs/MILESTONES.md) | Roadmap breakdown, deliverables matrix, and status |
+| **Relational DDL** | [init.sql](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/init.sql) | PostgreSQL 16 schema, constraints, partial indexes |
+| **AMQP 0-9-1 Topology** | [shared/amqp_topology.py](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/shared/amqp_topology.py) | Kombu exchanges, queues, DLX routing |
+| **Multi-Container Cluster** | [docker-compose.yml](file:///home/sabad/Python/Celery/2_Advanced_Celery_Topics/07_failure_recovery_lab/docker-compose.yml) | 6-container orchestrated runtime environment |
 
