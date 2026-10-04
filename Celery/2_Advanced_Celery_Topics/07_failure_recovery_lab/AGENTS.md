@@ -18,4 +18,7 @@
   - Partition documentation across dedicated files: `README.md`, `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/SEQUENCE_DIAGRAMS.md`, `docs/MILESTONES.md`, `docs/TEST_PLAN.md`, `docs/USE_CASES.md`, and `.agents/milestones/M<N>_<SLUG>.md`.
   - **Dual-Layer Milestone Generation**: Always maintain `docs/MILESTONES.md` (human-facing lifecycle roadmap and compliance matrix) concurrently with `.agents/milestones/M<N>_<SLUG>.md` (agent-facing procedural execution runbooks with explicit scope fences, micro-commit slicing, and verification gates).
   - Anti-Bloat: NEVER duplicate raw SQL (`init.sql`) or Python models in markdown files. Link directly to code files and use visual Mermaid models (`erDiagram`, `classDiagram`, `flowchart`).
-
+* **Zero Backstage File Modification & Anti-Editor Conflict Invariant**:
+  - Never open files in the editor or trigger editor tab openings during automated agent operations.
+  - Never perform "backstage" modifications (such as running `ruff check --fix` or repeated overwrite edits) after writing a file; always author fully formatted, sorted, and lint-clean code upfront on the first attempt so disk contents never conflict with open editor buffers.
+  - Workspace configuration (`.vscode/settings.json`) must strictly maintain `"files.autoSave": "off"` and `"editor.formatOnSave": false` to prevent editor buffers from dirtying or overwriting on-disk files.
