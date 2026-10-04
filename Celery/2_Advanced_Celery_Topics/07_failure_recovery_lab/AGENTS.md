@@ -6,14 +6,22 @@
   - Development micro-commits:
     - Requirements: `chore(deps): declare base dependencies in requirements_api.txt and requirements_dev.txt`
     - DDL & Database: `feat(db): declare postgresql 16 relational ddl in init.sql with partial index`
-    - DB Container: `chore(db): configure postgresql engine parameters and container specification`
     - AMQP Topology: `feat(amqp): declare kombu exchanges and queues topology in shared/amqp_topology.py`
+    - Shared Models: `feat(models): declare domain models in shared/models.py as shared kernel`
+    - Shared Schemas: `feat(schemas): declare domain schemas in shared/schemas.py as shared kernel`
     - RabbitMQ Definitions: `chore(rabbitmq): configure pre-loaded rabbitmq topology definitions and vhost`
+    - Centralized Docker: `chore(docker): centralize service dockerfiles under docker/ directory`
     - Celery App: `feat(worker): configure celery app with acks_late and lost worker rejection`
     - Celery Tasks: **ONE TASK PER COMMIT** (with localized unit tests)
-    - Celery Dockerfile: `chore(worker): author headless celery worker dockerfile and entrypoint`
-    - Per API: minimal API skeleton (`/health`, `/ready`), models definition, models validations, schemas definition, Swagger examples & endpoints.
+    - Per API: minimal API skeleton (`/health`, `/ready`), Swagger examples & endpoints.
   - Zero broken execution: each micro-commit must pass syntax, type checking, and its localized unit tests independently.
+* **Clean Architecture & Domain-Driven Design (Shared Kernel)**:
+  - Database persistence models (`shared/models.py`), Pydantic domain contracts (`shared/schemas.py`), and Kombu AMQP declarations (`shared/amqp_topology.py`) reside strictly in `shared/` as the **Shared Kernel**.
+  - **Never place domain models or shared message schemas inside `app/`**. Headless workers must never import from `app` (`from app.models import ...`), ensuring workers stay decoupled from web frameworks and worker Docker builds stay minimal.
+  - Dependencies are strictly unidirectional: `app -> shared`, `services/worker -> shared`, `scripts -> shared`.
+* **Centralized Docker Packaging (`docker/` Invariant)**:
+  - Centralize all container Dockerfiles under `docker/` (`docker/Dockerfile.api`, `docker/Dockerfile.worker`, `docker/Dockerfile.<service>`), leaving workspace root and service directories clean of Dockerfiles.
+  - Pre-boot infrastructure configs reside in `docker/<infra>/` (`docker/rabbitmq/definitions.json`, `docker/rabbitmq/rabbitmq.conf`).
 * **Modular Documentation & Anti-Bloat Invariant**:
   - Partition documentation across dedicated files: `README.md`, `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/SEQUENCE_DIAGRAMS.md`, `docs/MILESTONES.md`, `docs/TEST_PLAN.md`, `docs/USE_CASES.md`, and `.agents/milestones/M<N>_<SLUG>.md`.
   - **Dual-Layer Milestone Generation**: Always maintain `docs/MILESTONES.md` (human-facing lifecycle roadmap and compliance matrix) concurrently with `.agents/milestones/M<N>_<SLUG>.md` (agent-facing procedural execution runbooks with explicit scope fences, micro-commit slicing, and verification gates).

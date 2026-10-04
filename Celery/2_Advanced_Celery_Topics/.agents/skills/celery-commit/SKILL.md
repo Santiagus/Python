@@ -32,18 +32,15 @@ This skill defines the standards and procedural rules for generating small, atom
    Partition development strictly into independent, cohesive micro-commits:
    - `chore(deps)`: Dependency manifests (`requirements_api.txt`, `requirements_dev.txt`, `services/*/requirements.txt`).
    - `feat(db)`: Database DDL (`init.sql`) and database configuration (committed with its dedicated DDL test).
-   - `chore(db)`: Database container Dockerfile or engine parameters.
    - `feat(amqp)`: Kombu AMQP 0-9-1 topology (`shared/amqp_topology.py`) (committed with its dedicated topology test).
-   - `chore(rabbitmq)`: RabbitMQ pre-loaded topology definitions (`definitions.json`, `rabbitmq.conf`).
-   - `chore(rabbitmq)`: RabbitMQ Dockerfile or broker container manifest.
-   - `feat(worker)`: Celery worker application configuration (`celery_app.py`) (committed with its configuration test).
+   - `feat(models)`: Shared Kernel domain database models (`shared/models.py`) (committed with model test).
+   - `feat(schemas)`: Shared Kernel Pydantic v2 domain schemas (`shared/schemas.py`) (committed with schema test).
+   - `chore(rabbitmq)`: RabbitMQ pre-loaded topology definitions and config (`docker/rabbitmq/definitions.json`, `docker/rabbitmq/rabbitmq.conf`).
+   - `chore(docker)`: Centralized container Dockerfiles (`docker/Dockerfile.api`, `docker/Dockerfile.worker`, `docker/Dockerfile.<service>`).
+   - `feat(worker)`: Celery worker application configuration (`services/worker/celery_app.py`) (committed with its configuration test).
    - `feat(worker)`: Individual Celery task (**STRICTLY ONE TASK PER COMMIT**, committed with its dedicated unit test).
-   - `chore(worker)`: Celery worker Dockerfile and runtime entrypoint.
    - Per API Gateway / Mock Service (e.g. `app/`, `services/bank_simulator_api/`):
      - `feat(api)`: Minimal API skeleton with `/health` and `/ready` probes (committed with health test).
-     - `feat(models)`: Domain database models definition (committed with model test).
-     - `feat(models)`: Model validations and data constraints definition.
-     - `feat(schemas)`: Pydantic v2 request/response schemas (committed with schema test).
      - `feat(api)`: API routes and Swagger/OpenAPI documentation with realistic examples.
    - `chore(orchestration)`: Multi-container orchestration (`docker-compose.yml`) (committed with orchestration test).
 

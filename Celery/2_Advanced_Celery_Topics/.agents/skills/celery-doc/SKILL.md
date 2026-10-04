@@ -128,10 +128,12 @@ Never copy-paste raw implementation code into markdown documentation files:
    - **Mandated**: Link directly using relative paths (e.g., `[init.sql](../init.sql)`). Illustrate schema relationships, primary keys, and foreign keys using a Mermaid `erDiagram`.
 2. **Pydantic Schemas & DTOs**:
    - **Banned**: Pasting 80+ lines of Pydantic model class code.
-   - **Mandated**: Link directly to source files using relative paths (e.g. `[schemas.py](../app/schemas.py)`). Illustrate fields, types, and constraints using a Mermaid `classDiagram`.
+   - **Mandated**: Link directly to source files using relative paths (e.g. `[schemas.py](../shared/schemas.py)`). Illustrate fields, types, and constraints using a Mermaid `classDiagram`.
 3. **AMQP 0-9-1 Topology**:
    - **Banned**: Pasting Kombu Python exchange/queue definitions.
    - **Mandated**: Link directly using relative paths (e.g. `[amqp_topology.py](../shared/amqp_topology.py)`). Illustrate bindings, routing keys, and DLX routing using a Mermaid `flowchart TD`.
+4. **Clean Architecture (Shared Kernel) Topology**:
+   - **Mandated**: Document the Shared Kernel architecture (`shared/models.py`, `shared/schemas.py`) illustrating unidirectional dependencies (`app -> shared`, `services/worker -> shared`) and centralized Docker packaging (`docker/Dockerfile.*`).
 
 ---
 

@@ -17,18 +17,15 @@ This project enforces strict backend engineering, distributed task execution, an
     Never bundle multi-file, multi-layer implementations into monolithic commits. Partition development strictly into independent, cohesive micro-commits:
     - `chore(deps)`: Dependency manifests (`requirements_api.txt`, `requirements_dev.txt`, `services/*/requirements.txt`).
     - `feat(db)`: Database DDL (`init.sql`) and database configuration (committed with its dedicated DDL test).
-    - `chore(db)`: Database container Dockerfile / custom engine parameters.
     - `feat(amqp)`: Kombu AMQP 0-9-1 topology (`shared/amqp_topology.py`) (committed with its dedicated topology test).
-    - `chore(rabbitmq)`: RabbitMQ pre-loaded topology definitions (`definitions.json`, `rabbitmq.conf`).
-    - `chore(rabbitmq)`: RabbitMQ Dockerfile or broker container manifest.
-    - `feat(worker)`: Celery worker application configuration (`celery_app.py`) (committed with its configuration test).
+    - `feat(models)`: Shared Kernel domain database models (`shared/models.py`) (committed with model test).
+    - `feat(schemas)`: Shared Kernel Pydantic v2 domain schemas (`shared/schemas.py`) (committed with schema test).
+    - `chore(rabbitmq)`: RabbitMQ pre-loaded topology definitions and config (`docker/rabbitmq/definitions.json`, `docker/rabbitmq/rabbitmq.conf`).
+    - `chore(docker)`: Centralized container Dockerfiles (`docker/Dockerfile.api`, `docker/Dockerfile.worker`, `docker/Dockerfile.<service>`).
+    - `feat(worker)`: Celery worker application configuration (`services/worker/celery_app.py`) (committed with its configuration test).
     - `feat(worker)`: Individual Celery task (**STRICTLY ONE TASK PER COMMIT**, committed with its dedicated unit test).
-    - `chore(worker)`: Celery worker Dockerfile and runtime entrypoint.
     - Per API Gateway / Mock Service (e.g. `app/`, `services/bank_simulator_api/`):
       - `feat(api)`: Minimal API skeleton with `/health` and `/ready` probes (committed with health test).
-      - `feat(models)`: Domain database models definition (committed with model test).
-      - `feat(models)`: Model validations and data constraints definition.
-      - `feat(schemas)`: Pydantic v2 request/response schemas (committed with schema test).
       - `feat(api)`: API routes and Swagger/OpenAPI documentation with realistic examples.
     - `chore(orchestration)`: Multi-container orchestration (`docker-compose.yml`) (committed with orchestration test).
     - `chore(debug)`: Just-in-time VS Code launch configurations (`.vscode/launch.json`) per runnable service, test harness, or compound multi-service workflow.
@@ -77,11 +74,19 @@ This project enforces strict backend engineering, distributed task execution, an
   - Explicit distinction between Application Layer (Celery workflows) and Driver/Protocol Layer (Kombu for AMQP 0-9-1 framing, exchanges, queues, DLX, and TTL arguments).
   - **Tiered Hybrid Queue Topology**: Group tasks initially by SLA tier (`critical`, `default`, `bulk`) to conserve compute, prevent broker connection bloat, and avoid managing dozens of idle worker pods. Always enforce fine-grained, semantic routing keys (`domain.entity.action` / `payment.standard.receipt` vs `payment.standard.webhook`) from day one. Split into dedicated queues only when a task's volume, latency variance, third-party unreliability, or heavy memory/CPU footprint demands physical isolation (requiring zero producer code changes). All design decisions must be explicitly reflected in project documentation.
 * **Production Reference Patterns & Clean Boundaries**:
+  - **Clean Architecture & Domain-Driven Design (Shared Kernel Invariant)**:
+    - Domain database persistence entities (`shared/models.py`), domain contracts & validation schemas (`shared/schemas.py`), and AMQP messaging topologies (`shared/amqp_topology.py`) strictly reside in `shared/` as the **Shared Kernel**.
+    - **Never place domain models or shared message schemas inside `app/`**. Placing models inside `app/` forces Celery workers to import from the web presentation layer (`from app.models import ...`), which destroys service isolation, tightly couples worker runtimes to web frameworks, and forces worker containers to bundle web code.
+    - Dependencies must remain strictly unidirectional: `app -> shared`, `services/worker -> shared`, `scripts -> shared`. Headless workers must never import from `app`, and `app` must never import from `services/worker`.
+  - **Centralized Docker Packaging & Infrastructure (`docker/` Invariant)**:
+    - Centralize all container Dockerfiles strictly under the top-level `docker/` directory (`docker/Dockerfile.api`, `docker/Dockerfile.worker`, `docker/Dockerfile.<service>`), keeping the repository root and service directories clean of Dockerfiles.
+    - Pre-boot broker and infrastructure assets reside in `docker/<infra>/` (e.g., `docker/rabbitmq/definitions.json`, `docker/rabbitmq/rabbitmq.conf`).
+    - Build context remains the workspace root (`context: .`), and `docker-compose.yml` specifies `dockerfile: docker/Dockerfile.<service>`.
   - Clear Producer (`app/dispatcher.py`) vs. Consumer (`services/worker/tasks/`) separation. Never create conflicting `app/tasks.py` files.
   - Domain-partitioned tasks: group tasks strictly by business domain (`tasks/payouts.py`, `tasks/settlements.py`, `tasks/notifications.py`), NEVER by queue or priority level (`tasks/critical.py`).
   - Flat service hierarchies: never nest external mock services or partner simulators inside worker directories (e.g., NEVER `services/worker/simulators/`).
   - Service naming convention: any standalone component or mock exposing an HTTP endpoint must include `_api` as a suffix or prefix (e.g., `services/bank_simulator_api/`, `services/provider_api/`).
-  - Dedicated service isolation: autonomous services own colocated `Dockerfile` and minimal `requirements.txt` (`services/worker/`, `services/bank_simulator_api/`). Never bloat headless workers with web servers (`uvicorn`/`fastapi`) or mock APIs with Celery/PostgreSQL.
+  - Dedicated service isolation: autonomous services own a minimal `requirements.txt` (`services/worker/requirements.txt`, `services/bank_simulator_api/requirements.txt`). Never bloat headless workers with web servers (`uvicorn`/`fastapi`) or mock APIs with Celery/PostgreSQL.
   - Uniform Pythonic `snake_case` naming: enforce `snake_case` across all dependency manifests, configuration files, and script names (`requirements_api.txt`, `requirements_dev.txt`). Never mix kebab-case with snake_case across the repository.
 * **Enterprise Security & Tokenization Invariants**:
   - Access security via FastAPI Security Dependencies (`Security(APIKeyHeader)` / `HTTPBearer`) over raw middleware for native OpenAPI `/docs` "Authorize" 🔒 integration, clean route exemptions, and RBAC scopes. Prefixed, hashed keys at rest (`sk_live_...`).
