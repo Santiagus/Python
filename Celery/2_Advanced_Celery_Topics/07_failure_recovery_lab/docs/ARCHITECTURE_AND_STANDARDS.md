@@ -322,9 +322,9 @@ flowchart LR
 * **Milestone 1 (Complete)**: Architecture specification, data models, state machines, and sequence diagrams.
 * **Milestone 2 (Complete)**: Multi-container orchestration (`docker-compose.yml`), PostgreSQL 16 schema (`init.sql`), Kombu AMQP 0-9-1 topology, RabbitMQ pre-loaded definitions, worker base configuration (`acks_late=True`), and 100% unit test coverage.
 * **Milestone 3 (Complete)**: Domain models (`shared/models.py`), Pydantic v2 schemas (`shared/schemas.py`), Bank Simulator API (`services/bank_simulator_api/`), and Celery worker task execution with Two-Phase Provider Inquiry (`services/worker/tasks/`).
-* **Milestone 4 (Next)**: FastAPI wire ingestion gateway (`app/main.py`), correlation middleware, Kombu publisher-confirmed dispatcher, and REST scenario suite.
-* **Milestone 5**: Automated chaos harness (`scripts/chaos_harness.py`) and failure recovery integration tests.
-* **Milestone 6**: Distributed live multi-process E2E verification, MTTR benchmarking, and immutable experiment evidence logs.
+* **Milestone 4 (Complete)**: FastAPI wire ingestion gateway (`app/main.py`), correlation middleware, Kombu publisher-confirmed dispatcher, and REST scenario suite.
+* **Milestone 5 (Complete)**: Automated chaos harness (`scripts/chaos_harness.py`) and failure recovery integration tests (worker SIGKILL, early vs late ack, broker restart, poison pill DLQ quarantine).
+* **Milestone 6 (Next)**: Distributed live multi-process E2E verification, MTTR benchmarking, and immutable experiment evidence logs.
 
 ---
 

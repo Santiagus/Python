@@ -37,7 +37,7 @@ flowchart LR
 * Declare Kombu AMQP 0-9-1 topology: `wire.direct`, `wire.dlx`, `wire.settlement.critical`, `wire.settlement.dlq`.
 * **Acceptance Criteria**: `docker compose up -d` boots all services with clean health checks and pre-configured queues.
 
-### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer (Complete)
+### Milestone 3: Domain Models, Bank Simulator API & Celery Worker Consumer (**Complete**)
 * **Agent Runbook**: [.agents/milestones/M3_WORKER_AND_BANK_SIMULATOR.md](../.agents/milestones/M3_WORKER_AND_BANK_SIMULATOR.md)
 * Implement Pydantic v2 schemas and domain models.
 * Implement standalone `services/bank_simulator_api/` simulating external Fedwire/SWIFT clearing with idempotent transaction tracking.
@@ -55,7 +55,6 @@ flowchart LR
 * Author self-contained REST Client scenario suite in `requests/requests.rest`.
 * **Acceptance Criteria**: FastAPI integration tests passing with 100% coverage; zero observable 404 blackholes during processing.
 
-### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites (**Next**)
 ### Milestone 5: Automated Chaos Harness & Failure Injection Test Suites (**Complete**)
 * **Agent Runbook**: [.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md](../.agents/milestones/M5_CHAOS_HARNESS_AND_FAILURE_TESTS.md)
 * Implement `scripts/chaos_harness.py` capable of programmatically executing the 5 core experiments.
@@ -66,7 +65,6 @@ flowchart LR
   - `tests/integration/test_dead_letter_quarantine.py` (Poison pill routing & `x-death` verification).
 * **Acceptance Criteria**: All failure injection integration tests execute cleanly in isolated test environments.
 
-### Milestone 6: Distributed Live E2E Verification, MTTR Benchmarks & Evidence Log
 ### Milestone 6: Distributed Live E2E Verification, MTTR Benchmarks & Evidence Log (**Next**)
 * **Agent Runbook**: [.agents/milestones/M6_LIVE_E2E_VERIFICATION_AND_BENCHMARKS.md](../.agents/milestones/M6_LIVE_E2E_VERIFICATION_AND_BENCHMARKS.md)
 * Execute live multi-process end-to-end test suite (`tests/e2e/test_live_e2e.py`) against the running Docker Compose cluster.
