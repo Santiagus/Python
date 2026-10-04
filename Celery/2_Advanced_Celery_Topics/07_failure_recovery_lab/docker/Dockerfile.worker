@@ -17,4 +17,3 @@ COPY shared/ ./shared
 COPY services/worker/ ./services/worker
 
 CMD ["celery", "-A", "services.worker.celery_app:celery_app", "worker", "--loglevel=INFO", "-Q", "wire.settlement.critical", "-c", "2"]
-

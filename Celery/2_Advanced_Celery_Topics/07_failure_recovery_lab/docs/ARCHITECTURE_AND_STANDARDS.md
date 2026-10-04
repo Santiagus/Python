@@ -195,7 +195,7 @@ erDiagram
 
 ### 2.3 Domain Entity & AMQP Contracts (Pydantic v2)
 
-Domain schemas decouple client presentation from internal broker communication. Detailed class definitions reside in [app/schemas.py](../app/schemas.py) and [shared/amqp_topology.py](../shared/amqp_topology.py):
+Domain schemas decouple client presentation from internal broker communication. Detailed class definitions reside in [shared/schemas.py](../shared/schemas.py) and [shared/amqp_topology.py](../shared/amqp_topology.py):
 
 ```mermaid
 classDiagram

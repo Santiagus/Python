@@ -120,3 +120,31 @@ def test_rabbitmq_definitions_file_exists_and_valid(workspace_root: Path) -> Non
     crit_args = queues["wire.settlement.critical"].get("arguments", {})
     assert crit_args.get("x-dead-letter-exchange") == "wire.dlx"
     assert crit_args.get("x-dead-letter-routing-key") == "wire.settlement.dlq"
+
+
+def test_centralized_dockerfiles_exist_and_referenced(workspace_root: Path) -> None:
+    """Verify centralized Dockerfiles in docker/ exist and are mapped in docker-compose.yml."""
+    expected_dockerfiles = [
+        workspace_root / "docker" / "Dockerfile.api",
+        workspace_root / "docker" / "Dockerfile.worker",
+        workspace_root / "docker" / "Dockerfile.bank_simulator_api",
+    ]
+    for df in expected_dockerfiles:
+        assert df.is_file(), f"Centralized Dockerfile must exist: {df}"
+
+    compose_path = workspace_root / "docker-compose.yml"
+    with open(compose_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    for svc_name in ["bank_simulator_api", "api", "worker_1", "worker_2"]:
+        svc = data["services"][svc_name]
+        assert "build" in svc, f"Service '{svc_name}' must have a build configuration"
+        dockerfile_rel = svc["build"].get("dockerfile")
+        assert dockerfile_rel is not None, f"Service '{svc_name}' must specify a dockerfile"
+        assert dockerfile_rel.startswith("docker/Dockerfile."), (
+            f"Service '{svc_name}' must reference centralized dockerfile, got {dockerfile_rel}"
+        )
+        assert (workspace_root / dockerfile_rel).is_file(), (
+            f"Referenced dockerfile must exist on disk: {dockerfile_rel}"
+        )
+

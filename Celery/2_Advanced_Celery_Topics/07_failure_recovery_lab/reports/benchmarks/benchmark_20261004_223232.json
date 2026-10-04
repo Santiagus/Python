@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-04T22:35:51.374360+00:00",
+  "timestamp": "2026-10-04T22:32:32.067630+00:00",
   "benchmark_suite": "distributed_failure_recovery_and_mttr",
   "cluster_topology": {
     "api_gateway": "FastAPI (zero-refresh, asyncpg pool=10)",
@@ -9,12 +9,12 @@
     "bank_simulator": "Wholesale Clearinghouse Simulator (Two-Phase Inquiry)"
   },
   "metrics": {
-    "total_settled_wires": 238,
-    "unique_idempotency_keys": 238,
+    "total_settled_wires": 204,
+    "unique_idempotency_keys": 204,
     "double_disbursements": 0,
     "ledger_drift_cents": 0,
     "ledger_balanced": true,
-    "total_cleared_volume_usd": "$16,513,997.00",
+    "total_cleared_volume_usd": "$14,593,497.50",
     "mttr_sla_target_ms": 15000.0,
     "worker_crash_recovery_status": "PASSED (zero message loss)"
   }

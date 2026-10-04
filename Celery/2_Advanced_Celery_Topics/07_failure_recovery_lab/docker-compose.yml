@@ -40,7 +40,7 @@ services:
   bank_simulator_api:
     build:
       context: .
-      dockerfile: services/bank_simulator_api/Dockerfile
+      dockerfile: docker/Dockerfile.bank_simulator_api
     container_name: wire_bank_simulator_api
     ports:
       - "8010:8010"
@@ -55,7 +55,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: docker/Dockerfile.api
     container_name: wire_ingestion_api
     ports:
       - "8000:8000"
@@ -80,7 +80,7 @@ services:
   worker_1:
     build:
       context: .
-      dockerfile: services/worker/Dockerfile
+      dockerfile: docker/Dockerfile.worker
     container_name: wire_worker_1
     hostname: worker-pod-1
     command: ["celery", "-A", "services.worker.celery_app:celery_app", "worker", "--loglevel=INFO", "-Q", "wire.settlement.critical", "-c", "2", "-n", "worker_1@worker-pod-1"]
@@ -100,7 +100,7 @@ services:
   worker_2:
     build:
       context: .
-      dockerfile: services/worker/Dockerfile
+      dockerfile: docker/Dockerfile.worker
     container_name: wire_worker_2
     hostname: worker-pod-2
     command: ["celery", "-A", "services.worker.celery_app:celery_app", "worker", "--loglevel=INFO", "-Q", "wire.settlement.critical", "-c", "2", "-n", "worker_2@worker-pod-2"]

@@ -16,7 +16,7 @@ This document records the execution boundary, technical invariants, and complete
   - `init.sql` (PostgreSQL 16 relational DDL, partial indexes, check constraints)
   - `shared/amqp_topology.py` (Kombu AMQP 0-9-1 declarations: exchanges, queues, dead-letter routing)
   - `docker/rabbitmq/definitions.json`, `docker/rabbitmq/rabbitmq.conf`
-  - `Dockerfile.api`, `services/worker/Dockerfile`, `services/bank_simulator_api/Dockerfile`
+  - `docker/Dockerfile.api`, `docker/Dockerfile.worker`, `docker/Dockerfile.bank_simulator_api`
   - `docker-compose.yml` (multi-container orchestrator)
   - `services/worker/celery_app.py` (Celery app with `acks_late=True`, `reject_on_worker_lost=True`)
   - Minimal health route skeletons (`app/main.py`, `services/bank_simulator_api/main.py`)
