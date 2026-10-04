@@ -1,0 +1,146 @@
+# ==============================================================================
+# High-Value Interbank Wire Settlement Gateway - REST Client Scenarios
+# ==============================================================================
+# Standards: VS Code REST Client (Humao.rest-client)
+# Organized in self-contained, repeatable workflows with variable chaining.
+# ==============================================================================
+
+@baseUrl = http://localhost:8000
+@apiPrefix = /api/v1
+@bankUrl = http://localhost:8010
+
+# ==============================================================================
+# 0. SYSTEM HEALTH & READINESS PROBES
+# ==============================================================================
+
+###
+# 0.1 Ingestion Gateway Liveness Probe
+GET {{baseUrl}}/health
+
+###
+# 0.2 Ingestion Gateway Readiness Probe (Database Connectivity)
+GET {{baseUrl}}/ready
+
+###
+# 0.3 Wholesale Bank Simulator Liveness Probe
+GET {{bankUrl}}/health
+
+###
+# 0.4 Wholesale Bank Simulator Readiness Probe
+GET {{bankUrl}}/ready
+
+
+# ==============================================================================
+# 1. HAPPY PATH INGESTION & IN-FLIGHT QUERY WORKFLOW
+# ==============================================================================
+
+###
+# 1.1 Ingest Wholesale Wire Transfer ($2,500,000.00 USD)
+# @name ingestWireHappyPath
+POST {{baseUrl}}{{apiPrefix}}/wires
+Content-Type: application/json
+Idempotency-Key: idem-treasury-2026-alpha-001
+X-Request-ID: req-client-treasury-001
+
+{
+  "client_id": "CORP-TREASURY-001",
+  "amount": "2500000.00",
+  "currency": "USD",
+  "beneficiary_account": "9876543210",
+  "routing_number": "121000358",
+  "swift_bic": "CHASUS33XXX"
+}
+
+###
+# 1.2 Inspect In-Flight Processing State (FinTech Anti-Blackhole Guarantee)
+GET {{baseUrl}}{{apiPrefix}}/wires/{{ingestWireHappyPath.response.body.wire_id}}
+X-Request-ID: req-client-query-001
+
+###
+# 1.3 Query Bank Clearinghouse Settlement State (Two-Phase Inquiry)
+GET {{bankUrl}}/v1/wires/idem-treasury-2026-alpha-001
+
+###
+# 1.4 List Ingested Wires for Client
+GET {{baseUrl}}{{apiPrefix}}/wires?client_id=CORP-TREASURY-001&limit=10
+
+
+# ==============================================================================
+# 2. ATOMIC IDEMPOTENCY RE-SUBMISSION WORKFLOW
+# ==============================================================================
+
+###
+# 2.1 Re-Submit Identical Wire with Same Idempotency Key (Safe Replay)
+POST {{baseUrl}}{{apiPrefix}}/wires
+Content-Type: application/json
+Idempotency-Key: idem-treasury-2026-alpha-001
+
+{
+  "client_id": "CORP-TREASURY-001",
+  "amount": "2500000.00",
+  "currency": "USD",
+  "beneficiary_account": "9876543210",
+  "routing_number": "121000358",
+  "swift_bic": "CHASUS33XXX"
+}
+
+
+# ==============================================================================
+# 3. AUTO-GENERATED IDEMPOTENCY WORKFLOW
+# ==============================================================================
+
+###
+# 3.1 Ingest Wire with Omitted Idempotency-Key Header
+# @name ingestAutoIdemWire
+POST {{baseUrl}}{{apiPrefix}}/wires
+Content-Type: application/json
+
+{
+  "client_id": "GLOBAL-INVEST-CORP",
+  "amount": "750000.50",
+  "currency": "USD",
+  "beneficiary_account": "1122334455",
+  "routing_number": "021000021",
+  "swift_bic": "BKTRUS33XXX"
+}
+
+###
+# 3.2 Inspect Auto-Generated Wire Status
+GET {{baseUrl}}{{apiPrefix}}/wires/{{ingestAutoIdemWire.response.body.wire_id}}
+
+
+# ==============================================================================
+# 4. VALIDATION & FINANCIAL EDGE CASES
+# ==============================================================================
+
+###
+# 4.1 Reject Invalid ABA Routing Number (Must be exactly 9 digits)
+POST {{baseUrl}}{{apiPrefix}}/wires
+Content-Type: application/json
+
+{
+  "client_id": "CORP-TREASURY-001",
+  "amount": "10000.00",
+  "currency": "USD",
+  "beneficiary_account": "12345678",
+  "routing_number": "1234",
+  "swift_bic": "CHASUS33XXX"
+}
+
+###
+# 4.2 Reject Invalid Zero or Negative Amount
+POST {{baseUrl}}{{apiPrefix}}/wires
+Content-Type: application/json
+
+{
+  "client_id": "CORP-TREASURY-001",
+  "amount": "-500.00",
+  "currency": "USD",
+  "beneficiary_account": "12345678",
+  "routing_number": "121000358",
+  "swift_bic": "CHASUS33XXX"
+}
+
+###
+# 4.3 Query Non-Existent Wire UUID (Expected 404 Not Found)
+GET {{baseUrl}}{{apiPrefix}}/wires/00000000-0000-0000-0000-000000000000
