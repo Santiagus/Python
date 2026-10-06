@@ -32,6 +32,16 @@ Tests must be partitioned into distinct layers:
 
 ---
 
+## FinTech In-Flight State Visibility & State Machine Contract
+
+In commercial banking, corporate treasury, and settlement platforms (Stripe Treasury, Modern Treasury, clearinghouse gateways), financial operations must never operate in an observable "black hole" where triggering an asynchronous action results in a `404 NOT FOUND` during in-flight processing.
+
+1. **State Machine Invariant**: When an asynchronous workflow (such as an End-of-Day cut-off, ledger reconciliation, or payout batch) is accepted (`HTTP 202 ACCEPTED`), the system must **immediately persist an initial state machine record** in PostgreSQL with `status="processing"` (or `"pending"`).
+2. **Immediate Read Availability**: Subsequent read operations (`GET /resource/{id}` or `GET /reconciliations/{date}`) must immediately return `HTTP 200 OK` reflecting the active in-flight state (`status="processing"`), rather than raising `404 NOT FOUND`.
+3. **Testing Methodology Requirement**: Every integration and E2E test suite for asynchronous workflows must explicitly verify this state machine contract by immediately issuing a `GET` request right after dispatch and asserting `HTTP 200 OK` with `status == "processing"` before the worker completes and transitions it to terminal states (`balanced`, `discrepancy_detected`, or `failed`).
+
+---
+
 ## Hybrid Testcontainer Pattern (`conftest.py`)
 
 Every test suite must support a **hybrid database and service lifecycle**:

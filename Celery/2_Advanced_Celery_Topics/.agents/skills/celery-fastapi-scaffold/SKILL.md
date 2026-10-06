@@ -114,3 +114,29 @@ All container build manifests and pre-boot infrastructure configurations must be
 4. **Minimal Container Layers**:
    - Headless worker containers copy only `shared/` and `services/worker/`, never bundling `app/` web routes.
    - Service requirements are isolated (`services/worker/requirements.txt`), omitting heavy web servers (`uvicorn`/`fastapi`) from worker pods.
+
+---
+
+## 4. High-Throughput API Gateway & Financial Data Standards
+
+### A. Zero-Refresh Response Generation
+* **Rule**: Pre-generate primary keys (`uuid.uuid4()`) and UTC timestamps in the application layer before issuing the database `INSERT`.
+* **Prohibition**: Never call `await session.refresh(instance)` in high-throughput write endpoints.
+* **Rationale**: Calling `session.refresh()` issues an unnecessary synchronous `SELECT` round-trip across the network while holding database transaction locks, severely degrading P99 ingestion latency. Pre-generating IDs allows the endpoint to return `HTTP 202 ACCEPTED` immediately upon commit.
+
+### B. Atomic Idempotency via Unique Constraints
+* **Rule**: Enforce idempotency via relational database `UNIQUE` constraints (e.g. `UNIQUE (idempotency_key)` or `UNIQUE (reference_id)`).
+* **Pattern**: Issue the atomic `INSERT` directly and catch `IntegrityError` (or `asyncpg.UniqueViolationError`) to return the existing record or a 409/conflict response.
+* **Prohibition**: Never execute speculative read-before-write queries (`SELECT ... WHERE idempotency_key = ...` followed by `INSERT`). Speculative checks suffer from concurrency race conditions under high-throughput parallel traffic.
+
+### C. Financial Monetary Precision
+* **Rule**: Use strict `Decimal` for all external monetary inputs/outputs (stored as `NUMERIC(14, 2)` in PostgreSQL) and process calculations internally in minor-unit integer cents (`amount_cents = int(amount * 100)`).
+* **Prohibition**: Never use floating-point types (`float`) for financial amounts. Float arithmetic introduces binary IEEE 754 drift that violates financial ledger accounting.
+
+### D. Specimen Defaults & Interactive Swagger Testing
+* **Rule**: Every Pydantic v2 schema must provide realistic specimen defaults and examples (`examples=[...]` or `model_config = ConfigDict(json_schema_extra={...})`).
+* **Requirement**: Swagger UI interactive documentation (`/docs`) "Try it out" must execute cleanly without returning `422 Unprocessable Entity` validation errors.
+
+### E. Enterprise Security & Zero-Knowledge Broker Invariants
+* **FastAPI Security Dependencies**: Authenticate requests via FastAPI Security Dependencies (`Security(APIKeyHeader)` / `HTTPBearer`) rather than raw custom middleware. This provides native OpenAPI `/docs` "Authorize" 🔒 integration, clean route exemptions, and RBAC scope enforcement.
+* **Zero-Knowledge Broker**: Strictly zero raw financial PII (credit card PANs, plain bank accounts, routing numbers) across Celery task arguments or RabbitMQ queues. Employ edge tokenization, encrypted vault storage, and masked audit fields (`account_mask: "******7890"`).

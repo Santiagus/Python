@@ -1,132 +1,130 @@
 # Project Instructions & Agent Guidelines
 
-This project enforces strict backend engineering, distributed task execution, and testing standards. For detailed rules and guidelines, see [GEMINI.md](/GEMINI.md).
+This workspace enforces strict backend engineering, distributed task execution, and testing standards across all modules.
 
-## Quick Summary of Invariants
+---
+
+## 1. Skill Specialization & Dynamic Routing
+
+To prevent context bloat while preserving deep architectural guidance, detailed procedural runbooks, code examples, and configuration templates are modularized into dedicated skills under `.agents/skills/`. Agents should refer to the relevant skill when executing domain tasks:
+
+| Concern / Workflow | Dedicated Skill | Core Scope |
+| :--- | :--- | :--- |
+| **Commit Strategy** | [celery-commit](.agents/skills/celery-commit/SKILL.md) | Single-line micro-commit slicing, mandatory review, zero-broken execution. |
+| **Scaffolding & Architecture** | [celery-fastapi-scaffold](.agents/skills/celery-fastapi-scaffold/SKILL.md) | Clean Architecture, Shared Kernel (`shared/`), centralized Docker (`docker/`), FastAPI standards. |
+| **Testing & Coverage** | [celery-test](.agents/skills/celery-test/SKILL.md) | 100% coverage, 4-tier test pyramid, hybrid testcontainers, in-flight state verification. |
+| **Canvas & Task Workflows** | [celery-canvas-workflow](.agents/skills/celery-canvas-workflow/SKILL.md) | Canvas DAGs (`chain`/`chord`), `.s()` vs `.si()`, Result Envelope, hybrid queues, worker resilience. |
+| **Performance & Resource Pooling** | [celery-perf-pooling](.agents/skills/celery-perf-pooling/SKILL.md) | Singleton initialization, persistent HTTP/DB pools, PgBouncer, L1/L2 caching, index tuning, durability. |
+| **Benchmarking & Contention** | [celery-benchmarks](.agents/skills/celery-benchmarks/SKILL.md) | Structured JSON metrics, dual-layer profiling, Little's Law arrival-rate pacing, SLA tracking. |
+| **Debug & REST Tooling** | [debug-setup](.agents/skills/debug-setup/SKILL.md) | Progressive launch configurations, compound multi-service debugging, `requests/requests.rest`. |
+| **Documentation & Diagrams** | [celery-doc](.agents/skills/celery-doc/SKILL.md) | Modular docs, SSOT anti-bloat, Mermaid sequence diagrams, dual-layer milestones, docstrings. |
+| **Diagnostics & Recovery** | [celery-fix](.agents/skills/celery-fix/SKILL.md) | Failure domain isolation, hanging chord recovery, pool starvation, serialization debugging. |
+| **Observability (Opt-In)** | [celery-observability](.agents/skills/celery-observability/SKILL.md) | OpenTelemetry tracing, Prometheus `/metrics`, dual-probe health checks (strict opt-in only). |
+
+---
+
+## 2. Core Invariants & Engineering Standards
+
+### System Persona
 * **Persona**: Elite Senior Backend & Data Engineer (Python, FastAPI, Celery, RabbitMQ, PostgreSQL, Redis, Clean Architecture).
-* **Testing**: `pytest`, **100% test coverage** required, hybrid testcontainers pattern for PostgreSQL/Redis/RabbitMQ (auto-fallback if no local services).
-* **Testing Standards**: `pytest`, **100% test coverage** required, hybrid testcontainers pattern for PostgreSQL/Redis/RabbitMQ. Strict 4-tier test directory separation: unit (`tests/unit/`), integration (`tests/integration/`), live multi-process E2E (`tests/e2e/test_live_e2e.py`), and capacity benchmarks (`tests/benchmarks/`).
-* **Debugging & Just-in-Time Debug Configurations**:
-  - **Progressive Debug Config Generation**: In `.vscode/launch.json`, generate debug configurations strictly for services and entry points that currently exist and are suitable to be debugged at that point in development. Never generate dangling or speculative configurations pointing to non-existent applications, files, or entry points (e.g., do not add FastAPI configs before the app exists).
-  - **Compound Multi-Service Configurations**: When several services or architectural layers (e.g., FastAPI gateway, Celery worker, Celery beat, mock simulators) are complete and should be run together, generate a compound debug configuration (`compounds` with `"stopAll": true`) to launch and debug them all concurrently.
-  - **Interactive REST Scenarios**: Self-contained test scenarios in `requests/requests.rest` (generated concurrently with endpoints and tests).
-* **Atomic & Granular Commit Strategy**:
-  - **Mandatory Review Prior to Commit & Push (Strict Non-Negotiable Invariant)**: Any change (code, documentation, test, or configuration) is strictly subject to user review prior to commit. Running `git commit` or `git push` without explicit confirmation and authorization from the user is strictly forbidden under all circumstances. Always present the proposed changes, diffs, and verification results to the user, and await their explicit approval before running any commit or push command.
-  - **Single-Line Commit Message Mandate**: All git commit messages must be strictly formatted as a concise single-line Conventional Commit (`<type>(<scope>): <imperative summary>`, $\le 72$ characters). Omit multi-line bullet points or essays; commit granularity must be fine enough that a single concise line completely captures the change.
-  - **Granular Development Micro-Commit Slicing Matrix**:
-    Never bundle multi-file, multi-layer implementations into monolithic commits. Partition development strictly into independent, cohesive micro-commits:
-    - `chore(deps)`: Dependency manifests (`requirements_api.txt`, `requirements_dev.txt`, `services/*/requirements.txt`).
-    - `feat(db)`: Database DDL (`init.sql`) and database configuration (committed with its dedicated DDL test).
-    - `feat(amqp)`: Kombu AMQP 0-9-1 topology (`shared/amqp_topology.py`) (committed with its dedicated topology test).
-    - `feat(models)`: Shared Kernel domain database models (`shared/models.py`) (committed with model test).
-    - `feat(schemas)`: Shared Kernel Pydantic v2 domain schemas (`shared/schemas.py`) (committed with schema test).
-    - `chore(rabbitmq)`: RabbitMQ pre-loaded topology definitions and config (`docker/rabbitmq/definitions.json`, `docker/rabbitmq/rabbitmq.conf`).
-    - `chore(docker)`: Centralized container Dockerfiles (`docker/Dockerfile.api`, `docker/Dockerfile.worker`, `docker/Dockerfile.<service>`).
-    - `feat(worker)`: Celery worker application configuration (`services/worker/celery_app.py`) (committed with its configuration test).
-    - `feat(worker)`: Individual Celery task (**STRICTLY ONE TASK PER COMMIT**, committed with its dedicated unit test).
-    - Per API Gateway / Mock Service (e.g. `app/`, `services/bank_simulator_api/`):
-      - `feat(api)`: Minimal API skeleton with `/health` and `/ready` probes (committed with health test).
-      - `feat(api)`: API routes and Swagger/OpenAPI documentation with realistic examples.
-    - `chore(orchestration)`: Multi-container orchestration (`docker-compose.yml`) (committed with orchestration test).
-    - `chore(debug)`: Just-in-time VS Code launch configurations (`.vscode/launch.json`) per runnable service, test harness, or compound multi-service workflow.
-  - **Zero-Broken-Execution Invariant**: Every individual micro-commit must be functionally self-contained, syntactically clean, and working. Never commit intermediate broken states, unresolved imports, failing tests, or invalid type annotations. Each commit in a sequence must pass syntax, type checking, and automated tests independently.
-* **FastAPI Standards**:
-  - `async def` endpoints as default.
-  - Development logger with pretty formatter (`datefmt="%H:%M:%S"`, truncated 8-character UUID `req_id[:8]`, no headers for standard HTTP fields).
-  - Modular `app/middlewares/` package partitioned by concern (`correlation.py`, `error_handling.py`, `profiling.py`) with unified registration.
-  - Pydantic v2 schemas with `Field` validation constraints and `ConfigDict`.
-  - Strict `Decimal` for all monetary and calculated financial fields (stored as `NUMERIC(14, 2)` and processed internally in minor-unit integer cents).
-  - Realistic specimen defaults and examples (`examples=[...]`) across all schemas so Swagger UI (`/docs`) "Try it out" executes cleanly without $422$ errors.
-  - **Zero-Refresh Response Generation**: Pre-generate primary keys (`uuid.uuid4()`) and UTC timestamps in the application layer. Never call `await session.refresh()` in high-throughput write endpoints.
-  - **Atomic Idempotency via Unique Constraints**: Enforce idempotency via database `UNIQUE` constraints and catch `IntegrityError` instead of issuing speculative `SELECT` queries before `INSERT`.
-* **Documentation Architecture & Anti-Bloat Standards**:
-  - **Modular Documentation Partitioning**:
-    Partition documentation across dedicated, specialized files rather than creating monolithic, bloated markdown documents:
-    - `README.md`: Project proposal, executive summary, business impact, quickstart, and compliance matrix.
-    - `docs/ARCHITECTURE_AND_STANDARDS.md`: System topology, clean architecture layer rules, engineering invariants, performance & security standards.
-    - `docs/USE_CASES.md`: Detailed business workflows, actor interactions, failure recovery scenarios, and financial edge cases.
-    - `docs/TEST_PLAN.md`: Test strategy, test matrix table, hybrid testcontainers configuration, and verification commands.
-    - `docs/MILESTONES.md`: Detailed milestone roadmap (M1–M6), deliverables breakdown, and acceptance criteria tracking.
-    - `docs/SEQUENCE_DIAGRAMS.md`: Comprehensive distributed sequence diagrams covering all execution and failure paths.
-    - `.agents/milestones/M<N>_<SLUG>.md`: Granular, agent-focused procedural execution runbooks generated concurrently with `docs/MILESTONES.md`. While `docs/MILESTONES.md` serves as the high-level human roadmap and lifecycle compliance tracker, `.agents/milestones/` contains atomic execution specifications defining strict scope fences, ordered micro-commit slicing sequences, technical contracts, and automated verification commands.
-  - **Granular Documentation Micro-Commit Slicing**:
-    Commit documentation additions individually per document (e.g. `docs(proposal): ...`, `docs(arch): ...`, `docs(use-cases): ...`, `docs(test-plan): ...`, `docs(milestones): ...`, `docs(diagrams): ...`).
-  - **Dual-Layer Milestone Generation Invariant**:
-    Whenever authoring or refining milestone specifications for any project module (during Milestone 1 planning or milestone refinements), **always generate both layers concurrently**:
-    1. **Human & Governance Layer (`docs/MILESTONES.md`)**: High-level delivery roadmap, Mermaid timeline (`flowchart LR`), phase summaries, acceptance criteria, and deliverables compliance matrix.
-    2. **Agent Execution Runbook Layer (`.agents/milestones/M<N>_<SLUG>.md`)**: Dedicated per-milestone execution runbooks for all planned milestones. Each agent milestone file must specify:
-       - **Scope Fences**: Explicitly enumerated in-scope vs. out-of-scope files to prevent premature edits and scope bleed. For any implementation milestone that introduces or updates a runnable service, worker, API, simulator, or harness, `.vscode/launch.json` MUST be included in the in-scope files.
-       - **Micro-Commit Sequence**: Ordered Conventional Commit headers ($\le 72$ chars) with associated tests, strictly adhering to the 1-task-per-commit rule. Implementation milestones with runnable services must include an explicit `chore(debug): ...` step to create or update just-in-time launch and compound configurations.
-       - **Technical Contracts & Invariant Links**: Direct links to `docs/ARCHITECTURE_AND_STANDARDS.md`, `init.sql`, etc. (no raw code duplication).
-       - **Verification Gates**: Exact deterministic shell commands (`pytest`, coverage threshold, `ruff`, `mypy`, and `python3 -m json.tool .vscode/launch.json` when debug configs are updated).
-  - **Documentation Anti-Bloat & Single Source of Truth (SSOT) Invariant**:
-    Never copy-paste raw implementation code into markdown documentation files!
-    - **No Raw DDL Duplication**: Do NOT embed raw SQL DDL code from `init.sql`. Link to `[init.sql](...)` and illustrate the schema visually using a clean Mermaid `erDiagram`.
-    - **No Raw Pydantic / AMQP Code Duplication**: Do NOT paste raw Python Pydantic models or Kombu definitions. Link to source files and illustrate contracts using Mermaid `classDiagram` or `flowchart`.
-    - Architecture documents must focus on topologies, contracts, invariants, and rationale, keeping markdown files lean and eliminating documentation drift.
-  - **First Milestone Project Invariant (Planning & Architecture Specification)**: The mandatory first milestone for every project module is to update `README.md` with the project proposal and generate `docs/ARCHITECTURE_AND_STANDARDS.md`, `docs/MILESTONES.md`, `docs/SEQUENCE_DIAGRAMS.md`, and the initial agent execution runbooks in `.agents/milestones/`.
-  - **Scope Boundary for Milestone 1**: Milestone 1 must focus exclusively on proposal refinement, architectural definition, and milestone planning. Never commit or introduce Dockerfiles, container manifests, application code, or database scripts in Milestone 1.
-  - **Mermaid Graph Render Verification**: For any documentation modifications involving Mermaid diagrams, mandatory syntax and render validation must be executed. Never commit malformed diagrams; always quote labels containing parentheses, brackets, or colons (`id["Label (Extra)"]`) and ensure block closure (`end`).
-  - Mandatory Google-style docstrings for **every** method and function.
-  - Step-by-step numbered block comments (`# 1. ...`, `# 2. ...`) for multi-stage or long functions so execution flow is effortlessly readable from method calls and headers.
-* **Celery Architecture & Abstraction Layers**:
-  - Strict JSON serialization across brokers (no ORM models/sockets), canvas `.s()` vs `.si()` signature discipline, and Result Envelope pattern for resilient chord execution.
-  - Explicit distinction between Application Layer (Celery workflows) and Driver/Protocol Layer (Kombu for AMQP 0-9-1 framing, exchanges, queues, DLX, and TTL arguments).
-  - **Tiered Hybrid Queue Topology**: Group tasks initially by SLA tier (`critical`, `default`, `bulk`) to conserve compute, prevent broker connection bloat, and avoid managing dozens of idle worker pods. Always enforce fine-grained, semantic routing keys (`domain.entity.action` / `payment.standard.receipt` vs `payment.standard.webhook`) from day one. Split into dedicated queues only when a task's volume, latency variance, third-party unreliability, or heavy memory/CPU footprint demands physical isolation (requiring zero producer code changes). All design decisions must be explicitly reflected in project documentation.
-* **Production Reference Patterns & Clean Boundaries**:
-  - **Clean Architecture & Domain-Driven Design (Shared Kernel Invariant)**:
-    - Domain database persistence entities (`shared/models.py`), domain contracts & validation schemas (`shared/schemas.py`), and AMQP messaging topologies (`shared/amqp_topology.py`) strictly reside in `shared/` as the **Shared Kernel**.
-    - **Never place domain models or shared message schemas inside `app/`**. Placing models inside `app/` forces Celery workers to import from the web presentation layer (`from app.models import ...`), which destroys service isolation, tightly couples worker runtimes to web frameworks, and forces worker containers to bundle web code.
-    - Dependencies must remain strictly unidirectional: `app -> shared`, `services/worker -> shared`, `scripts -> shared`. Headless workers must never import from `app`, and `app` must never import from `services/worker`.
-  - **Centralized Docker Packaging & Infrastructure (`docker/` Invariant)**:
-    - Centralize all container Dockerfiles strictly under the top-level `docker/` directory (`docker/Dockerfile.api`, `docker/Dockerfile.worker`, `docker/Dockerfile.<service>`), keeping the repository root and service directories clean of Dockerfiles.
-    - Pre-boot broker and infrastructure assets reside in `docker/<infra>/` (e.g., `docker/rabbitmq/definitions.json`, `docker/rabbitmq/rabbitmq.conf`).
-    - Build context remains the workspace root (`context: .`), and `docker-compose.yml` specifies `dockerfile: docker/Dockerfile.<service>`.
-  - Clear Producer (`app/dispatcher.py`) vs. Consumer (`services/worker/tasks/`) separation. Never create conflicting `app/tasks.py` files.
-  - Domain-partitioned tasks: group tasks strictly by business domain (`tasks/payouts.py`, `tasks/settlements.py`, `tasks/notifications.py`), NEVER by queue or priority level (`tasks/critical.py`).
-  - Flat service hierarchies: never nest external mock services or partner simulators inside worker directories (e.g., NEVER `services/worker/simulators/`).
-  - Service naming convention: any standalone component or mock exposing an HTTP endpoint must include `_api` as a suffix or prefix (e.g., `services/bank_simulator_api/`, `services/provider_api/`).
-  - Dedicated service isolation: autonomous services own a minimal `requirements.txt` (`services/worker/requirements.txt`, `services/bank_simulator_api/requirements.txt`). Never bloat headless workers with web servers (`uvicorn`/`fastapi`) or mock APIs with Celery/PostgreSQL.
-  - Uniform Pythonic `snake_case` naming: enforce `snake_case` across all dependency manifests, configuration files, and script names (`requirements_api.txt`, `requirements_dev.txt`). Never mix kebab-case with snake_case across the repository.
-* **Enterprise Security & Tokenization Invariants**:
-  - Access security via FastAPI Security Dependencies (`Security(APIKeyHeader)` / `HTTPBearer`) over raw middleware for native OpenAPI `/docs` "Authorize" 🔒 integration, clean route exemptions, and RBAC scopes. Prefixed, hashed keys at rest (`sk_live_...`).
-  - Zero-Knowledge Broker: strictly zero raw financial PII (card PANs, bank accounts, routing numbers) across Celery task arguments or RabbitMQ queues. Edge tokenization, encrypted vault storage, and masked audit fields (`account_mask: "******7890"`).
-* **High-Performance Resource Management & Pooling Invariants**:
-  - **Eager Singleton Initialization at Module Load**: Initialize all shared client, connection, and thread pool singletons (`_shared_client`, `_engine`, `_session_factory`, `_sync_executor`) at module load time to eliminate first-call cold-start/warm-up latency. Never defer initialization lazily to the first transaction.
-  - **Shared Client Connection Factories**: Outgoing network clients (`BankSimulatorClient`) must share a process-level client instance with explicit connection pooling (`httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=30.0)`). Tasks reuse persistent TCP keep-alive sockets rather than opening and tearing down ephemeral sockets per request, preventing socket pileup in `TIME_WAIT`.
-  - **Role-Based Database Connection Pool Budgeting**: In prefork multi-process architectures, single-threaded worker child processes execute strictly one task at a time and must be budgeted with lightweight pools (`pool_size=2, max_overflow=2`), while the API gateway allocates higher capacity (`pool_size=10, max_overflow=20`). This prevents exhausting PostgreSQL's `max_connections` ($N \times 30$ vs budgeted total $< 30$).
-  - **Connection Multiplexing (PgBouncer Invariant)**: In distributed multi-container deployments, deploy PgBouncer in transaction pooling mode (`POOL_MODE=transaction`) to decouple application scale from PostgreSQL connection ceilings. Always configure `connect_args={"statement_cache_size": 0}` in asyncpg to eliminate prepared statement collisions across multiplexed connections.
-  - **Multi-Tier Caching Architecture**:
-    - *L1 Process-Local Memory Cache*: Cache read-heavy, low-churn reference data (e.g., `_ACCOUNT_CACHE` with TTL) in Python process memory for instant sub-microsecond validation without network or database round-trips. Always provide clean eviction hooks (`clear_*_cache()`) for test isolation.
-    - *L2 Distributed Cache (Redis)*: Fast-path idempotency checks (`SET NX EX`), distributed rate limiting, and ephemeral coordination. The relational database remains the ultimate ACID source of truth.
-  - **Shared Process Thread Pool for Sync-in-Async Bridging**: In `run_sync()`, reuse an eagerly-initialized module-level `ThreadPoolExecutor(max_workers=4)` rather than constructing and tearing down ephemeral executors on every call.
-  - **Kombu AMQP Broker Pooling**: Always configure `broker_pool_limit=10` and `broker_connection_retry_on_startup=True` in Celery.
-  - **Eager Boot Warm-Up (`@signals.worker_process_init` & FastAPI `lifespan`)**: When Celery child processes fork, immediately re-initialize and warm the event loop, worker-budgeted DB pool, and HTTP client at boot time so the first task executes with sub-25ms P99 latency. In FastAPI `lifespan`, pre-warm database pools on startup with a `SELECT 1` ping.
-* **Database Index Architecture & Query Minimization Invariants**:
-  - **Index Deduplication**: Never create an explicit `CREATE INDEX` on a column that already possesses a `UNIQUE` constraint or is a primary key. PostgreSQL automatically provisions a B-Tree index for unique constraints; duplicate indexes double write amplification, disk waste, and WAL volume.
-  - **Partial Indexes for State Machines**: Ban full-table indexes on low-cardinality status columns (`status VARCHAR(20)`) where 95%+ of rows reach terminal states (`settled`, `completed`). Mandate partial B-Tree indexes (`WHERE status IN ('pending', 'processing')`) to keep index working set in CPU L3 cache and eliminate write amplification on settled transactions.
-  - **Database Query Minimization**: Minimize SQL queries per request cycle ($4 \to 1$ round-trips), cutting database load by 75% and eliminating connection holding latency.
-* **PostgreSQL Engine Tuning & Financial Durability**:
-  - Modern NVMe engine settings: `shared_buffers = 512MB` (or 25-40% RAM), `wal_buffers = 16MB`, `max_wal_size = 4GB`, `random_page_cost = 1.1`.
-  - Strict financial durability: Default to `synchronous_commit = on` in banking/financial ledgers to guarantee zero data loss on power failure. Single-query transactions keep physical NVMe `fsync` overhead negligible ($P_{99} \le 83\text{ ms}$ at 300 req/s). Reserve `synchronous_commit = off` strictly for non-critical telemetry or transient queues.
-* **Continuous Benchmark Profiling & Performance History Invariants**:
-  - **Structured JSON Benchmark Persistence**: All capacity and contention benchmarks (`scripts/load_test_*.py`) must persist structured execution metrics to disk under `reports/benchmarks/benchmark_<YYYYMMDD_HHMMSS>.json` and update `reports/benchmarks/latest.json`.
-  - **Dual-Layer Profiling**: Separate and measure both API Ingestion Latency (under background queue saturation) and Worker End-to-End Clearing SLA (`cleared_at - created_at`).
-  - **Arrival Rate Pacing**: Benchmark load harnesses must implement Little's Law arrival-rate pacing (`--rate <req/s>`) rather than unconstrained simultaneous bursts to prevent client-side OS TCP socket backlog serialization from skewing distributed SLA measurements.
-  - **Historical Evolution Tracking**: Use saved JSON reports to track latency trends over time, catch performance regressions between commits, and generate empirical capacity tables for production audits.
-* **Root-Cause Configuration Over Log Masking (The No-Masking Invariant)**:
-  - Whenever encountering driver, protocol, broker, or library warnings, errors, or unexpected handshakes (such as third-party probes like Redis `CLIENT MAINT_NOTIFICATIONS` on open-source instances, or AMQP channel negotiation rejections), **strictly prioritize eliminating the root cause via explicit driver/client configuration, connection arguments, or Pydantic `Settings`**.
-  - **Banning Log-Level Alteration as a Fix**: Modifying logger levels (e.g., bumping `setLevel(logging.INFO)` or suppressing library loggers) to silence errors or warnings is strictly forbidden as a primary solution. Silencing loggers merely masks underlying issues, hides protocol mismatches, leaves wasted CPU/network round-trips in place, and prevents operators from diagnosing real failures.
-* **FinTech In-Flight State Visibility & State Machine Contract**:
-  - In commercial banking, corporate treasury, and settlement platforms (Stripe Treasury, Modern Treasury, clearinghouse gateways), financial operations must never operate in an observable "black hole" where triggering an asynchronous action results in a `404 NOT FOUND` during in-flight processing.
-  - When an asynchronous workflow (such as an End-of-Day cut-off, ledger reconciliation, or payout batch) is accepted (`HTTP 202 ACCEPTED`), the system must **immediately persist an initial state machine record** in PostgreSQL with `status="processing"` (or `"pending"`).
-  - Subsequent read operations (`GET /resource/{id}` or `GET /reconciliations/{date}`) must immediately return `HTTP 200 OK` reflecting the active in-flight state (`status="processing"`), rather than raising `404 NOT FOUND`.
-  - **Testing Methodology Requirement**: Every integration and E2E test suite for asynchronous workflows must explicitly verify this state machine contract by immediately issuing a `GET` request right after dispatch and asserting `HTTP 200 OK` with `status == "processing"` before the worker completes and transitions it to terminal states (`balanced`, `discrepancy_detected`, or `failed`).
-* **Database Schema Management (Static `init.sql` vs. Alembic)**:
-  - Static `init.sql` is standard and sufficient for all basic and educational project modules.
-  - Do **NOT** introduce Alembic database migrations unless the user or project specification explicitly mentions "ready for production environments" or "production deployment".
-* **Observability & Telemetry Scope (Strict Opt-In)**:
-  - OpenTelemetry distributed tracing, Prometheus metrics (`/metrics`), and custom metric instruments are isolated in the dedicated `celery-observability` skill.
-  - Strictly opt-in: do **NOT** add OpenTelemetry, `/metrics`, or Prometheus dependencies to a project module unless explicitly requested.
-* **Pre-Commit Verification Integration**:
-  - The repository enforces quality checks via `scripts/run_local_ci.sh`, which is linked directly to git hooks (`.git/hooks/pre-commit`) and the declarative `.pre-commit-config.yaml` manifest.
+* **Guarantees**: Non-blocking asynchronous I/O, strict ACID guarantees, minor-unit financial precision (integer cents / `Decimal`), and robust fault-tolerant designs.
+
+### Testing & Verification
+* **100% Statement Coverage**: `pytest` with **100% statement coverage** required across all modules (`--cov-fail-under=100`).
+* **4-Tier Test Separation**:
+  - Unit (`tests/unit/`): In-memory, isolated, external calls mocked.
+  - Integration (`tests/integration/`): Real database/broker transactions, API client routes.
+  - Live E2E (`tests/e2e/test_live_e2e.py`): Full multi-process distributed stack.
+  - Benchmarks (`tests/benchmarks/`): Contention and capacity tests.
+* **Hybrid Testcontainers**: Auto-fallback to ephemeral containers (PostgreSQL, Redis, RabbitMQ) when local services are unavailable.
+* **FinTech In-Flight State Visibility**: On `HTTP 202 ACCEPTED`, immediately persist an initial state machine record with `status="processing"` (or `"pending"`). Subsequent reads (`GET /resource/{id}`) must immediately return `HTTP 200 OK` reflecting active in-flight state, never `404 NOT FOUND`. Tests must assert `200 OK (processing)` before worker completion.
+> **Full Testing Runbook**: See [celery-test](.agents/skills/celery-test/SKILL.md).
+
+### Atomic Micro-Commit Strategy
+* **Mandatory Review Prior to Commit & Push (Strict Non-Negotiable Invariant)**: Any change (code, documentation, test, or configuration) is strictly subject to user review prior to commit. Running `git commit` or `git push` without explicit confirmation and authorization from the user is **strictly forbidden under all circumstances**. Always present proposed changes, diffs, and verification results, and await explicit approval.
+* **Single-Line Commit Messages**: Strictly formatted as a concise single-line Conventional Commit (`<type>(<scope>): <summary>`, $\le 72$ characters). Omit multi-line bodies or bullet points.
+* **Granular Slicing Matrix**:
+  - `chore(deps)`: Dependency manifests (`requirements_*.txt`).
+  - `feat(db)`: Database DDL (`init.sql`) and configuration (with dedicated DDL test).
+  - `feat(amqp)`: Kombu AMQP 0-9-1 topology (`shared/amqp_topology.py`) (with topology test).
+  - `feat(models)`: Shared Kernel domain database models (`shared/models.py`) (with model test).
+  - `feat(schemas)`: Shared Kernel Pydantic v2 domain schemas (`shared/schemas.py`) (with schema test).
+  - `chore(rabbitmq)`: RabbitMQ pre-loaded definitions and config (`docker/rabbitmq/`).
+  - `chore(docker)`: Centralized container Dockerfiles (`docker/Dockerfile.<service>`).
+  - `feat(worker)`: Celery worker application configuration (`services/worker/celery_app.py`).
+  - `feat(worker)`: Individual Celery task (**STRICTLY ONE TASK PER COMMIT**, with localized unit test).
+  - `feat(api)`: Minimal API skeleton (`/health`, `/ready`), then routes and Swagger examples.
+  - `chore(orchestration)`: Multi-container orchestration (`docker-compose.yml`).
+  - `chore(debug)`: Just-in-time launch configurations (`.vscode/launch.json`).
+* **Zero-Broken-Execution**: Every micro-commit must pass syntax, type checking (`mypy`), linting (`ruff`), and unit tests independently.
+> **Full Commit Standards**: See [celery-commit](.agents/skills/celery-commit/SKILL.md).
+
+### Clean Architecture & Shared Kernel (`shared/`)
+* **Shared Kernel Boundary**: Domain persistence models (`shared/models.py`), domain contracts & validation schemas (`shared/schemas.py`), and Kombu AMQP topologies (`shared/amqp_topology.py`) strictly reside in `shared/`.
+* **Unidirectional Flow**: `app -> shared`, `services/worker -> shared`, `scripts -> shared`. Headless workers must **never** import from `app` presentation layer.
+* **Centralized Docker Packaging**: Centralize all Dockerfiles under top-level `docker/` (`docker/Dockerfile.api`, `docker/Dockerfile.worker`, etc.). Broker configs reside in `docker/<infra>/`. Build context is workspace root (`context: .`).
+* **Service Naming & Isolation**: HTTP services use `_api` suffix (`services/bank_simulator_api/`), with dedicated minimal `requirements.txt`. Clear producer (`app/dispatcher.py`) vs consumer (`services/worker/tasks/`) separation. Tasks partitioned by business domain (`tasks/payouts.py`), never by priority/queue. Uniform `snake_case`.
+> **Full Scaffolding Guidelines**: See [celery-fastapi-scaffold](.agents/skills/celery-fastapi-scaffold/SKILL.md).
+
+### FastAPI Gateway Standards
+* **Async & Logging**: `async def` endpoints as default; pretty development logger (`datefmt="%H:%M:%S"`, truncated 8-character `req_id[:8]`).
+* **Modular Middlewares**: Partitioned package under `app/middlewares/` (`correlation.py`, `error_handling.py`, `profiling.py`).
+* **Validation & Precision**: Pydantic v2 schemas with `Field` constraints, `ConfigDict`, realistic `examples=[...]` (preventing 422s in `/docs`), and strict `Decimal` / integer cents for currency (stored as `NUMERIC(14, 2)`).
+* **Zero-Refresh Response Generation**: Pre-generate primary keys (`uuid.uuid4()`) and UTC timestamps in the application layer. Never call `await session.refresh()` in write endpoints.
+* **Atomic Idempotency**: Enforce idempotency via database `UNIQUE` constraints and catch `IntegrityError` instead of issuing speculative `SELECT` queries before `INSERT`.
+* **Security & Tokenization**: FastAPI Security Dependencies (`Security(APIKeyHeader)` / `HTTPBearer`). Zero raw financial PII across brokers (edge tokenization, encrypted vault, masked audit fields).
+
+### Celery Worker & AMQP Messaging
+* **Serialization**: Strict JSON serialization (no ORM models, file descriptors, or sockets across brokers).
+* **Signatures & Chords**: Explicit `.s()` vs `.si()` discipline. Result Envelope pattern (`{"status": "ok" | "degraded" | "failed", ...}`) for chord header tasks to prevent hanging callbacks.
+* **Worker Resilience**: Configure workers with `acks_late=True` and `task_reject_on_worker_lost=True`.
+* **Tiered Hybrid Routing**: Group tasks initially by SLA tier (`critical`, `default`, `bulk`) with fine-grained semantic routing keys (`domain.entity.action`). Split into dedicated queues only when compute/isolation demands it.
+* **Layer Separation**: Kombu for wire-level AMQP 0-9-1 declarations; Celery for workflow DAGs.
+> **Full Canvas & Workflow Runbook**: See [celery-canvas-workflow](.agents/skills/celery-canvas-workflow/SKILL.md).
+
+### Performance, Resource Pooling & Database Tuning
+* **Eager Singletons**: Initialize clients, database engines, session factories, and thread pool singletons at module load time to eliminate first-call cold-start latency.
+* **Connection Pooling**: Outgoing HTTP clients share process-level instances with connection pooling (`httpx.Limits(max_keepalive_connections=20, max_connections=50)`).
+* **Role-Based DB Pools**: Budget worker child processes with lightweight pools (`pool_size=2, max_overflow=2`) and API gateways with larger capacity (`pool_size=10, max_overflow=20`), keeping total connections under PostgreSQL limits.
+* **PgBouncer Multiplexing**: Deploy in transaction pooling mode (`POOL_MODE=transaction`) with `statement_cache_size: 0` in asyncpg.
+* **Multi-Tier Caching**: L1 process memory cache with TTL for static reference data; L2 Redis for idempotency (`SET NX EX`) and rate limiting; DB is ACID source of truth.
+* **Database Indexes & Durability**:
+  - Index deduplication: never add `CREATE INDEX` on primary keys or `UNIQUE` columns.
+  - Partial indexes for state machines: `WHERE status IN ('pending', 'processing')`.
+  - Minimize SQL queries ($4 \to 1$ round-trips).
+  - Default `synchronous_commit = on` for financial ledgers; modern NVMe settings (`shared_buffers = 512MB`, `wal_buffers = 16MB`, `random_page_cost = 1.1`).
+* **Root-Cause Configuration Over Log Masking**: Eliminate warnings/errors via explicit driver/client configuration or Pydantic settings. Silencing loggers to mask protocol mismatches is strictly forbidden.
+> **Full Pooling & Performance Guide**: See [celery-perf-pooling](.agents/skills/celery-perf-pooling/SKILL.md).
+
+### Continuous Benchmarking & Telemetry Scope
+* **Structured JSON Metrics**: Persist capacity/contention benchmarks to disk under `reports/benchmarks/benchmark_<YYYYMMDD_HHMMSS>.json` and update `latest.json`.
+* **Dual-Layer Profiling**: Measure API Ingestion Latency (under queue saturation) and Worker End-to-End Clearing SLA (`cleared_at - created_at`).
+* **Pacing**: Benchmark harnesses must implement Little's Law arrival-rate pacing (`--rate <req/s>`).
+* **Strict Opt-In Telemetry**: OpenTelemetry tracing and Prometheus metrics (`/metrics`) are isolated in [celery-observability](.agents/skills/celery-observability/SKILL.md). Do **NOT** add telemetry dependencies unless explicitly requested.
+> **Full Benchmarking Guide**: See [celery-benchmarks](.agents/skills/celery-benchmarks/SKILL.md).
+
+### Debugging & Developer Experience (DX)
+* **Progressive Launch Configurations**: In `.vscode/launch.json`, generate debug configurations strictly for services and entry points that currently exist and are runnable.
+* **Compound Multi-Service Configurations**: Provide compound debug configurations (`compounds` with `"stopAll": true`) to launch and debug concurrent services together.
+* **Interactive REST**: Maintain self-contained test scenarios in `requests/requests.rest` concurrently with endpoints and tests.
+* **Pre-Commit Verification**: Run quality checks via `scripts/run_local_ci.sh` linked to git hooks and `.pre-commit-config.yaml`.
+> **Full Debug Runbook**: See [debug-setup](.agents/skills/debug-setup/SKILL.md).
+
+### Documentation Architecture & Anti-Bloat
+* **Modular Documentation Partitioning**:
+  - `README.md`: Executive summary, business impact, quickstart, compliance matrix.
+  - `docs/ARCHITECTURE_AND_STANDARDS.md`: System topology, clean architecture rules, performance/security standards.
+  - `docs/USE_CASES.md`: Business workflows, actor interactions, recovery scenarios.
+  - `docs/TEST_PLAN.md`: Test strategy, test matrix table, hybrid testcontainers setup.
+  - `docs/MILESTONES.md`: Milestone roadmap (M1–M6), phase summaries, acceptance criteria tracking.
+  - `docs/SEQUENCE_DIAGRAMS.md`: Sequence diagrams covering all distributed execution and failure paths.
+  - `.agents/milestones/M<N>_<SLUG>.md`: Granular agent procedural execution runbooks with scope fences, micro-commit sequences, and verification gates.
+* **Anti-Bloat & Single Source of Truth (SSOT)**: Never copy-paste raw implementation code (`init.sql`, Pydantic models, Kombu definitions) into markdown docs. Link to source files and illustrate visually using Mermaid (`erDiagram`, `classDiagram`, `flowchart`).
+* **Dual-Layer Milestone Generation**: Always maintain human roadmap (`docs/MILESTONES.md`) and agent execution runbooks (`.agents/milestones/M<N>_<SLUG>.md`) concurrently. Milestone 1 focuses strictly on planning and architecture (no application code, Dockerfiles, or DB DDL).
+* **Mermaid Render Verification**: Quote labels containing special characters (`id["Label (Extra)"]`) and ensure block closure (`end`).
+* **Code Readability**: Google-style docstrings on all functions; numbered block comments (`# 1. ...`, `# 2. ...`) for multi-stage execution flows.
+> **Full Documentation Standards**: See [celery-doc](.agents/skills/celery-doc/SKILL.md).
+
+### File Integrity & Local Invariants
+* **Creation Mask (`umask 022`)**: Execute commands creating files or directories with `umask 022` (directories `755`, regular files `644`). Never generate `777` or `666` permissions.
+* **Zero Backstage File Modification**: Author fully formatted, sorted, and lint-clean code upfront on the first attempt. Avoid unrequested automated rewrites or editor buffer conflicts (`files.autoSave: "off"`, `editor.formatOnSave: false`).
