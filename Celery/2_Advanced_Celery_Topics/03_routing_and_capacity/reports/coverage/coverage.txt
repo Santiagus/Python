@@ -1,0 +1,32 @@
+Name                                      Stmts   Miss Branch BrPart  Cover   Missing
+-------------------------------------------------------------------------------------
+app/__init__.py                               1      0      0      0   100%
+app/cache.py                                112      0     28      0   100%
+app/circuit_breaker.py                       84      0     18      0   100%
+app/config.py                                28      0      0      0   100%
+app/db.py                                    51      0     10      0   100%
+app/dependencies.py                          26      0      6      0   100%
+app/dispatcher.py                            26      0      2      0   100%
+app/logging_config.py                        46      0     10      0   100%
+app/main.py                                  48      0      2      0   100%
+app/middlewares/__init__.py                  17      0      0      0   100%
+app/middlewares/correlation.py               18      0      0      0   100%
+app/middlewares/error_handling.py            16      0      0      0   100%
+app/middlewares/profiling.py                 20      0      2      0   100%
+app/middlewares/rate_limit.py                82      0     16      0   100%
+app/middlewares/security.py                  18      0      4      0   100%
+app/models.py                                64      0      0      0   100%
+app/routes.py                               174      0     24      0   100%
+app/schemas.py                              123      0      2      0   100%
+services/bank_simulator_api/__init__.py       1      0      0      0   100%
+services/bank_simulator_api/client.py        75      0     14      0   100%
+services/bank_simulator_api/main.py          56      0      6      0   100%
+services/worker/__init__.py                   1      0      0      0   100%
+services/worker/celery_app.py                61      0      6      0   100%
+services/worker/tasks/__init__.py             5      0      0      0   100%
+services/worker/tasks/notifications.py       28      0      2      0   100%
+services/worker/tasks/payouts.py            120      0     12      0   100%
+services/worker/tasks/settlements.py         47      0      6      0   100%
+services/worker/tasks/utils.py               39      0     12      0   100%
+-------------------------------------------------------------------------------------
+TOTAL                                      1387      0    182      0   100%
