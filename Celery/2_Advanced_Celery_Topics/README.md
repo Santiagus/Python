@@ -87,21 +87,3 @@ For every project, demonstrate:
 5. Measurements for latency, throughput, retries, failures, and queue depth.
 6. Reproducible setup with pinned dependencies and environment-based secrets.
 7. Documentation explaining operational tradeoffs and recovery procedures.
-
-## CV Guidance
-
-Completing tutorials alone does not establish expert-level experience. A
-credible CV claim should be supported by the capstone repository, test reports,
-load-test results, architecture decisions, and a failure-injection demo.
-
-Accurate progression examples:
-
-- Early stage: `Built and tested asynchronous Python tasks with Celery and RabbitMQ.`
-- Project stage: `Implemented reliable Celery workflows with retries, idempotency,
-  routing, scheduling, and integration tests.`
-- Strong portfolio stage: `Designed and operated a containerized Celery/RabbitMQ
-  job platform with queue isolation, failure recovery, observability, and
-  measured throughput.`
-
-Use `Celery expert` only when you can defend production-scale decisions,
-incident behavior, performance limits, and tradeoffs in a technical interview.
