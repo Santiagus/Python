@@ -114,9 +114,7 @@ async def ingest_wire_transfer(
     """
     # 1. Resolve idempotency key
     resolved_idempotency_key = (
-        idempotency_key.strip()
-        if idempotency_key and idempotency_key.strip()
-        else f"idem-{uuid.uuid4().hex[:16]}"
+        idempotency_key.strip() if idempotency_key and idempotency_key.strip() else f"idem-{uuid.uuid4().hex[:16]}"
     )
 
     # 2. Pre-generate UUIDv4 primary keys and UTC timestamps (Zero-Refresh Invariant)

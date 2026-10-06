@@ -184,7 +184,9 @@ def test_celery_task_audit_wrappers() -> None:
         assert mock_record.called
 
     # 2. Test quarantine_poison_pill wrapper
-    with patch("services.worker.tasks.audit.process_quarantine_poison_pill", return_value={"quarantined": True}) as mock_quarantine:
+    with patch(
+        "services.worker.tasks.audit.process_quarantine_poison_pill", return_value={"quarantined": True}
+    ) as mock_quarantine:
         res2 = quarantine_poison_pill(str(uuid.uuid4()), "poison pill")
         assert res2["quarantined"] is True
         assert mock_quarantine.called

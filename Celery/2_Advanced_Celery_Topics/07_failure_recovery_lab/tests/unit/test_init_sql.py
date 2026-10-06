@@ -32,10 +32,7 @@ def test_wire_transfers_table_schema(init_sql_content: str) -> None:
     assert "idempotency_key VARCHAR(128) NOT NULL" in init_sql_content
     assert "amount_cents BIGINT NOT NULL CHECK (amount_cents > 0)" in init_sql_content
     assert "status VARCHAR(32) NOT NULL DEFAULT 'processing'" in init_sql_content
-    assert (
-        "CONSTRAINT uq_wire_idempotency UNIQUE (client_id, idempotency_key)"
-        in init_sql_content
-    )
+    assert "CONSTRAINT uq_wire_idempotency UNIQUE (client_id, idempotency_key)" in init_sql_content
 
 
 def test_partial_index_for_in_flight_wires(init_sql_content: str) -> None:
@@ -53,18 +50,9 @@ def test_ledger_journal_table_schema(init_sql_content: str) -> None:
 
     # 2. Key columns, foreign keys, and directions
     assert "entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v4()" in init_sql_content
-    assert (
-        "wire_id UUID NOT NULL REFERENCES wire_transfers(wire_id) ON DELETE RESTRICT"
-        in init_sql_content
-    )
-    assert (
-        "direction VARCHAR(8) NOT NULL CHECK (direction IN ('DEBIT', 'CREDIT'))"
-        in init_sql_content
-    )
-    assert (
-        "CREATE INDEX IF NOT EXISTS idx_ledger_wire_id ON ledger_journal(wire_id);"
-        in init_sql_content
-    )
+    assert "wire_id UUID NOT NULL REFERENCES wire_transfers(wire_id) ON DELETE RESTRICT" in init_sql_content
+    assert "direction VARCHAR(8) NOT NULL CHECK (direction IN ('DEBIT', 'CREDIT'))" in init_sql_content
+    assert "CREATE INDEX IF NOT EXISTS idx_ledger_wire_id ON ledger_journal(wire_id);" in init_sql_content
 
 
 def test_wire_audit_log_table_schema(init_sql_content: str) -> None:
@@ -74,14 +62,8 @@ def test_wire_audit_log_table_schema(init_sql_content: str) -> None:
 
     # 2. Key columns and index
     assert "audit_id BIGSERIAL PRIMARY KEY" in init_sql_content
-    assert (
-        "wire_id UUID NOT NULL REFERENCES wire_transfers(wire_id) ON DELETE CASCADE"
-        in init_sql_content
-    )
-    assert (
-        "CREATE INDEX IF NOT EXISTS idx_audit_wire_id ON wire_audit_log(wire_id);"
-        in init_sql_content
-    )
+    assert "wire_id UUID NOT NULL REFERENCES wire_transfers(wire_id) ON DELETE CASCADE" in init_sql_content
+    assert "CREATE INDEX IF NOT EXISTS idx_audit_wire_id ON wire_audit_log(wire_id);" in init_sql_content
 
 
 def test_index_deduplication_invariant(init_sql_content: str) -> None:

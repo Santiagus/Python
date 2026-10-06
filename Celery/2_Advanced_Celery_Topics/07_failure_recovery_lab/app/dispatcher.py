@@ -87,18 +87,10 @@ class WireDispatcher:
             RuntimeError: If broker publisher confirmation fails or connection drops.
         """
         # 1. Standardize payload dictionary
-        payload_dict = (
-            task_payload.model_dump()
-            if isinstance(task_payload, WireTaskPayload)
-            else dict(task_payload)
-        )
+        payload_dict = task_payload.model_dump() if isinstance(task_payload, WireTaskPayload) else dict(task_payload)
 
         # 2. Resolve correlation and task identifiers
-        active_correl_id = (
-            correlation_id
-            or get_current_request_id()
-            or uuid.uuid4().hex[:8]
-        )
+        active_correl_id = correlation_id or get_current_request_id() or uuid.uuid4().hex[:8]
         tid = task_id or str(uuid.uuid4())
 
         # 3. Format message according to Celery v2 task protocol

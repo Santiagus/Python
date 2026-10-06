@@ -317,15 +317,15 @@ class ChaosHarness:
     async def _execute_ledger_audit(self, session: AsyncSession) -> LedgerAuditResult:
         """Execute aggregate queries against ledger journal and wire transfers."""
         # 1. Aggregate sum of DEBIT entries
-        debit_stmt = select(
-            func.coalesce(func.sum(LedgerJournal.amount_cents), 0)
-        ).where(LedgerJournal.direction == LedgerDirection.DEBIT.value)
+        debit_stmt = select(func.coalesce(func.sum(LedgerJournal.amount_cents), 0)).where(
+            LedgerJournal.direction == LedgerDirection.DEBIT.value
+        )
         total_debits = (await session.execute(debit_stmt)).scalar_one()
 
         # 2. Aggregate sum of CREDIT entries
-        credit_stmt = select(
-            func.coalesce(func.sum(LedgerJournal.amount_cents), 0)
-        ).where(LedgerJournal.direction == LedgerDirection.CREDIT.value)
+        credit_stmt = select(func.coalesce(func.sum(LedgerJournal.amount_cents), 0)).where(
+            LedgerJournal.direction == LedgerDirection.CREDIT.value
+        )
         total_credits = (await session.execute(credit_stmt)).scalar_one()
 
         # 3. Query settled wire transfer count and distinct idempotency keys
@@ -916,15 +916,17 @@ class ChaosHarness:
             detail_str = f"Error: {err}" if err else "All financial & AMQP invariants verified"
             lines.append(f"| **`{exp_id}`** | {name} | `{status_val}` | {mttr} | {detail_str} |")
 
-        lines.extend([
-            "",
-            "## 3. Financial Invariant Verification",
-            "",
-            "* **Ledger Drift**: $0\\text{ cents}$ (Exact mathematical balance $\\sum \\text{Debits} == \\sum \\text{Credits}$).",
-            "* **Double Disbursements**: $0$ phantom payouts detected.",
-            "* **Zero Lost Wires**: 100% of publisher-confirmed messages settled.",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## 3. Financial Invariant Verification",
+                "",
+                "* **Ledger Drift**: $0\\text{ cents}$ (Exact mathematical balance $\\sum \\text{Debits} == \\sum \\text{Credits}$).",
+                "* **Double Disbursements**: $0$ phantom payouts detected.",
+                "* **Zero Lost Wires**: 100% of publisher-confirmed messages settled.",
+                "",
+            ]
+        )
 
         return "\n".join(lines)
 

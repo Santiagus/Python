@@ -46,10 +46,7 @@ def test_requests_rest_contains_happy_path_workflow(
     assert "POST {{baseUrl}}{{apiPrefix}}/wires" in requests_rest_content
     assert "Idempotency-Key: idem-treasury-2026-alpha-001" in requests_rest_content
     assert "X-Request-ID: req-client-treasury-001" in requests_rest_content
-    assert (
-        "GET {{baseUrl}}{{apiPrefix}}/wires/{{ingestWireHappyPath.response.body.wire_id}}"
-        in requests_rest_content
-    )
+    assert "GET {{baseUrl}}{{apiPrefix}}/wires/{{ingestWireHappyPath.response.body.wire_id}}" in requests_rest_content
 
 
 def test_requests_rest_contains_idempotency_and_auto_key_workflows(
@@ -57,10 +54,7 @@ def test_requests_rest_contains_idempotency_and_auto_key_workflows(
 ) -> None:
     """Verify idempotency replay and auto-generated key workflows."""
     assert "# @name ingestAutoIdemWire" in requests_rest_content
-    assert (
-        "GET {{baseUrl}}{{apiPrefix}}/wires/{{ingestAutoIdemWire.response.body.wire_id}}"
-        in requests_rest_content
-    )
+    assert "GET {{baseUrl}}{{apiPrefix}}/wires/{{ingestAutoIdemWire.response.body.wire_id}}" in requests_rest_content
     assert "idem-treasury-2026-alpha-001" in requests_rest_content
 
 
@@ -70,10 +64,7 @@ def test_requests_rest_contains_validation_and_error_scenarios(
     """Verify invalid routing number, negative amount, and 404 query test scenarios."""
     assert '"routing_number": "1234"' in requests_rest_content
     assert '"amount": "-500.00"' in requests_rest_content
-    assert (
-        "GET {{baseUrl}}{{apiPrefix}}/wires/00000000-0000-0000-0000-000000000000"
-        in requests_rest_content
-    )
+    assert "GET {{baseUrl}}{{apiPrefix}}/wires/00000000-0000-0000-0000-000000000000" in requests_rest_content
 
 
 def test_requests_rest_request_blocks_syntax(

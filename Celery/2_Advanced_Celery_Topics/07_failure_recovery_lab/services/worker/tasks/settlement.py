@@ -195,11 +195,7 @@ async def _execute_settlement_transaction(
 ) -> dict[str, Any]:
     """Execute settlement transaction within an active database session."""
     # 1. Acquire row-level lock on master wire transfer
-    stmt = (
-        select(WireTransfer)
-        .where(WireTransfer.wire_id == wire_uuid)
-        .with_for_update()
-    )
+    stmt = select(WireTransfer).where(WireTransfer.wire_id == wire_uuid).with_for_update()
     result = await session.execute(stmt)
     wire = result.scalar_one_or_none()
 
@@ -259,9 +255,7 @@ async def _execute_settlement_transaction(
         bank_data = disburse_resp.json()
         bank_reference_id = bank_data["bank_reference_id"]
     else:
-        raise RuntimeError(
-            f"Clearinghouse inquiry error: HTTP {inquiry_resp.status_code} - {inquiry_resp.text}"
-        )
+        raise RuntimeError(f"Clearinghouse inquiry error: HTTP {inquiry_resp.status_code} - {inquiry_resp.text}")
 
     # 4. Advance wire state and update delivery metadata
     previous_status = wire.status

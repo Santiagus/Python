@@ -37,9 +37,7 @@ def test_required_services_defined(workspace_root: Path) -> None:
         "worker_2",
     }
     for req in required:
-        assert req in services, (
-            f"Service '{req}' must be declared in docker-compose.yml"
-        )
+        assert req in services, f"Service '{req}' must be declared in docker-compose.yml"
 
 
 def test_postgres_service_configuration(workspace_root: Path) -> None:
@@ -55,9 +53,7 @@ def test_postgres_service_configuration(workspace_root: Path) -> None:
 
     # Check volume mounts
     volumes = pg.get("volumes", [])
-    assert any("init.sql" in str(v) for v in volumes), (
-        "init.sql must be mounted to docker-entrypoint-initdb.d"
-    )
+    assert any("init.sql" in str(v) for v in volumes), "init.sql must be mounted to docker-entrypoint-initdb.d"
 
 
 def test_rabbitmq_service_configuration(workspace_root: Path) -> None:
@@ -75,9 +71,7 @@ def test_rabbitmq_service_configuration(workspace_root: Path) -> None:
 
     # Check definitions mount
     volumes = rabbit.get("volumes", [])
-    assert any("definitions.json" in str(v) for v in volumes), (
-        "definitions.json must be mounted to rabbitmq"
-    )
+    assert any("definitions.json" in str(v) for v in volumes), "definitions.json must be mounted to rabbitmq"
 
 
 def test_worker_fleet_configuration(workspace_root: Path) -> None:
@@ -147,4 +141,3 @@ def test_centralized_dockerfiles_exist_and_referenced(workspace_root: Path) -> N
         assert (workspace_root / dockerfile_rel).is_file(), (
             f"Referenced dockerfile must exist on disk: {dockerfile_rel}"
         )
-

@@ -50,16 +50,26 @@ def test_build_arg_parser_defaults() -> None:
 def test_build_arg_parser_custom_values() -> None:
     """Verify that build_arg_parser parses custom arguments correctly."""
     parser = build_arg_parser()
-    args = parser.parse_args([
-        "-e", "EXP-01",
-        "--api-url", "http://api.test:8000",
-        "--bank-url", "http://bank.test:8010",
-        "--broker-url", "amqp://user:pass@broker:5672//",
-        "--db-url", "postgresql+asyncpg://user:pass@db:5432/test",
-        "--compose-file", "docker-compose.override.yml",
-        "--output-json", "test_report.json",
-        "--output-markdown", "test_report.md",
-    ])
+    args = parser.parse_args(
+        [
+            "-e",
+            "EXP-01",
+            "--api-url",
+            "http://api.test:8000",
+            "--bank-url",
+            "http://bank.test:8010",
+            "--broker-url",
+            "amqp://user:pass@broker:5672//",
+            "--db-url",
+            "postgresql+asyncpg://user:pass@db:5432/test",
+            "--compose-file",
+            "docker-compose.override.yml",
+            "--output-json",
+            "test_report.json",
+            "--output-markdown",
+            "test_report.md",
+        ]
+    )
     assert args.experiment == "EXP-01"
     assert args.api_url == "http://api.test:8000"
     assert args.bank_url == "http://bank.test:8010"
@@ -111,9 +121,7 @@ def test_execute_docker_command() -> None:
     """Verify docker command execution via subprocess."""
     harness = ChaosHarness(compose_file="docker-compose.test.yml")
     with patch("scripts.chaos_harness.subprocess.run") as mock_run:
-        mock_run.return_value = subprocess.CompletedProcess(
-            args=["docker", "compose"], returncode=0, stdout="done"
-        )
+        mock_run.return_value = subprocess.CompletedProcess(args=["docker", "compose"], returncode=0, stdout="done")
         res = harness.execute_docker_command(["ps"])
         mock_run.assert_called_once_with(
             ["docker", "compose", "-f", "docker-compose.test.yml", "ps"],
@@ -355,18 +363,23 @@ async def test_run_experiment_1_worker_sigkill_passed() -> None:
     mock_client.post.return_value = post_resp
 
     # 2. Mock container kill
-    with patch.object(harness, "kill_container", return_value=True) as mock_kill, \
-         patch.object(harness, "audit_wire_status", return_value={"status": "settled", "redelivered_flag": True}), \
-         patch.object(harness, "audit_ledger_parity", return_value=LedgerAuditResult(
-             total_debits_cents=10000000,
-             total_credits_cents=10000000,
-             drift_cents=0,
-             settled_wires_count=1,
-             unique_idempotency_keys_count=1,
-             is_balanced=True,
-             double_disbursements_count=0,
-         )):
-
+    with (
+        patch.object(harness, "kill_container", return_value=True) as mock_kill,
+        patch.object(harness, "audit_wire_status", return_value={"status": "settled", "redelivered_flag": True}),
+        patch.object(
+            harness,
+            "audit_ledger_parity",
+            return_value=LedgerAuditResult(
+                total_debits_cents=10000000,
+                total_credits_cents=10000000,
+                drift_cents=0,
+                settled_wires_count=1,
+                unique_idempotency_keys_count=1,
+                is_balanced=True,
+                double_disbursements_count=0,
+            ),
+        ),
+    ):
         result = await harness.run_experiment_1_worker_sigkill(client=mock_client)
         assert result.experiment_id == "EXP-01"
         assert result.status == ExperimentStatus.PASSED
@@ -402,17 +415,23 @@ async def test_run_experiment_1_ledger_imbalance_failure() -> None:
     post_resp.json.return_value = {"wire_id": "w1", "status": "processing"}
     mock_client.post.return_value = post_resp
 
-    with patch.object(harness, "kill_container", return_value=True), \
-         patch.object(harness, "audit_wire_status", return_value={"status": "settled"}), \
-         patch.object(harness, "audit_ledger_parity", return_value=LedgerAuditResult(
-             total_debits_cents=100,
-             total_credits_cents=50,
-             drift_cents=50,
-             settled_wires_count=1,
-             unique_idempotency_keys_count=1,
-             is_balanced=False,
-             double_disbursements_count=0,
-         )):
+    with (
+        patch.object(harness, "kill_container", return_value=True),
+        patch.object(harness, "audit_wire_status", return_value={"status": "settled"}),
+        patch.object(
+            harness,
+            "audit_ledger_parity",
+            return_value=LedgerAuditResult(
+                total_debits_cents=100,
+                total_credits_cents=50,
+                drift_cents=50,
+                settled_wires_count=1,
+                unique_idempotency_keys_count=1,
+                is_balanced=False,
+                double_disbursements_count=0,
+            ),
+        ),
+    ):
         result = await harness.run_experiment_1_worker_sigkill(client=mock_client)
         assert result.status == ExperimentStatus.FAILED
         assert "Ledger imbalance detected" in str(result.error_message)
@@ -458,10 +477,11 @@ async def test_run_experiment_3_broker_outage_passed_and_failed() -> None:
     post_resp.json.return_value = {"wire_id": "w3"}
     mock_client.post.return_value = post_resp
 
-    with patch.object(harness, "stop_container", return_value=True) as mock_stop, \
-         patch.object(harness, "start_container", return_value=True) as mock_start, \
-         patch.object(harness, "audit_wire_status", return_value={"status": "settled"}):
-
+    with (
+        patch.object(harness, "stop_container", return_value=True) as mock_stop,
+        patch.object(harness, "start_container", return_value=True) as mock_start,
+        patch.object(harness, "audit_wire_status", return_value={"status": "settled"}),
+    ):
         res_pass = await harness.run_experiment_3_broker_outage(client=mock_client, downtime_seconds=0.01)
         assert res_pass.experiment_id == "EXP-03"
         assert res_pass.status == ExperimentStatus.PASSED
@@ -502,8 +522,10 @@ def test_run_experiment_4_poison_pill_passed_and_failed() -> None:
     assert res_fail.status == ExperimentStatus.FAILED
 
     # 3. Connection is None default initialization
-    with patch("scripts.chaos_harness.Connection") as mock_conn_cls, \
-         patch("scripts.chaos_harness.wire_critical_queue") as mock_q_fn:
+    with (
+        patch("scripts.chaos_harness.Connection") as mock_conn_cls,
+        patch("scripts.chaos_harness.wire_critical_queue") as mock_q_fn,
+    ):
         conn_inst = MagicMock()
         conn_inst.channel.return_value.__enter__.return_value = mock_channel
         mock_conn_cls.return_value = conn_inst
@@ -539,17 +561,21 @@ async def test_run_experiment_5_mttr_benchmarks_passed_and_failed() -> None:
     )
 
     # 1. Passed case
-    with patch.object(harness, "audit_ledger_parity", side_effect=[balanced_audit, balanced_audit]), \
-         patch.object(harness, "kill_container", return_value=True), \
-         patch.object(harness, "start_container", return_value=True):
+    with (
+        patch.object(harness, "audit_ledger_parity", side_effect=[balanced_audit, balanced_audit]),
+        patch.object(harness, "kill_container", return_value=True),
+        patch.object(harness, "start_container", return_value=True),
+    ):
         res_pass = await harness.run_experiment_5_mttr_benchmarks()
         assert res_pass.experiment_id == "EXP-05"
         assert res_pass.status == ExperimentStatus.PASSED
 
     # 2. Drift failure case
-    with patch.object(harness, "audit_ledger_parity", side_effect=[balanced_audit, imbalanced_audit]), \
-         patch.object(harness, "kill_container", return_value=True), \
-         patch.object(harness, "start_container", return_value=True):
+    with (
+        patch.object(harness, "audit_ledger_parity", side_effect=[balanced_audit, imbalanced_audit]),
+        patch.object(harness, "kill_container", return_value=True),
+        patch.object(harness, "start_container", return_value=True),
+    ):
         res_fail = await harness.run_experiment_5_mttr_benchmarks()
         assert res_fail.experiment_id == "EXP-05"
         assert res_fail.status == ExperimentStatus.FAILED
@@ -569,12 +595,13 @@ async def test_run_all_experiments() -> None:
         finished_at="",
     )
 
-    with patch.object(harness, "run_experiment_1_worker_sigkill", return_value=mock_res), \
-         patch.object(harness, "run_experiment_2_ack_modes", return_value=mock_res), \
-         patch.object(harness, "run_experiment_3_broker_outage", return_value=mock_res), \
-         patch.object(harness, "run_experiment_4_poison_pill", return_value=mock_res), \
-         patch.object(harness, "run_experiment_5_mttr_benchmarks", return_value=mock_res):
-
+    with (
+        patch.object(harness, "run_experiment_1_worker_sigkill", return_value=mock_res),
+        patch.object(harness, "run_experiment_2_ack_modes", return_value=mock_res),
+        patch.object(harness, "run_experiment_3_broker_outage", return_value=mock_res),
+        patch.object(harness, "run_experiment_4_poison_pill", return_value=mock_res),
+        patch.object(harness, "run_experiment_5_mttr_benchmarks", return_value=mock_res),
+    ):
         results = await harness.run_all_experiments()
         assert len(results) == 5
 
@@ -769,20 +796,25 @@ async def test_run_experiments_owned_client() -> None:
         instance.post.return_value = mock_resp_post
         mock_cls.return_value = instance
 
-        with patch.object(harness, "kill_container", return_value=True), \
-             patch.object(harness, "stop_container", return_value=True), \
-             patch.object(harness, "start_container", return_value=True), \
-             patch.object(harness, "audit_wire_status", return_value={"status": "settled"}), \
-             patch.object(harness, "audit_ledger_parity", return_value=LedgerAuditResult(
-                 total_debits_cents=100,
-                 total_credits_cents=100,
-                 drift_cents=0,
-                 settled_wires_count=1,
-                 unique_idempotency_keys_count=1,
-                 is_balanced=True,
-                 double_disbursements_count=0,
-             )):
-
+        with (
+            patch.object(harness, "kill_container", return_value=True),
+            patch.object(harness, "stop_container", return_value=True),
+            patch.object(harness, "start_container", return_value=True),
+            patch.object(harness, "audit_wire_status", return_value={"status": "settled"}),
+            patch.object(
+                harness,
+                "audit_ledger_parity",
+                return_value=LedgerAuditResult(
+                    total_debits_cents=100,
+                    total_credits_cents=100,
+                    drift_cents=0,
+                    settled_wires_count=1,
+                    unique_idempotency_keys_count=1,
+                    is_balanced=True,
+                    double_disbursements_count=0,
+                ),
+            ),
+        ):
             res1 = await harness.run_experiment_1_worker_sigkill(client=None)
             assert res1.status == ExperimentStatus.PASSED
 
@@ -809,7 +841,9 @@ def test_dunder_main_block(tmp_path: Path) -> None:
     tmp_json = str(tmp_path / "report.json")
     tmp_md = str(tmp_path / "report.md")
 
-    with patch("sys.argv", ["chaos_harness.py", "-e", "EXP-01", "--output-json", tmp_json, "--output-markdown", tmp_md]), \
-         patch("sys.exit") as mock_exit:
+    with (
+        patch("sys.argv", ["chaos_harness.py", "-e", "EXP-01", "--output-json", tmp_json, "--output-markdown", tmp_md]),
+        patch("sys.exit") as mock_exit,
+    ):
         runpy.run_path("scripts/chaos_harness.py", run_name="__main__")
         mock_exit.assert_called_once_with(1)

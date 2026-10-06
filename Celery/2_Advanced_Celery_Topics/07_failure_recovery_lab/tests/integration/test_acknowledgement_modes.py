@@ -169,10 +169,7 @@ async def test_batch_acknowledgement_comparative_loss_rate(
     # -------------------------------------------------------------------------
     # 1. Dispatch 10 wires under early-ack mode with simulated 50% worker crash rate
     # -------------------------------------------------------------------------
-    early_ack_wires = [
-        {"wire_id": str(uuid.uuid4()), "status": "processing"}
-        for _ in range(10)
-    ]
+    early_ack_wires = [{"wire_id": str(uuid.uuid4()), "status": "processing"} for _ in range(10)]
     early_ack_lost = 0
 
     for idx, wire in enumerate(early_ack_wires):
@@ -190,10 +187,7 @@ async def test_batch_acknowledgement_comparative_loss_rate(
     # -------------------------------------------------------------------------
     # 2. Dispatch 10 wires under late-ack mode with same 50% crash rate
     # -------------------------------------------------------------------------
-    late_ack_wires = [
-        {"wire_id": str(uuid.uuid4()), "status": "processing"}
-        for _ in range(10)
-    ]
+    late_ack_wires = [{"wire_id": str(uuid.uuid4()), "status": "processing"} for _ in range(10)]
     late_ack_lost = 0
 
     for wire in late_ack_wires:

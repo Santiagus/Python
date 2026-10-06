@@ -180,11 +180,7 @@ async def _execute_quarantine(
     hostname: str,
 ) -> dict[str, Any]:
     """Execute state transition to dead_lettered with row lock."""
-    stmt = (
-        select(WireTransfer)
-        .where(WireTransfer.wire_id == wire_uuid)
-        .with_for_update()
-    )
+    stmt = select(WireTransfer).where(WireTransfer.wire_id == wire_uuid).with_for_update()
     result = await session.execute(stmt)
     wire = result.scalar_one_or_none()
 

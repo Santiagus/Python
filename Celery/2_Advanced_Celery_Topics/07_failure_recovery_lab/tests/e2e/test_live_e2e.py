@@ -254,6 +254,7 @@ async def test_live_idempotency_collision_under_concurrency() -> None:
 
     # 1. Fire 5 concurrent requests with identical idempotency key
     async with httpx.AsyncClient(timeout=10.0) as client:
+
         async def post_same_wire() -> httpx.Response:
             return await client.post(
                 f"{API_BASE_URL}/api/v1/wires",

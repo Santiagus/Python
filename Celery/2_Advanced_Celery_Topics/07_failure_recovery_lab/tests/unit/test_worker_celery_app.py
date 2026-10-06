@@ -50,9 +50,10 @@ def test_celery_queue_topology_binding() -> None:
 
 def test_worker_process_init_signal() -> None:
     """Verify on_worker_process_init signal listener resets process singletons."""
-    with patch("services.worker.tasks.settlement.reset_process_singletons") as mock_settle, \
-         patch("services.worker.tasks.audit.reset_process_singletons") as mock_audit:
+    with (
+        patch("services.worker.tasks.settlement.reset_process_singletons") as mock_settle,
+        patch("services.worker.tasks.audit.reset_process_singletons") as mock_audit,
+    ):
         on_worker_process_init()
         assert mock_settle.called
         assert mock_audit.called
-
